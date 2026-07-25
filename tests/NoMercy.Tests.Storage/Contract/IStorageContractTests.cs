@@ -105,7 +105,7 @@ public abstract class IStorageContractTests
                 StorageEntry e in storage.ListAsync(
                     "",
                     "*",
-                    false,
+                    recursive: false,
                     CancellationToken.None
                 )
             )
@@ -129,7 +129,7 @@ public abstract class IStorageContractTests
                 StorageEntry e in storage.ListAsync(
                     "",
                     null,
-                    false,
+                    recursive: false,
                     CancellationToken.None
                 )
             )
@@ -498,7 +498,7 @@ public abstract class IStorageContractTests
                     StorageEntry e in storage.ListAsync(
                         "nonexistent-dir-xyz",
                         "*",
-                        false,
+                        recursive: false,
                         CancellationToken.None
                     )
                 )
@@ -534,7 +534,7 @@ public abstract class IStorageContractTests
                 StorageEntry e in storage.ListAsync(
                     "filter",
                     "*.bin",
-                    false,
+                    recursive: false,
                     CancellationToken.None
                 )
             )
@@ -570,7 +570,7 @@ public abstract class IStorageContractTests
                 StorageEntry e in storage.ListAsync(
                     "flat",
                     "*",
-                    false,
+                    recursive: false,
                     CancellationToken.None
                 )
             )
@@ -603,7 +603,7 @@ public abstract class IStorageContractTests
                 StorageEntry e in storage.ListAsync(
                     "rec",
                     "*",
-                    true,
+                    recursive: true,
                     CancellationToken.None
                 )
             )

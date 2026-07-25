@@ -29,7 +29,7 @@ public class ResourceBudgetTests
     [Fact]
     public void InitialState_AllSlotsAvailable()
     {
-        ResourceBudget budget = new([TestGpu], 8);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
         budget.AvailableGpuEncoderSlots(TestGpu.Name).Should().Be(3);
         budget.AvailableCpuThreads().Should().Be(8);
     }
@@ -37,11 +37,11 @@ public class ResourceBudgetTests
     [Fact]
     public void Acquire_GpuSlot_DecreasesAvailable()
     {
-        ResourceBudget budget = new([TestGpu], 8);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
         ResourceRequirement requirement = new(
-            TestGpu.Name,
-            1,
-            0
+            GpuDeviceKey: TestGpu.Name,
+            GpuSlots: 1,
+            CpuThreads: 0
         );
         ResourceLease lease = budget.Acquire(requirement);
         budget.AvailableGpuEncoderSlots(TestGpu.Name).Should().Be(2);
@@ -51,11 +51,11 @@ public class ResourceBudgetTests
     [Fact]
     public void Release_RestoresSlots()
     {
-        ResourceBudget budget = new([TestGpu], 8);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
         ResourceRequirement requirement = new(
-            TestGpu.Name,
-            1,
-            0
+            GpuDeviceKey: TestGpu.Name,
+            GpuSlots: 1,
+            CpuThreads: 0
         );
         ResourceLease lease = budget.Acquire(requirement);
         budget.AvailableGpuEncoderSlots(TestGpu.Name).Should().Be(2);
@@ -66,8 +66,8 @@ public class ResourceBudgetTests
     [Fact]
     public void Acquire_CpuThreads_DecreasesAvailable()
     {
-        ResourceBudget budget = new([], 8);
-        ResourceRequirement requirement = new(null, 0, 4);
+        ResourceBudget budget = new([], cpuCores: 8);
+        ResourceRequirement requirement = new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 4);
         ResourceLease lease = budget.Acquire(requirement);
         budget.AvailableCpuThreads().Should().Be(4);
         budget.Release(lease);
@@ -77,11 +77,11 @@ public class ResourceBudgetTests
     [Fact]
     public void TryAcquire_WhenExhausted_ReturnsNull()
     {
-        ResourceBudget budget = new([TestGpu], 8);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
         ResourceRequirement requirement = new(
-            TestGpu.Name,
-            1,
-            0
+            GpuDeviceKey: TestGpu.Name,
+            GpuSlots: 1,
+            CpuThreads: 0
         );
         ResourceLease lease1 = budget.Acquire(requirement);
         ResourceLease lease2 = budget.Acquire(requirement);
@@ -99,7 +99,7 @@ public class ResourceBudgetTests
     [Fact]
     public void IsGpuDeviceRegistered_TrueForRegisteredDevice()
     {
-        ResourceBudget budget = new([TestGpu], 8);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
 
         budget.IsGpuDeviceRegistered(TestGpu.Name).Should().BeTrue();
     }
@@ -109,7 +109,7 @@ public class ResourceBudgetTests
     {
         // Nvidia() only device — "nvenc" and "h264_nvenc" are vendor/encoder
         // aliases of the same semaphore, not separate devices.
-        ResourceBudget budget = new([TestGpu], 8);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
 
         budget.IsGpuDeviceRegistered("nvenc").Should().BeTrue();
         budget.IsGpuDeviceRegistered("h264_nvenc").Should().BeTrue();
@@ -120,7 +120,7 @@ public class ResourceBudgetTests
     {
         // Only an NVIDIA GPU is registered — an AMD-only key (Fillz's stuck
         // "h264_amf" child jobs) must read as permanently absent, never busy.
-        ResourceBudget budget = new([TestGpu], 8);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
 
         budget.IsGpuDeviceRegistered("h264_amf").Should().BeFalse();
         budget.IsGpuDeviceRegistered("amf").Should().BeFalse();
@@ -129,7 +129,7 @@ public class ResourceBudgetTests
     [Fact]
     public void IsGpuDeviceRegistered_FalseWhenNoGpuAtAll()
     {
-        ResourceBudget budget = new([], 8);
+        ResourceBudget budget = new([], cpuCores: 8);
 
         budget.IsGpuDeviceRegistered("h264_nvenc").Should().BeFalse();
     }
@@ -145,14 +145,14 @@ public class ResourceBudgetTests
         monitor.Setup(m => m.GetAvailableMemoryMb()).Returns(8192);
 
         ResourceBudgetOptions options = new(
-            75,
-            80,
-            1024
+            CpuHeadroomPercent: 75,
+            GpuHeadroomPercent: 80,
+            MinFreeMemoryMb: 1024
         );
-        ResourceBudget budget = new([TestGpu], 8, monitor.Object, options);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8, monitor.Object, options);
 
         ResourceLease? lease = budget.TryAcquire(
-            new(TestGpu.Name, 1, 1),
+            new(GpuDeviceKey: TestGpu.Name, GpuSlots: 1, CpuThreads: 1),
             TimeSpan.Zero
         );
 
@@ -170,14 +170,14 @@ public class ResourceBudgetTests
         monitor.Setup(m => m.GetAvailableMemoryMb()).Returns(8192);
 
         ResourceBudgetOptions options = new(
-            75,
-            80,
-            1024
+            CpuHeadroomPercent: 75,
+            GpuHeadroomPercent: 80,
+            MinFreeMemoryMb: 1024
         );
-        ResourceBudget budget = new([TestGpu], 8, monitor.Object, options);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8, monitor.Object, options);
 
         ResourceLease? lease = budget.TryAcquire(
-            new(TestGpu.Name, 1, 1),
+            new(GpuDeviceKey: TestGpu.Name, GpuSlots: 1, CpuThreads: 1),
             TimeSpan.Zero
         );
 
@@ -196,14 +196,14 @@ public class ResourceBudgetTests
         monitor.Setup(m => m.GetAvailableMemoryMb()).Returns(8192);
 
         ResourceBudgetOptions options = new(
-            75,
-            80,
-            1024
+            CpuHeadroomPercent: 75,
+            GpuHeadroomPercent: 80,
+            MinFreeMemoryMb: 1024
         );
-        ResourceBudget budget = new([TestGpu], 8, monitor.Object, options);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8, monitor.Object, options);
 
         ResourceLease? lease = budget.TryAcquire(
-            new(TestGpu.Name, 1, 0),
+            new(GpuDeviceKey: TestGpu.Name, GpuSlots: 1, CpuThreads: 0),
             TimeSpan.Zero
         );
 
@@ -219,14 +219,14 @@ public class ResourceBudgetTests
         monitor.Setup(m => m.GetAvailableMemoryMb()).Returns(256);
 
         ResourceBudgetOptions options = new(
-            75,
-            80,
-            1024
+            CpuHeadroomPercent: 75,
+            GpuHeadroomPercent: 80,
+            MinFreeMemoryMb: 1024
         );
-        ResourceBudget budget = new([TestGpu], 8, monitor.Object, options);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8, monitor.Object, options);
 
         ResourceLease? lease = budget.TryAcquire(
-            new(null, 0, 1),
+            new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 1),
             TimeSpan.Zero
         );
 
@@ -245,13 +245,13 @@ public class ResourceBudgetTests
 
         ResourceBudget budget = new(
             [TestGpu],
-            8,
+            cpuCores: 8,
             monitor.Object,
             ResourceBudgetOptions.Disabled
         );
 
         ResourceLease? lease = budget.TryAcquire(
-            new(TestGpu.Name, 1, 1),
+            new(GpuDeviceKey: TestGpu.Name, GpuSlots: 1, CpuThreads: 1),
             TimeSpan.Zero
         );
 
@@ -262,11 +262,11 @@ public class ResourceBudgetTests
     [Fact]
     public async Task ConcurrentAcquire_IsThreadSafe()
     {
-        ResourceBudget budget = new([TestGpu], 8);
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
         ResourceRequirement requirement = new(
-            TestGpu.Name,
-            1,
-            0
+            GpuDeviceKey: TestGpu.Name,
+            GpuSlots: 1,
+            CpuThreads: 0
         );
         int successCount = 0;
         List<ResourceLease> leases = [];

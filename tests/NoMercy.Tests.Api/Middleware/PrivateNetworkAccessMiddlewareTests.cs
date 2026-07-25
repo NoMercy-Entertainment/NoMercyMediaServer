@@ -45,7 +45,7 @@ public sealed class PrivateNetworkAccessMiddlewareTests
     [Fact]
     public async Task Preflight_WithoutPrivateNetworkRequest_HasNoAllowHeader()
     {
-        HttpContext context = await Invoke("OPTIONS", null);
+        HttpContext context = await Invoke("OPTIONS", requestPrivateNetwork: null);
 
         context
             .Response.Headers.ContainsKey("Access-Control-Allow-Private-Network")

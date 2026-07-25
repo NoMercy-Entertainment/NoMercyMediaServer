@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Users;
 using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
@@ -55,14 +56,14 @@ public class UserRepositoryTests : IDisposable
     public async Task UpdatePermissionsAsync_GrantsLibraryAccessToTargetUser_NotActingUser()
     {
         await _repository.UpdatePermissionsAsync(
-            SeedConstants.UserId,
-            ActingUserId,
-            true,
-            false,
-            false,
-            false,
-            true,
-            [SeedConstants.MovieLibraryId]
+            targetUserId: SeedConstants.UserId,
+            actingUserId: ActingUserId,
+            allowed: true,
+            audioTranscoding: false,
+            videoTranscoding: false,
+            noTranscoding: false,
+            manage: true,
+            libraryIds: [SeedConstants.MovieLibraryId]
         );
 
         await using MediaContext verify = _factory.CreateDbContext();

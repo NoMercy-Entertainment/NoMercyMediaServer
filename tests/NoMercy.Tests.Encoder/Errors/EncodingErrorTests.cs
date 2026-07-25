@@ -19,11 +19,11 @@ public class EncodingErrorTests
     public void Error_WithAllFields_RoundTrips()
     {
         EncodingError error = new(
-            EncodingErrorKind.CodecUnavailable,
-            "h264_nvenc not found",
-            "Encoder not available",
-            "Validate",
-            false
+            Kind: EncodingErrorKind.CodecUnavailable,
+            Message: "h264_nvenc not found",
+            FfmpegStderr: "Encoder not available",
+            StageName: "Validate",
+            Recoverable: false
         );
 
         error.Kind.Should().Be(EncodingErrorKind.CodecUnavailable);
@@ -37,11 +37,11 @@ public class EncodingErrorTests
     public void Error_WithNullOptionals_Allowed()
     {
         EncodingError error = new(
-            EncodingErrorKind.Cancelled,
-            "User cancelled",
-            null,
-            null,
-            false
+            Kind: EncodingErrorKind.Cancelled,
+            Message: "User cancelled",
+            FfmpegStderr: null,
+            StageName: null,
+            Recoverable: false
         );
 
         error.FfmpegStderr.Should().BeNull();

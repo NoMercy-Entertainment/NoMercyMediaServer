@@ -126,7 +126,7 @@ public class FfmpegCapabilityProbeTests
     [Fact]
     public async Task ProbeAsync_returns_BluRayProtocol_true_when_listed()
     {
-        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(true, false);
+        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: true, dvdread: false);
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
         SetupMuxerOutput(runner, AllMuxersOutput());
@@ -142,7 +142,7 @@ public class FfmpegCapabilityProbeTests
     [Fact]
     public async Task ProbeAsync_returns_BluRayProtocol_false_when_missing()
     {
-        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(false, false);
+        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: false, dvdread: false);
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
         SetupMuxerOutput(runner, AllMuxersOutput());
@@ -166,7 +166,7 @@ public class FfmpegCapabilityProbeTests
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
         SetupMuxerOutput(runner, AllMuxersOutput());
-        SetupFpcalc(runner, 1);
+        SetupFpcalc(runner, exitCode: 1);
         storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
 
         FfmpegCapabilityProbe probe = BuildProbe(caps, runner, storage);
@@ -274,7 +274,7 @@ public class FfmpegCapabilityProbeTests
     [Fact]
     public async Task GetCachedReport_returns_last_report_after_probe_completes()
     {
-        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(true, true);
+        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: true, dvdread: true);
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
         SetupMuxerOutput(runner, AllMuxersOutput());

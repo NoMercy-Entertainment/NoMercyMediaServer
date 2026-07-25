@@ -12,6 +12,7 @@
 using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Text;
+using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.MediaProcessing.Subtitles;
 
@@ -73,7 +74,7 @@ public class OpenSubtitlesDownloadQueueTests
         byte[] result = await provider.DownloadSubtitleAsync(
             "https://dl.opensubtitles.org/x",
             CancellationToken.None,
-            true
+            priority: true
         );
 
         Encoding.UTF8.GetString(result).Should().Be(srt);
@@ -81,7 +82,7 @@ public class OpenSubtitlesDownloadQueueTests
 
     private sealed class StubFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
-        public HttpClient CreateClient(string name) => new(handler, false);
+        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
     }
 
     private sealed class RecordingHandler(byte[] body) : HttpMessageHandler

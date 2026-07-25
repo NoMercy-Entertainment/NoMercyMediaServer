@@ -44,7 +44,7 @@ public class WorkerSelfRegistrationServiceLicenseTests
             TaskCreationOptions.RunContinuationsAsynchronously
         );
 
-        FakeLicenseTokenClient licenseClient = new(() =>
+        FakeLicenseTokenClient licenseClient = new(onRequest: () =>
         {
             refreshCalled.TrySetResult();
             return new(fresh, null, null);
@@ -61,8 +61,8 @@ public class WorkerSelfRegistrationServiceLicenseTests
                 opts.WorkerId = "tw";
                 opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(30);
             },
-            holder,
-            licenseClient
+            holder: holder,
+            licenseClient: licenseClient
         );
 
         using CancellationTokenSource cts = new();
@@ -80,12 +80,12 @@ public class WorkerSelfRegistrationServiceLicenseTests
     public async Task TokenRequest_403_SetsRevokedAndStopsLoop()
     {
         ClusterTokenHolder holder = new();
-        FakeLicenseTokenClient licenseClient = new(() =>
+        FakeLicenseTokenClient licenseClient = new(onRequest: () =>
             new(null, LicenseFailureKind.EntitlementRevoked, "403 from coordinator")
         );
 
         TaskCompletionSource stopObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        RecordingHandler http = new(req =>
+        RecordingHandler http = new(respond: req =>
         {
             // We should never reach a heartbeat — service should stop.
             if (req.RequestUri!.ToString().Contains("heartbeat"))
@@ -103,8 +103,8 @@ public class WorkerSelfRegistrationServiceLicenseTests
                 opts.WorkerId = "tw";
                 opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(30);
             },
-            holder,
-            licenseClient
+            holder: holder,
+            licenseClient: licenseClient
         );
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(3));
@@ -134,7 +134,7 @@ public class WorkerSelfRegistrationServiceLicenseTests
         int maxCalls = 4;
         TaskCompletionSource doneTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        FakeLicenseTokenClient licenseClient = new(() =>
+        FakeLicenseTokenClient licenseClient = new(onRequest: () =>
         {
             DateTime now = DateTime.UtcNow;
             lock (callLock)
@@ -163,8 +163,8 @@ public class WorkerSelfRegistrationServiceLicenseTests
                 // Very short heartbeat so the test doesn't take forever.
                 opts.WorkerHeartbeatInterval = TimeSpan.FromMilliseconds(10);
             },
-            holder,
-            licenseClient
+            holder: holder,
+            licenseClient: licenseClient
         );
 
         using CancellationTokenSource cts = new();
@@ -231,7 +231,7 @@ public class WorkerSelfRegistrationServiceLicenseTests
             Task.FromResult(onRequest());
 
         public Task<IntrospectResult> IntrospectAsync(string token, CancellationToken ct) =>
-            Task.FromResult(new IntrospectResult(true, [], null));
+            Task.FromResult(new IntrospectResult(Active: true, Scopes: [], Message: null));
     }
 
     private sealed class RecordingHandler : HttpMessageHandler

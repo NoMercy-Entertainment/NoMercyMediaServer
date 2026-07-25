@@ -100,7 +100,7 @@ public class BuildStageResumeTests
 
         try
         {
-            BuildInput input = MakeBuildInput(tempDir, 60_000);
+            BuildInput input = MakeBuildInput(tempDir: tempDir, resumeFromMs: 60_000);
 
             StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
@@ -119,7 +119,7 @@ public class BuildStageResumeTests
         }
         finally
         {
-            Directory.Delete(tempDir, true);
+            Directory.Delete(tempDir, recursive: true);
         }
     }
 
@@ -131,7 +131,7 @@ public class BuildStageResumeTests
 
         try
         {
-            BuildInput input = MakeBuildInput(tempDir, null);
+            BuildInput input = MakeBuildInput(tempDir: tempDir, resumeFromMs: null);
 
             StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
@@ -143,64 +143,68 @@ public class BuildStageResumeTests
         }
         finally
         {
-            Directory.Delete(tempDir, true);
+            Directory.Delete(tempDir, recursive: true);
         }
     }
 
     private static BuildInput MakeBuildInput(string tempDir, long? resumeFromMs)
     {
         ExecutionPlan plan = new(
+            Groups:
             [
                 new(
-                    "group_0",
+                    GroupId: "group_0",
+                    Nodes:
                     [
                         new("decode_0", OperationType.Decode, [], new()),
                         new("encode_0", OperationType.Encode, ["decode_0"], new()),
                     ],
-                    null,
-                    0,
-                    4,
-                    false,
-                    1
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 4,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            new(
-                OutputFormat.Hls,
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: new(
+                Format: OutputFormat.Hls,
+                VideoOutputs:
                 [
                     new(
-                        1920,
-                        1080,
-                        "libx264",
-                        23,
-                        4000,
-                        "medium",
-                        "high",
-                        "4.1",
-                        false,
-                        "yuv420p",
-                        "[v0]",
-                        new()
+                        Width: 1920,
+                        Height: 1080,
+                        EncoderName: "libx264",
+                        Crf: 23,
+                        BitrateKbps: 4000,
+                        Preset: "medium",
+                        Profile: "high",
+                        Level: "4.1",
+                        TenBit: false,
+                        PixelFormat: "yuv420p",
+                        MapLabel: "[v0]",
+                        ExtraFlags: new()
                     ),
                 ],
+                AudioOutputs:
                 [
                     new(
-                        "aac",
-                        192,
-                        2,
-                        48000,
-                        StreamAction.Transcode,
-                        "en",
-                        "0:a:0"
+                        EncoderName: "aac",
+                        BitrateKbps: 192,
+                        Channels: 2,
+                        SampleRate: 48000,
+                        Action: StreamAction.Transcode,
+                        Language: "en",
+                        MapLabel: "0:a:0"
                     ),
                 ],
-                [],
-                null
+                SubtitleOutputs: [],
+                Thumbnails: null
             )
         );
 
         return new(
-            plan,
+            Plan: plan,
             InputPath: "/dev/null",
             OutputDirectory: tempDir,
             MediaTitle: "test",

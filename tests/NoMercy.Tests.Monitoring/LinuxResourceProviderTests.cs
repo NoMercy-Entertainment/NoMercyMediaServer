@@ -21,6 +21,7 @@
 // an unverified platform assumption.
 #pragma warning disable CA1416
 
+using System.Reflection;
 using FluentAssertions;
 using NoMercy.Monitoring;
 using Xunit;
@@ -119,14 +120,25 @@ public class LinuxResourceProviderTests
     ) =>
         ReflectionHelpers.CreateNested(
             typeof(LinuxResourceProvider),
-            "CpuSnapshot", [label, user, nice, system, idle, ioWait, irq, softIrq, steal]
+            "CpuSnapshot",
+            label,
+            user,
+            nice,
+            system,
+            idle,
+            ioWait,
+            irq,
+            softIrq,
+            steal
         );
 
     private static double CalculatePercent(object prev, object curr) =>
         (double)
             ReflectionHelpers.InvokeStatic(
                 typeof(LinuxResourceProvider),
-                "CalculatePercent", [prev, curr]
+                "CalculatePercent",
+                prev,
+                curr
             )!;
 
     [Fact]
@@ -134,25 +146,25 @@ public class LinuxResourceProviderTests
     {
         object prev = CreateCpuSnapshot(
             "cpu",
-            0,
-            0,
-            0,
-            1000,
-            0,
-            0,
-            0,
-            0
+            user: 0,
+            nice: 0,
+            system: 0,
+            idle: 1000,
+            ioWait: 0,
+            irq: 0,
+            softIrq: 0,
+            steal: 0
         );
         object curr = CreateCpuSnapshot(
             "cpu",
-            500,
-            0,
-            0,
-            1500,
-            0,
-            0,
-            0,
-            0
+            user: 500,
+            nice: 0,
+            system: 0,
+            idle: 1500,
+            ioWait: 0,
+            irq: 0,
+            softIrq: 0,
+            steal: 0
         );
 
         // prevTotal=1000 busy=0 ; currTotal=2000 busy=500 => delta 1000/500 = 50%
@@ -197,27 +209,29 @@ public class LinuxResourceProviderTests
     }
 
     [Theory]
-    [InlineData([new[] { "cpu", "10", "20", "30" }, 1, 10L])]
-    [InlineData([new[] { "cpu", "10", "20", "30" }, 3, 30L])]
-    [InlineData([new[] { "cpu", "10", "20", "30" }, 9, 0L])] // out of range
-    [InlineData([new[] { "cpu", "not-a-number" }, 1, 0L])] // unparsable
+    [InlineData(new[] { "cpu", "10", "20", "30" }, 1, 10L)]
+    [InlineData(new[] { "cpu", "10", "20", "30" }, 3, 30L)]
+    [InlineData(new[] { "cpu", "10", "20", "30" }, 9, 0L)] // out of range
+    [InlineData(new[] { "cpu", "not-a-number" }, 1, 0L)] // unparsable
     public void ParseLong_HandlesBoundsAndMalformedInput(string[] parts, int index, long expected)
     {
         long result = (long)
             ReflectionHelpers.InvokeStatic(
                 typeof(LinuxResourceProvider),
-                "ParseLong", [parts, index]
+                "ParseLong",
+                parts,
+                index
             )!;
 
         result.Should().Be(expected);
     }
 
     [Theory]
-    [InlineData(["55.55", 55.6])]
-    [InlineData(["0", 0.0])]
-    [InlineData(["100", 100.0])]
-    [InlineData(["not-a-number", 0.0])]
-    [InlineData(["", 0.0])]
+    [InlineData("55.55", 55.6)]
+    [InlineData("0", 0.0)]
+    [InlineData("100", 100.0)]
+    [InlineData("not-a-number", 0.0)]
+    [InlineData("", 0.0)]
     public void ParseDouble_RoundsToOneDecimal_OrZeroOnFailure(string input, double expected)
     {
         double result = (double)
@@ -239,14 +253,16 @@ public class LinuxResourceProviderTests
             string name = (string)
                 ReflectionHelpers.InvokeStatic(
                     typeof(LinuxResourceProvider),
-                    "ReadAmdGpuName", [cardPath, 7]
+                    "ReadAmdGpuName",
+                    cardPath,
+                    7
                 )!;
 
             name.Should().Be("Radeon RX 6800");
         }
         finally
         {
-            Directory.Delete(cardPath, true);
+            Directory.Delete(cardPath, recursive: true);
         }
     }
 
@@ -261,14 +277,16 @@ public class LinuxResourceProviderTests
             string name = (string)
                 ReflectionHelpers.InvokeStatic(
                     typeof(LinuxResourceProvider),
-                    "ReadAmdGpuName", [cardPath, 3]
+                    "ReadAmdGpuName",
+                    cardPath,
+                    3
                 )!;
 
             name.Should().Be("GPU 3");
         }
         finally
         {
-            Directory.Delete(cardPath, true);
+            Directory.Delete(cardPath, recursive: true);
         }
     }
 
@@ -285,7 +303,9 @@ public class LinuxResourceProviderTests
             string name = (string)
                 ReflectionHelpers.InvokeStatic(
                     typeof(LinuxResourceProvider),
-                    "ReadAmdGpuName", [cardPath, 9]
+                    "ReadAmdGpuName",
+                    cardPath,
+                    9
                 )!;
 
             name.Should()
@@ -293,7 +313,7 @@ public class LinuxResourceProviderTests
         }
         finally
         {
-            Directory.Delete(cardPath, true);
+            Directory.Delete(cardPath, recursive: true);
         }
     }
 

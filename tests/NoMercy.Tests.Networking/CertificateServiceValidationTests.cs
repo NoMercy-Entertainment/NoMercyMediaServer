@@ -13,6 +13,7 @@ using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
@@ -241,7 +242,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         });
         CertificateService service = BuildFastRetryService(factory);
 
-        await service.RenewSslCertificate("test-token", 1);
+        await service.RenewSslCertificate("test-token", maxRetries: 1);
 
         Assert.True(factoryCalled);
     }
@@ -259,7 +260,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         using X509Certificate2 valid = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(14));
         InjectCachedCertificate(service, valid);
 
-        await service.RenewSslCertificate("test-token", 1);
+        await service.RenewSslCertificate("test-token", maxRetries: 1);
 
         Assert.False(factoryCalled);
     }
@@ -277,7 +278,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         using X509Certificate2 nearExpiry = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(12));
         InjectCachedCertificate(service, nearExpiry);
 
-        await service.RenewSslCertificate("test-token", 1);
+        await service.RenewSslCertificate("test-token", maxRetries: 1);
 
         Assert.True(factoryCalled);
     }
@@ -295,7 +296,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         using X509Certificate2 expired = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddSeconds(-1));
         InjectCachedCertificate(service, expired);
 
-        await service.RenewSslCertificate("test-token", 1);
+        await service.RenewSslCertificate("test-token", maxRetries: 1);
 
         Assert.True(factoryCalled);
     }
@@ -311,7 +312,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         });
         CertificateService service = BuildService(factory);
 
-        await service.RenewSslCertificate(null, 1);
+        await service.RenewSslCertificate(accessToken: null, maxRetries: 1);
 
         Assert.False(factoryCalled);
     }
@@ -327,7 +328,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         });
         CertificateService service = BuildService(factory);
 
-        await service.RenewSslCertificate(string.Empty, 1);
+        await service.RenewSslCertificate(accessToken: string.Empty, maxRetries: 1);
 
         Assert.False(factoryCalled);
     }
@@ -348,7 +349,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         });
         CertificateService service = BuildService(factory);
 
-        await service.RenewSslCertificate("test-token", 5);
+        await service.RenewSslCertificate("test-token", maxRetries: 5);
 
         Assert.Equal(1, callCount);
     }
@@ -364,7 +365,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         });
         CertificateService service = BuildService(factory);
 
-        await service.RenewSslCertificate("test-token", 5);
+        await service.RenewSslCertificate("test-token", maxRetries: 5);
 
         Assert.Equal(1, callCount);
     }
@@ -383,7 +384,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         });
         CertificateService service = BuildService(factory);
 
-        await service.RenewSslCertificate("test-token", 3);
+        await service.RenewSslCertificate("test-token", maxRetries: 3);
 
         Assert.Equal(1, callCount);
     }
@@ -399,7 +400,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         });
         CertificateService service = BuildFastRetryService(factory);
 
-        await service.RenewSslCertificate("test-token", 2);
+        await service.RenewSslCertificate("test-token", maxRetries: 2);
 
         Assert.Equal(2, callCount);
     }
@@ -416,7 +417,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         CertificateService service = BuildFastRetryService(factory);
 
         await Assert.ThrowsAsync<HttpRequestException>(() =>
-            service.RenewSslCertificate("test-token", 2)
+            service.RenewSslCertificate("test-token", maxRetries: 2)
         );
 
         Assert.Equal(2, callCount);
@@ -471,7 +472,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
             if (File.Exists(candidate))
                 return candidate;
 
-            string repoCandidate = Path.Combine([dir, "..", "..", "..", "..", "..", relativePath]);
+            string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
             string resolved = Path.GetFullPath(repoCandidate);
             if (File.Exists(resolved))
                 return resolved;

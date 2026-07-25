@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NoMercy.Api.Controllers.V1.Encoder;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Startup;
@@ -80,7 +81,7 @@ public class EncoderHardwareControllerTests
             .Returns(job);
 
         IActionResult result = CreateController()
-            .StartBenchmark(new([], null));
+            .StartBenchmark(new(Codecs: [], Resolutions: null));
 
         Assert.IsType<AcceptedResult>(result);
         _tracker.Verify(
@@ -102,10 +103,10 @@ public class EncoderHardwareControllerTests
             .Returns(job);
 
         IActionResult result = CreateController()
-            .StartBenchmark(new(["H264", "Av1"], null));
+            .StartBenchmark(new(Codecs: ["H264", "Av1"], Resolutions: null));
 
         Assert.IsType<AcceptedResult>(result);
-        captured.Should().Equal([VideoCodecType.H264, VideoCodecType.Av1]);
+        captured.Should().Equal(VideoCodecType.H264, VideoCodecType.Av1);
     }
 
     [Fact]
@@ -121,7 +122,7 @@ public class EncoderHardwareControllerTests
             .Returns(job);
 
         IActionResult result = CreateController()
-            .StartBenchmark(new(["h265"], null));
+            .StartBenchmark(new(Codecs: ["h265"], Resolutions: null));
 
         Assert.IsType<AcceptedResult>(result);
         captured.Should().Equal(VideoCodecType.H265);
@@ -140,17 +141,17 @@ public class EncoderHardwareControllerTests
             .Returns(job);
 
         IActionResult result = CreateController()
-            .StartBenchmark(new(null, [1080, 2160]));
+            .StartBenchmark(new(Codecs: null, Resolutions: [1080, 2160]));
 
         Assert.IsType<AcceptedResult>(result);
-        captured.Should().Equal([1080, 2160]);
+        captured.Should().Equal(1080, 2160);
     }
 
     [Fact]
     public void StartBenchmark_UnknownCodecName_Returns422WithSuggestion()
     {
         IActionResult result = CreateController()
-            .StartBenchmark(new(["not-a-real-codec"], null));
+            .StartBenchmark(new(Codecs: ["not-a-real-codec"], Resolutions: null));
 
         UnprocessableEntityObjectResult unprocessable =
             Assert.IsType<UnprocessableEntityObjectResult>(result);
@@ -169,7 +170,7 @@ public class EncoderHardwareControllerTests
         // Two invalid entries — only the FIRST must be reported and the loop
         // must stop there rather than continuing to validate the rest.
         IActionResult result = CreateController()
-            .StartBenchmark(new(["totally-bogus", "also-bogus"], null));
+            .StartBenchmark(new(Codecs: ["totally-bogus", "also-bogus"], Resolutions: null));
 
         UnprocessableEntityObjectResult unprocessable =
             Assert.IsType<UnprocessableEntityObjectResult>(result);
@@ -182,7 +183,7 @@ public class EncoderHardwareControllerTests
     public void StartBenchmark_ValidThenInvalidCodec_Returns422_NeverStartsJob()
     {
         IActionResult result = CreateController()
-            .StartBenchmark(new(["H264", "not-a-real-codec"], null));
+            .StartBenchmark(new(Codecs: ["H264", "not-a-real-codec"], Resolutions: null));
 
         Assert.IsType<UnprocessableEntityObjectResult>(result);
         _tracker.Verify(
@@ -285,16 +286,16 @@ public class EncoderHardwareControllerTests
     public void GetCapabilities_CachedReportAvailable_ReturnsTheReport()
     {
         CapabilityReport report = new(
-            true,
-            false,
-            ["libx264", "h264_nvenc"],
-            [],
-            [],
-            true,
-            false,
-            true,
-            "/models",
-            []
+            BluRayProtocol: true,
+            DvdReadProtocol: false,
+            AvailableEncoders: ["libx264", "h264_nvenc"],
+            MissingFilters: [],
+            MissingMuxers: [],
+            FpcalcPresent: true,
+            WhisperModelPresent: false,
+            TesseractEngTraineddataPresent: true,
+            TesseractModelsDirectory: "/models",
+            Issues: []
         );
         _probe.Setup(p => p.GetCachedReport()).Returns(report);
 

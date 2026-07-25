@@ -88,8 +88,8 @@ public class ColorPaletteJobTests : IDisposable
     public async Task Already_filled_palette_skips_persist()
     {
         (ColorPaletteJob job, StubSource source) = Build(
-            "{\"poster\":{}}",
-            () => Task.FromResult(PaletteResult.Success("{\"poster\":{}}"))
+            current: "{\"poster\":{}}",
+            generate: () => Task.FromResult(PaletteResult.Success("{\"poster\":{}}"))
         );
         PaletteSourceRegistry registry = new([source]);
 
@@ -103,8 +103,8 @@ public class ColorPaletteJobTests : IDisposable
     {
         string expectedJson = "{\"poster\":{\"dominant\":\"#abc\"}}";
         (ColorPaletteJob job, StubSource source) = Build(
-            "",
-            () => Task.FromResult(PaletteResult.Success(expectedJson))
+            current: "",
+            generate: () => Task.FromResult(PaletteResult.Success(expectedJson))
         );
         PaletteSourceRegistry registry = new([source]);
 
@@ -118,8 +118,8 @@ public class ColorPaletteJobTests : IDisposable
     public async Task Transient_failure_propagates_and_does_not_persist_empty_braces()
     {
         (ColorPaletteJob job, StubSource source) = Build(
-            "",
-            () => throw new HttpRequestException("simulated network failure")
+            current: "",
+            generate: () => throw new HttpRequestException("simulated network failure")
         );
         PaletteSourceRegistry registry = new([source]);
 
@@ -133,8 +133,8 @@ public class ColorPaletteJobTests : IDisposable
     public async Task NoImage_result_persists_terminal_empty_braces()
     {
         (ColorPaletteJob job, StubSource source) = Build(
-            "",
-            () => Task.FromResult(PaletteResult.NoImage())
+            current: "",
+            generate: () => Task.FromResult(PaletteResult.NoImage())
         );
         PaletteSourceRegistry registry = new([source]);
 
@@ -154,8 +154,8 @@ public class ColorPaletteJobTests : IDisposable
         // thrown exception means "retry"; a stored value means "answered".
         bool generated = false;
         (ColorPaletteJob job, StubSource source) = Build(
-            "{}",
-            () =>
+            current: "{}",
+            generate: () =>
             {
                 generated = true;
                 return Task.FromResult(PaletteResult.NoImage());

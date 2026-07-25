@@ -43,7 +43,7 @@ public class PluginServiceRegistrationTests : IDisposable
         try
         {
             if (Directory.Exists(_tempPluginsDir))
-                Directory.Delete(_tempPluginsDir, true);
+                Directory.Delete(_tempPluginsDir, recursive: true);
         }
         catch (Exception) { }
     }
@@ -67,18 +67,28 @@ public class PluginServiceRegistrationTests : IDisposable
         string configDir = Path.GetDirectoryName(tfmDir)!; // <Config> e.g. Debug | Release
         string buildConfig = Path.GetFileName(configDir);
 
-        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
+        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
 
         // Prefer the configuration that matches the currently running test assembly.
         // Fall back to the other known configuration so a local Debug build still works
         // when a Release artefact happens to be present (and vice-versa).
-        string preferred = Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", buildConfig, "net10.0"]
+        string preferred = Path.Combine(
+            repoRoot,
+            "tests",
+            "NoMercy.Plugin.Samples.Echo",
+            "bin",
+            buildConfig,
+            "net10.0"
         );
-        string fallback = Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", string.Equals(buildConfig, "Release", StringComparison.OrdinalIgnoreCase)
+        string fallback = Path.Combine(
+            repoRoot,
+            "tests",
+            "NoMercy.Plugin.Samples.Echo",
+            "bin",
+            string.Equals(buildConfig, "Release", StringComparison.OrdinalIgnoreCase)
                 ? "Debug"
                 : "Release",
-                "net10.0"
-            ]
+            "net10.0"
         );
 
         if (Directory.Exists(preferred))
@@ -103,10 +113,10 @@ public class PluginServiceRegistrationTests : IDisposable
             );
 
         foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
-            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), overwrite: true);
 
         if (File.Exists(manifestSrc))
-            File.Copy(manifestSrc, Path.Combine(_echoPluginDir, "plugin.json"), true);
+            File.Copy(manifestSrc, Path.Combine(_echoPluginDir, "plugin.json"), overwrite: true);
     }
 
     private static string GetFailuresPluginBinDir()
@@ -117,9 +127,15 @@ public class PluginServiceRegistrationTests : IDisposable
         string tfmDir = testBinDir;
         string configDir = Path.GetDirectoryName(tfmDir)!;
         string buildConfig = Path.GetFileName(configDir);
-        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
+        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
 
-        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0"]
+        return Path.Combine(
+            repoRoot,
+            "tests",
+            "NoMercy.Plugin.Samples.Failures",
+            "bin",
+            buildConfig,
+            "net10.0"
         );
     }
 
@@ -136,12 +152,12 @@ public class PluginServiceRegistrationTests : IDisposable
 
         Directory.CreateDirectory(targetDir);
         foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
-            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), overwrite: true);
         foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
-            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), overwrite: true);
 
         if (File.Exists(manifestSrc))
-            File.Copy(manifestSrc, Path.Combine(targetDir, "plugin.json"), true);
+            File.Copy(manifestSrc, Path.Combine(targetDir, "plugin.json"), overwrite: true);
     }
 
     [Fact]
@@ -237,14 +253,14 @@ public class PluginServiceRegistrationTests : IDisposable
         File.WriteAllText(
             Path.Combine(pluginDir, "plugin.json"),
             """
-                      {
-                        "id": "44444444-4444-4444-4444-444444444444",
-                        "name": "MissingAssembly",
-                        "description": "manifest with no matching dll on disk",
-                        "version": "1.0.0",
-                        "assembly": "DoesNotExist.dll"
-                      }
-                      """
+            {
+              "id": "44444444-4444-4444-4444-444444444444",
+              "name": "MissingAssembly",
+              "description": "manifest with no matching dll on disk",
+              "version": "1.0.0",
+              "assembly": "DoesNotExist.dll"
+            }
+            """
         );
 
         IServiceCollection services = new ServiceCollection();

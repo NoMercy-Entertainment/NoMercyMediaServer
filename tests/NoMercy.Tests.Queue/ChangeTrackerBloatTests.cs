@@ -154,7 +154,7 @@ public class ChangeTrackerBloatTests : IDisposable
     [Fact]
     public void FailJob_ChangeTrackerClearedAfterSave()
     {
-        JobQueue jobQueue = new(_adapter, 1);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 1);
 
         for (int i = 0; i < 20; i++)
         {

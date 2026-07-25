@@ -54,11 +54,11 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
     {
         JwtSecurityTokenHandler handler = new();
         JwtSecurityToken token = new(
-            "https://auth.nomercy.tv/realms/NoMercyTV",
-            "nomercy-server",
-            [new("sub", Guid.NewGuid().ToString())],
-            DateTime.UtcNow.AddMinutes(-5),
-            DateTime.UtcNow.Add(validFor)
+            issuer: "https://auth.nomercy.tv/realms/NoMercyTV",
+            audience: "nomercy-server",
+            claims: [new("sub", Guid.NewGuid().ToString())],
+            notBefore: DateTime.UtcNow.AddMinutes(-5),
+            expires: DateTime.UtcNow.Add(validFor)
         );
         return handler.WriteToken(token);
     }
@@ -111,8 +111,8 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
             new NoOpApiKeyLoader(),
             new ApiKeyStore(),
             new NoOpServerRegistrationService(),
-            null,
-            _ => Task.CompletedTask
+            networkDiscovery: null,
+            delay: _ => Task.CompletedTask
         );
 
         Task loopTask = recovery.StartRecoveryLoop(tasks);
@@ -146,8 +146,8 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
             new NoOpApiKeyLoader(),
             apiKeyStore,
             registration,
-            null,
-            _ => Task.CompletedTask
+            networkDiscovery: null,
+            delay: _ => Task.CompletedTask
         );
 
         await recovery.StartRecoveryLoop(tasks).WaitAsync(TimeSpan.FromSeconds(15));
@@ -179,8 +179,8 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
             new NoOpApiKeyLoader(),
             apiKeyStore,
             registration,
-            null,
-            _ => Task.CompletedTask
+            networkDiscovery: null,
+            delay: _ => Task.CompletedTask
         );
 
         // AllCompleted never flips (Authenticated stays false) — run one iteration's
@@ -213,8 +213,8 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
             new NoOpApiKeyLoader(),
             apiKeyStore,
             registration,
-            null,
-            _ => Task.CompletedTask
+            networkDiscovery: null,
+            delay: _ => Task.CompletedTask
         );
 
         Task loopTask = recovery.StartRecoveryLoop(tasks);
@@ -242,8 +242,8 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
             new NoOpApiKeyLoader(),
             apiKeyStore,
             new CooldownServerRegistrationService(),
-            null,
-            _ => Task.CompletedTask
+            networkDiscovery: null,
+            delay: _ => Task.CompletedTask
         );
 
         Task loopTask = recovery.StartRecoveryLoop(tasks);
@@ -269,8 +269,8 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
             new NoOpApiKeyLoader(),
             apiKeyStore,
             new FailingServerRegistrationService(),
-            null,
-            _ => Task.CompletedTask
+            networkDiscovery: null,
+            delay: _ => Task.CompletedTask
         );
 
         Task loopTask = recovery.StartRecoveryLoop(tasks);
@@ -292,8 +292,8 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
             new ThrowingApiKeyLoader(),
             new ApiKeyStore(),
             new NoOpServerRegistrationService(),
-            null,
-            _ => Task.CompletedTask
+            networkDiscovery: null,
+            delay: _ => Task.CompletedTask
         );
 
         Task loopTask = recovery.StartRecoveryLoop(tasks);
@@ -315,8 +315,8 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
             new NoOpApiKeyLoader(),
             new ApiKeyStore(),
             new NoOpServerRegistrationService(),
-            new ThrowingNetworkDiscovery(),
-            _ => Task.CompletedTask
+            networkDiscovery: new ThrowingNetworkDiscovery(),
+            delay: _ => Task.CompletedTask
         );
 
         Task loopTask = recovery.StartRecoveryLoop(tasks);

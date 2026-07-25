@@ -27,7 +27,7 @@ public class DiskOverlayLoaderTests : IDisposable
     {
         try
         {
-            Directory.Delete(_tempDir, true);
+            Directory.Delete(_tempDir, recursive: true);
         }
         catch { }
     }
@@ -38,11 +38,11 @@ public class DiskOverlayLoaderTests : IDisposable
         File.WriteAllText(
             Path.Combine(_tempDir, "wrap.json"),
             """
-                      {
-                          "name": "Wrapped",
-                          "profile": { "id": "01HQ6298ZS00000000000000AA", "name": "Wrapped", "container": 3, "audio": [], "subtitles": [] }
-                      }
-                      """
+            {
+                "name": "Wrapped",
+                "profile": { "id": "01HQ6298ZS00000000000000AA", "name": "Wrapped", "container": 3, "audio": [], "subtitles": [] }
+            }
+            """
         );
 
         DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
@@ -57,8 +57,8 @@ public class DiskOverlayLoaderTests : IDisposable
         File.WriteAllText(
             Path.Combine(_tempDir, "raw.json"),
             """
-                      { "id": "01HQ6298ZS00000000000000BB", "name": "Raw", "container": 3, "audio": [], "subtitles": [] }
-                      """
+            { "id": "01HQ6298ZS00000000000000BB", "name": "Raw", "container": 3, "audio": [], "subtitles": [] }
+            """
         );
 
         DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
@@ -72,8 +72,8 @@ public class DiskOverlayLoaderTests : IDisposable
         File.WriteAllText(
             Path.Combine(_tempDir, "good.json"),
             """
-                      { "name": "Good", "profile": { "id": "01HQ6298ZS00000000000000CC", "name": "Good", "container": 3, "audio": [], "subtitles": [] } }
-                      """
+            { "name": "Good", "profile": { "id": "01HQ6298ZS00000000000000CC", "name": "Good", "container": 3, "audio": [], "subtitles": [] } }
+            """
         );
         File.WriteAllText(Path.Combine(_tempDir, "bad.json"), "{not json");
 
@@ -90,19 +90,19 @@ public class DiskOverlayLoaderTests : IDisposable
         File.WriteAllText(
             Path.Combine(_tempDir, "extra.json"),
             """
-                      {
-                          "name": "Extra",
-                          "futureField": "ignored",
-                          "profile": {
-                              "id": "01HQ6298ZS00000000000000DD",
-                              "name": "Extra",
-                              "container": 3,
-                              "audio": [],
-                              "subtitles": [],
-                              "anotherFutureField": 42
-                          }
-                      }
-                      """
+            {
+                "name": "Extra",
+                "futureField": "ignored",
+                "profile": {
+                    "id": "01HQ6298ZS00000000000000DD",
+                    "name": "Extra",
+                    "container": 3,
+                    "audio": [],
+                    "subtitles": [],
+                    "anotherFutureField": 42
+                }
+            }
+            """
         );
         DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
         result.Loaded.Should().HaveCount(1);
@@ -116,8 +116,8 @@ public class DiskOverlayLoaderTests : IDisposable
         File.WriteAllText(
             Path.Combine(_tempDir, "ok.json"),
             """
-                      { "id": "01HQ6298ZS00000000000000EE", "name": "Ok", "container": 3, "audio": [], "subtitles": [] }
-                      """
+            { "id": "01HQ6298ZS00000000000000EE", "name": "Ok", "container": 3, "audio": [], "subtitles": [] }
+            """
         );
         DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
         result.Loaded.Should().HaveCount(1);
@@ -130,14 +130,14 @@ public class DiskOverlayLoaderTests : IDisposable
         File.WriteAllText(
             Path.Combine(_tempDir, "w.json"),
             """
-                      { "name": "W", "profile": { "id": "01HQ6298ZS00000000000000FF", "name": "W", "container": 3, "audio": [], "subtitles": [] } }
-                      """
+            { "name": "W", "profile": { "id": "01HQ6298ZS00000000000000FF", "name": "W", "container": 3, "audio": [], "subtitles": [] } }
+            """
         );
         File.WriteAllText(
             Path.Combine(_tempDir, "r.json"),
             """
-                      { "id": "01HQ6298ZS0000000000000100", "name": "R", "container": 3, "audio": [], "subtitles": [] }
-                      """
+            { "id": "01HQ6298ZS0000000000000100", "name": "R", "container": 3, "audio": [], "subtitles": [] }
+            """
         );
         DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
         result.Loaded.Should().HaveCount(2);
@@ -152,8 +152,8 @@ public class DiskOverlayLoaderTests : IDisposable
         File.WriteAllText(
             Path.Combine(sub, "deep.json"),
             """
-                      { "id": "01HQ6298ZS0000000000000111", "name": "Deep", "container": 3, "audio": [], "subtitles": [] }
-                      """
+            { "id": "01HQ6298ZS0000000000000111", "name": "Deep", "container": 3, "audio": [], "subtitles": [] }
+            """
         );
         DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
         result.Loaded.Should().BeEmpty();
@@ -174,14 +174,14 @@ public class DiskOverlayLoaderTests : IDisposable
         File.WriteAllText(
             Path.Combine(_tempDir, "first.json"),
             """
-                      { "id": "01HQ6298ZS0000000000000222", "name": "First", "container": 3, "audio": [], "subtitles": [] }
-                      """
+            { "id": "01HQ6298ZS0000000000000222", "name": "First", "container": 3, "audio": [], "subtitles": [] }
+            """
         );
         File.WriteAllText(
             Path.Combine(_tempDir, "second.json"),
             """
-                      { "id": "01HQ6298ZS0000000000000222", "name": "Second", "container": 3, "audio": [], "subtitles": [] }
-                      """
+            { "id": "01HQ6298ZS0000000000000222", "name": "Second", "container": 3, "audio": [], "subtitles": [] }
+            """
         );
         DiskOverlayLoader.LoadResult result = DiskOverlayLoader.Load(_tempDir);
         result.Loaded.Should().HaveCount(2);

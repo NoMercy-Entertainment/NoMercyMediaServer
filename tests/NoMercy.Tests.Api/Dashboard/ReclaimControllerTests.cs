@@ -133,21 +133,21 @@ public class ReclaimControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task GetIndex_PageIndexFarBeyondLastPage_ReturnsEmptyItemsNotFirstPage()
     {
         ReclaimableItem item = new(
-            "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-            "Test Movie",
-            "movie",
-            "/media/movies/Test Movie",
-            "master.m3u8",
-            ReclaimKind.ReclaimableHls,
-            ["/media/movies/Test Movie/720p"],
-            123456789L
+            Id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+            Title: "Test Movie",
+            MediaType: "movie",
+            Folder: "/media/movies/Test Movie",
+            ServedCopy: "master.m3u8",
+            Kind: ReclaimKind.ReclaimableHls,
+            TargetPaths: ["/media/movies/Test Movie/720p"],
+            ReclaimableBytes: 123456789L
         );
 
         ReclaimScanResult result = new(
-            [item, item, item],
-            [],
-            123456789L,
-            0L
+            Items: [item, item, item],
+            PartialJunk: [],
+            TotalReclaimableBytes: 123456789L,
+            TotalPartialJunkBytes: 0L
         );
 
         FakeReclaimScanService fakeService = new()
@@ -202,21 +202,21 @@ public class ReclaimControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task GetIndex_WithItems_ReturnsCamelCaseItemEnvelopeWithoutTargetPaths()
     {
         ReclaimableItem item = new(
-            "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-            "Test Movie",
-            "movie",
-            "/media/movies/Test Movie",
-            "master.m3u8",
-            ReclaimKind.ReclaimableHls,
-            ["/media/movies/Test Movie/720p", "/media/movies/Test Movie/480p"],
-            123456789L
+            Id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+            Title: "Test Movie",
+            MediaType: "movie",
+            Folder: "/media/movies/Test Movie",
+            ServedCopy: "master.m3u8",
+            Kind: ReclaimKind.ReclaimableHls,
+            TargetPaths: ["/media/movies/Test Movie/720p", "/media/movies/Test Movie/480p"],
+            ReclaimableBytes: 123456789L
         );
 
         ReclaimScanResult result = new(
-            [item],
-            [],
-            123456789L,
-            0L
+            Items: [item],
+            PartialJunk: [],
+            TotalReclaimableBytes: 123456789L,
+            TotalPartialJunkBytes: 0L
         );
 
         FakeReclaimScanService fakeService = new()

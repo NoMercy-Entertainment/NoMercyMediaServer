@@ -62,7 +62,7 @@ public class JobDispatcherTests
         TestJob job = new() { Message = "child will not enqueue" };
 
         Action act = () =>
-            dispatcher.DispatchChild(job, "encoder-child", 1, 5, "g");
+            dispatcher.DispatchChild(job, "encoder-child", 1, parentJobId: 5, groupTag: "g");
 
         act.Should().NotThrow();
         context.Verify(c => c.AddJob(It.IsAny<QueueJobModel>()), Times.Never);
@@ -260,10 +260,10 @@ public class JobDispatcherTests
 
         dispatcher.DispatchChild(
             testJob,
-            "encoder-child",
-            7,
-            42,
-            "group-abc"
+            onQueue: "encoder-child",
+            priority: 7,
+            parentJobId: 42,
+            groupTag: "group-abc"
         );
 
         Assert.Single(adapter.Jobs);

@@ -66,7 +66,7 @@ public sealed class PortForwardStrategyTests
     public async Task TryEstablishAsync_WhenNatStatusIsOpen_ReturnsTrue_WithoutCheckingPort()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.Open };
-        PortForwardStrategy strategy = BuildStrategy(status, false);
+        PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
 
         bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 
@@ -78,7 +78,7 @@ public sealed class PortForwardStrategyTests
     public async Task TryEstablishAsync_WhenNatStatusIsFiltered_SetsPortForwarded_AndPromotesToOpen()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.Filtered };
-        PortForwardStrategy strategy = BuildStrategy(status, false);
+        PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
 
         bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 
@@ -91,7 +91,7 @@ public sealed class PortForwardStrategyTests
     public async Task TryEstablishAsync_WhenNatStatusIsNone_AndPortOpen_ReturnsTrueAndSetsOpen()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.None };
-        PortForwardStrategy strategy = BuildStrategy(status, true);
+        PortForwardStrategy strategy = BuildStrategy(status, portOpen: true);
 
         bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 
@@ -103,7 +103,7 @@ public sealed class PortForwardStrategyTests
     public async Task TryEstablishAsync_WhenNatStatusIsNone_AndPortClosed_ReturnsFalse()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.None };
-        PortForwardStrategy strategy = BuildStrategy(status, false);
+        PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
 
         bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 
@@ -114,7 +114,7 @@ public sealed class PortForwardStrategyTests
     public async Task TryEstablishAsync_WhenNatStatusIsClosed_AndPortClosed_ReturnsFalse()
     {
         ConnectivityStatus status = new() { NatStatus = NatStatus.Closed };
-        PortForwardStrategy strategy = BuildStrategy(status, false);
+        PortForwardStrategy strategy = BuildStrategy(status, portOpen: false);
 
         bool result = await strategy.TryEstablishAsync(CancellationToken.None);
 

@@ -33,41 +33,43 @@ public class AnalyzeStageTests
 
     private static MediaInfo BuildMediaInfo() =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
+            AudioStreams:
             [
                 new(
-                    1,
-                    "aac",
-                    2,
-                    48000,
-                    192,
-                    "en",
-                    true,
-                    false
+                    Index: 1,
+                    Codec: "aac",
+                    Channels: 2,
+                    SampleRate: 48000,
+                    BitRateKbps: 192,
+                    Language: "en",
+                    IsDefault: true,
+                    IsForced: false
                 ),
             ],
-            [],
-            []
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     // ------------------------------------------------------------------

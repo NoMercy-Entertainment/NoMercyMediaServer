@@ -132,7 +132,7 @@ public class ServiceRegistrationBranchTests
         finally
         {
             if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, true);
+                Directory.Delete(tempDir, recursive: true);
         }
     }
 

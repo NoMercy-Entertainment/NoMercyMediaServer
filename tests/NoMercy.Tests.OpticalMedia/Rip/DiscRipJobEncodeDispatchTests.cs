@@ -17,6 +17,7 @@ using NoMercy.Events;
 using NoMercy.Events.DriveMonitor;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Dto;
+using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
@@ -60,14 +61,14 @@ public class DiscRipJobEncodeDispatchTests
         RipMode mode = RipMode.RipAndEncode
     ) =>
         new(
-            "D:\\",
+            DrivePath: "D:\\",
             SelectedTitleIndices: [1],
             MetadataId: null,
             Custom: new(
-                "Test Film",
-                2024,
-                OpticalMediaType.Movie,
-                null
+                Title: "Test Film",
+                Year: 2024,
+                Type: OpticalMediaType.Movie,
+                PosterUrl: null
             ),
             LibraryId: KnownLibraryId,
             FolderId: KnownFolderId,
@@ -111,12 +112,12 @@ public class DiscRipJobEncodeDispatchTests
 
     private static DiscRipResult MakeRipResult(string outputPath = "/tmp/title_01.mkv") =>
         new(
-            1,
-            outputPath,
-            true,
-            TimeSpan.FromMinutes(90),
-            1_000_000,
-            null
+            TitleIndex: 1,
+            OutputPath: outputPath,
+            Success: true,
+            Duration: TimeSpan.FromMinutes(90),
+            OutputSizeBytes: 1_000_000,
+            Error: null
         );
 
     private static Mock<IStorage> MakeStorageMock(string hostPath)
@@ -227,8 +228,8 @@ public class DiscRipJobEncodeDispatchTests
             Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
 
             RipRequest request = MakeVideoRequest(
-                OpticalDiscType.Dvd,
-                KnownPresetId.ToString()
+                discType: OpticalDiscType.Dvd,
+                encodingProfileId: KnownPresetId.ToString()
             );
 
             DiscRipJob job = BuildJob(
@@ -310,8 +311,8 @@ public class DiscRipJobEncodeDispatchTests
             Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
 
             RipRequest request = MakeVideoRequest(
-                OpticalDiscType.BluRay,
-                differentPresetId.ToString()
+                discType: OpticalDiscType.BluRay,
+                encodingProfileId: differentPresetId.ToString()
             );
 
             DiscRipJob job = BuildJob(
@@ -386,8 +387,8 @@ public class DiscRipJobEncodeDispatchTests
             Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
 
             RipRequest request = MakeVideoRequest(
-                OpticalDiscType.Dvd,
-                null
+                discType: OpticalDiscType.Dvd,
+                encodingProfileId: null
             );
 
             DiscRipJob job = BuildJob(
@@ -445,7 +446,7 @@ public class DiscRipJobEncodeDispatchTests
         Library library = MakeLibrary();
         Mock<IStorage> storageMock = MakeStorageMock("/media/music");
 
-        RipRequest request = MakeVideoRequest(OpticalDiscType.Cd);
+        RipRequest request = MakeVideoRequest(discType: OpticalDiscType.Cd);
 
         DiscRipJob job = BuildJob(
             request,
@@ -514,12 +515,12 @@ public class DiscRipJobEncodeDispatchTests
             Library library = MakeLibrary();
             Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
 
-            RipRequest request = MakeVideoRequest(OpticalDiscType.Dvd);
+            RipRequest request = MakeVideoRequest(discType: OpticalDiscType.Dvd);
 
             DiscRipJob job = BuildJob(
                 request,
                 ripperMock.Object,
-                null,
+                jobDispatcher: null,
                 storageMock.Object,
                 folder,
                 library

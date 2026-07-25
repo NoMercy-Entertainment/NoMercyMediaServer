@@ -33,14 +33,14 @@ public class CoordinatorReEnqueueDedupTests
     public void CoordinatorState_WakeSequenceDefaultsToZero()
     {
         CoordinatorState state = new(
-            "G",
-            ["t1"],
-            CoordinatorPhase.WaitChildren,
-            null,
-            null,
-            null,
-            Ulid.NewUlid(),
-            1
+            GroupTag: "G",
+            TaskIds: ["t1"],
+            Phase: CoordinatorPhase.WaitChildren,
+            Pass1DispatchedAt: null,
+            Pass2DispatchedAt: null,
+            Pass1StatsPath: null,
+            PresetId: Ulid.NewUlid(),
+            ExpectedFinalCount: 1
         );
 
         Assert.Equal(0, state.WakeSequence);
@@ -52,7 +52,7 @@ public class CoordinatorReEnqueueDedupTests
         // Identical otherwise — same Phase, same bundle index, same group, same
         // task list. Pre-fix this collision is exactly what killed the coordinator.
         CoordinatorState first = new(
-            "G",
+            GroupTag: "G",
             TaskIds: ["t1", "t2"],
             Phase: CoordinatorPhase.WaitChildren,
             Pass1DispatchedAt: null,
@@ -82,7 +82,7 @@ public class CoordinatorReEnqueueDedupTests
         // (e.g. retry after crash with the same WakeSequence). The nonce only
         // diverges via ReEnqueueSelf's explicit increment.
         CoordinatorState a = new(
-            "G",
+            GroupTag: "G",
             TaskIds: ["t1"],
             Phase: CoordinatorPhase.WaitChildren,
             Pass1DispatchedAt: null,

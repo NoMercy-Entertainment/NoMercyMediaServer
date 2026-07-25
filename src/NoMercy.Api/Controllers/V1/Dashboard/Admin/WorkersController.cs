@@ -96,7 +96,7 @@ public class WorkersController(
         if (!encoderOptions.IsDistributedEncodingEnabled)
             return ServiceUnavailableResponse(
                 "Distributed encoding is not enabled on this server. "
-                        + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
+                    + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
             );
 
         if (!AuthPolicy.IsOwner(User))
@@ -124,25 +124,27 @@ public class WorkersController(
         httpClient.Timeout = TimeSpan.FromMinutes(10); // Task encodes take minutes.
 
         HttpRemoteWorker worker = new(
-            request.WorkerId,
-            httpClient,
-            serializer,
-            encoderOptions.GetDistributedEncodingSigningKey(),
-            new HardwareCapabilities(
-                request.Gpus ?? [],
-                request.CpuCores
+            workerId: request.WorkerId,
+            http: httpClient,
+            serializer: serializer,
+            signingKey: encoderOptions.GetDistributedEncodingSigningKey(),
+            initialCapabilities: new HardwareCapabilities(
+                Gpus: request.Gpus ?? [],
+                CpuCores: request.CpuCores
             ),
-            new(
-                request.AvailableGpuSlots,
-                request.AvailableCpuThreads,
-                0
+            initialBudget: new(
+                AvailableGpuSlots: request.AvailableGpuSlots,
+                AvailableCpuThreads: request.AvailableCpuThreads,
+                GpuUtilization: 0
             ),
-            workerLogger
+            logger: workerLogger
         );
 
         registry.Register(worker);
         logger.LogInformation(
-            "Registered remote worker {WorkerId} at {BaseUrl}", [request.WorkerId, baseUri]
+            "Registered remote worker {WorkerId} at {BaseUrl}",
+            request.WorkerId,
+            baseUri
         );
 
         return Ok(new { worker_id = request.WorkerId, registered = true });
@@ -176,9 +178,9 @@ public class WorkersController(
                 http.UpdateSnapshot(
                     http.GetCapabilities(),
                     new(
-                        gpu,
-                        cpu,
-                        request.GpuUtilization ?? 0
+                        AvailableGpuSlots: gpu,
+                        AvailableCpuThreads: cpu,
+                        GpuUtilization: request.GpuUtilization ?? 0
                     )
                 );
             }
@@ -216,17 +218,17 @@ public class WorkersController(
         progressStore.Update(
             taskId,
             new(
-                taskId,
-                workerId,
-                update.PercentComplete,
-                update.CurrentFps,
-                update.CurrentSpeed,
-                update.CurrentStage,
-                update.ElapsedSeconds,
-                update.EstimatedRemainingSeconds,
-                update.CurrentTimeSeconds,
-                update.DurationSeconds,
-                DateTime.UtcNow
+                TaskId: taskId,
+                WorkerId: workerId,
+                PercentComplete: update.PercentComplete,
+                CurrentFps: update.CurrentFps,
+                CurrentSpeed: update.CurrentSpeed,
+                CurrentStage: update.CurrentStage,
+                ElapsedSeconds: update.ElapsedSeconds,
+                EstimatedRemainingSeconds: update.EstimatedRemainingSeconds,
+                CurrentTimeSeconds: update.CurrentTimeSeconds,
+                DurationSeconds: update.DurationSeconds,
+                ReceivedAtUtc: DateTime.UtcNow
             )
         );
 

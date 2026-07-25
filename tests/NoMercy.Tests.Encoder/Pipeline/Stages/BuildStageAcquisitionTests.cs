@@ -50,7 +50,7 @@ public class BuildStageAcquisitionTests
     [Fact]
     public async Task NoAcquiredSubtitles_CommandContainsOnlySourceInput()
     {
-        ExecutionPlan plan = BuildPlan([]);
+        ExecutionPlan plan = BuildPlan(acquiredSubtitles: []);
         BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
@@ -69,16 +69,16 @@ public class BuildStageAcquisitionTests
     public async Task OneExactMatchSub_AddsInputToCommand()
     {
         AcquiredSubtitle sub = new(
-            "en",
-            "/tmp/subs/en.srt",
-            "OpenSubtitles",
-            true,
-            8.0,
-            1000,
-            "srt"
+            Language: "en",
+            LocalPath: "/tmp/subs/en.srt",
+            Provider: "OpenSubtitles",
+            IsExactMatch: true,
+            Rating: 8.0,
+            Downloads: 1000,
+            Format: "srt"
         );
 
-        ExecutionPlan plan = BuildPlan([sub]);
+        ExecutionPlan plan = BuildPlan(acquiredSubtitles: [sub]);
         BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
@@ -96,16 +96,16 @@ public class BuildStageAcquisitionTests
     public async Task NonExactMatchSub_NotAddedAsInput()
     {
         AcquiredSubtitle sub = new(
-            "en",
-            "/tmp/subs/en.srt",
-            "OpenSubtitles",
-            false,
-            6.0,
-            100,
-            "srt"
+            Language: "en",
+            LocalPath: "/tmp/subs/en.srt",
+            Provider: "OpenSubtitles",
+            IsExactMatch: false,
+            Rating: 6.0,
+            Downloads: 100,
+            Format: "srt"
         );
 
-        ExecutionPlan plan = BuildPlan([sub]);
+        ExecutionPlan plan = BuildPlan(acquiredSubtitles: [sub]);
         BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
@@ -123,25 +123,25 @@ public class BuildStageAcquisitionTests
     public async Task TwoExactMatchSubs_BothAddedAsInputs()
     {
         AcquiredSubtitle enSub = new(
-            "en",
-            "/tmp/subs/en.srt",
-            "OpenSubtitles",
-            true,
-            8.0,
-            1000,
-            "srt"
+            Language: "en",
+            LocalPath: "/tmp/subs/en.srt",
+            Provider: "OpenSubtitles",
+            IsExactMatch: true,
+            Rating: 8.0,
+            Downloads: 1000,
+            Format: "srt"
         );
         AcquiredSubtitle nlSub = new(
-            "nl",
-            "/tmp/subs/nl.srt",
-            "OpenSubtitles",
-            true,
-            7.0,
-            500,
-            "srt"
+            Language: "nl",
+            LocalPath: "/tmp/subs/nl.srt",
+            Provider: "OpenSubtitles",
+            IsExactMatch: true,
+            Rating: 7.0,
+            Downloads: 500,
+            Format: "srt"
         );
 
-        ExecutionPlan plan = BuildPlan([enSub, nlSub]);
+        ExecutionPlan plan = BuildPlan(acquiredSubtitles: [enSub, nlSub]);
         BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
@@ -160,25 +160,25 @@ public class BuildStageAcquisitionTests
     public async Task MixedExactAndNonExact_OnlyExactAdded()
     {
         AcquiredSubtitle exact = new(
-            "en",
-            "/tmp/subs/en.srt",
-            "OpenSubtitles",
-            true,
-            8.0,
-            1000,
-            "srt"
+            Language: "en",
+            LocalPath: "/tmp/subs/en.srt",
+            Provider: "OpenSubtitles",
+            IsExactMatch: true,
+            Rating: 8.0,
+            Downloads: 1000,
+            Format: "srt"
         );
         AcquiredSubtitle notExact = new(
-            "nl",
-            "/tmp/subs/nl.srt",
-            "OpenSubtitles",
-            false,
-            6.0,
-            100,
-            "srt"
+            Language: "nl",
+            LocalPath: "/tmp/subs/nl.srt",
+            Provider: "OpenSubtitles",
+            IsExactMatch: false,
+            Rating: 6.0,
+            Downloads: 100,
+            Format: "srt"
         );
 
-        ExecutionPlan plan = BuildPlan([exact, notExact]);
+        ExecutionPlan plan = BuildPlan(acquiredSubtitles: [exact, notExact]);
         BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
@@ -197,34 +197,34 @@ public class BuildStageAcquisitionTests
     private static ExecutionPlan BuildPlan(IReadOnlyList<AcquiredSubtitle>? acquiredSubtitles)
     {
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    1920,
-                    1080,
-                    "libx264",
-                    23,
-                    4000,
-                    "medium",
-                    "high",
-                    "4.1",
-                    false,
-                    "yuv420p",
-                    "[v0]",
-                    new()
+                    Width: 1920,
+                    Height: 1080,
+                    EncoderName: "libx264",
+                    Crf: 23,
+                    BitrateKbps: 4000,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.1",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: "[v0]",
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs:
             [
                 new(
-                    "aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    "en",
-                    "0:a:0"
+                    EncoderName: "aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: "en",
+                    MapLabel: "0:a:0"
                 ),
             ],
             SubtitleOutputs: [],
@@ -233,22 +233,24 @@ public class BuildStageAcquisitionTests
         );
 
         return new(
+            Groups:
             [
                 new(
-                    "group_0",
+                    GroupId: "group_0",
+                    Nodes:
                     [
                         new("decode_0", OperationType.Decode, [], new()),
                         new("encode_0", OperationType.Encode, ["decode_0"], new()),
                     ],
-                    null,
-                    0,
-                    4,
-                    false,
-                    1
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 4,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            outputPlan
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: outputPlan
         );
     }
 }

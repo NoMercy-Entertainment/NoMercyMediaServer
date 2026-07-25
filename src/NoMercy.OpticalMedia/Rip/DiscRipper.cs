@@ -88,7 +88,10 @@ public partial class DiscRipper(
             results.Add(result);
             if (!result.Success)
                 logger.LogWarning(
-                    "Rip title {Index} from {Drive} failed: {Error}", [titleIndex, request.DrivePath, result.Error]
+                    "Rip title {Index} from {Drive} failed: {Error}",
+                    titleIndex,
+                    request.DrivePath,
+                    result.Error
                 );
         }
         return results.ToArray();
@@ -129,7 +132,10 @@ public partial class DiscRipper(
             results.Add(result);
             if (!result.Success)
                 logger.LogWarning(
-                    "CD track rip {Index} from {Drive} failed: {Error}", [trackIndex, request.DrivePath, result.Error]
+                    "CD track rip {Index} from {Drive} failed: {Error}",
+                    trackIndex,
+                    request.DrivePath,
+                    result.Error
                 );
         }
 
@@ -179,8 +185,8 @@ public partial class DiscRipper(
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
             args.ToArray(),
-            outputDirectory,
-            ct
+            workingDirectory: outputDirectory,
+            cancellationToken: ct
         );
         stopwatch.Stop();
 
@@ -191,31 +197,40 @@ public partial class DiscRipper(
                 : result.StdErr.Length > 800 ? result.StdErr[^800..]
                 : result.StdErr;
             logger.LogInformation(
-                "ffmpeg CD rip failed exit={Exit} args=[{Args}] stderr_tail={Stderr}", [result.ExitCode, string.Join(" ", args), stderrTail]
+                "ffmpeg CD rip failed exit={Exit} args=[{Args}] stderr_tail={Stderr}",
+                result.ExitCode,
+                string.Join(" ", args),
+                stderrTail
             );
 
             return new(
-                trackIndex,
-                outputPath,
-                false,
-                stopwatch.Elapsed,
-                0,
-                $"ffmpeg exited with code {result.ExitCode}"
+                TitleIndex: trackIndex,
+                OutputPath: outputPath,
+                Success: false,
+                Duration: stopwatch.Elapsed,
+                OutputSizeBytes: 0,
+                Error: $"ffmpeg exited with code {result.ExitCode}"
             );
         }
 
         long size = storage.SizeOrZero(outputPath);
         logger.LogInformation(
-            "Ripped CD track {Index} (stream 0:a:{Stream}) from {Drive} → {Path} ({Bytes} bytes, {Duration:c})", [trackIndex, streamIndex, request.DrivePath, outputPath, size, stopwatch.Elapsed]
+            "Ripped CD track {Index} (stream 0:a:{Stream}) from {Drive} → {Path} ({Bytes} bytes, {Duration:c})",
+            trackIndex,
+            streamIndex,
+            request.DrivePath,
+            outputPath,
+            size,
+            stopwatch.Elapsed
         );
 
         return new(
-            trackIndex,
-            outputPath,
-            true,
-            stopwatch.Elapsed,
-            size,
-            null
+            TitleIndex: trackIndex,
+            OutputPath: outputPath,
+            Success: true,
+            Duration: stopwatch.Elapsed,
+            OutputSizeBytes: size,
+            Error: null
         );
     }
 
@@ -319,14 +334,14 @@ public partial class DiscRipper(
                 options.FfmpegPath,
                 args.ToArray(),
                 envOverrides,
-                outputDirectory,
-                ct
+                workingDirectory: outputDirectory,
+                cancellationToken: ct
             )
             : await processRunner.RunAsync(
                 options.FfmpegPath,
                 args.ToArray(),
-                outputDirectory,
-                ct
+                workingDirectory: outputDirectory,
+                cancellationToken: ct
             );
         stopwatch.Stop();
 
@@ -343,31 +358,39 @@ public partial class DiscRipper(
                 : result.StdErr.Length > 800 ? result.StdErr[^800..]
                 : result.StdErr;
             logger.LogInformation(
-                "ffmpeg rip failed exit={Exit} args=[{Args}] stderr_tail={Stderr}", [result.ExitCode, string.Join(" ", args), stderrTail]
+                "ffmpeg rip failed exit={Exit} args=[{Args}] stderr_tail={Stderr}",
+                result.ExitCode,
+                string.Join(" ", args),
+                stderrTail
             );
 
             return new(
-                titleIndex,
-                outputPath,
-                false,
-                stopwatch.Elapsed,
-                0,
-                $"ffmpeg exited with code {result.ExitCode}"
+                TitleIndex: titleIndex,
+                OutputPath: outputPath,
+                Success: false,
+                Duration: stopwatch.Elapsed,
+                OutputSizeBytes: 0,
+                Error: $"ffmpeg exited with code {result.ExitCode}"
             );
         }
 
         long size = storage.SizeOrZero(outputPath);
         logger.LogInformation(
-            "Ripped title {Index} from {Drive} → {Path} ({Bytes} bytes, {Duration:c})", [titleIndex, request.DrivePath, outputPath, size, stopwatch.Elapsed]
+            "Ripped title {Index} from {Drive} → {Path} ({Bytes} bytes, {Duration:c})",
+            titleIndex,
+            request.DrivePath,
+            outputPath,
+            size,
+            stopwatch.Elapsed
         );
 
         return new(
-            titleIndex,
-            outputPath,
-            true,
-            stopwatch.Elapsed,
-            size,
-            null
+            TitleIndex: titleIndex,
+            OutputPath: outputPath,
+            Success: true,
+            Duration: stopwatch.Elapsed,
+            OutputSizeBytes: size,
+            Error: null
         );
     }
 
@@ -402,7 +425,7 @@ public partial class DiscRipper(
         if (drivePath.StartsWith("dvd:", StringComparison.OrdinalIgnoreCase))
             return drivePath;
 
-        string trimmed = drivePath.TrimEnd(['\\', '/']);
+        string trimmed = drivePath.TrimEnd('\\', '/');
         return discType switch
         {
             OpticalDiscType.BluRay => $"bluray:{trimmed}/",

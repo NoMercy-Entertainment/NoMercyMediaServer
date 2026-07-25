@@ -62,13 +62,13 @@ public class DistributionEndToEndTests
         HttpClient httpToWorker = new(handler) { BaseAddress = new("http://worker.test/") };
 
         HttpRemoteWorker remoteWorker = new(
-            "end2end-worker",
-            httpToWorker,
-            _serializer,
-            _sharedKey,
-            new HardwareCapabilities([], 4),
-            new(0, 4, 0),
-            NullLogger<HttpRemoteWorker>.Instance
+            workerId: "end2end-worker",
+            http: httpToWorker,
+            serializer: _serializer,
+            signingKey: _sharedKey,
+            initialCapabilities: new HardwareCapabilities([], 4),
+            initialBudget: new(0, 4, 0),
+            logger: NullLogger<HttpRemoteWorker>.Instance
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
@@ -118,13 +118,13 @@ public class DistributionEndToEndTests
         HttpClient httpToWorker = new(handler) { BaseAddress = new("http://worker.test/") };
 
         HttpRemoteWorker remoteWorker = new(
-            "mismatched-key",
-            httpToWorker,
-            _serializer,
-            _sharedKey, // coordinator's key — doesn't match worker's
-            new HardwareCapabilities([], 4),
-            new(0, 4, 0),
-            NullLogger<HttpRemoteWorker>.Instance
+            workerId: "mismatched-key",
+            http: httpToWorker,
+            serializer: _serializer,
+            signingKey: _sharedKey, // coordinator's key — doesn't match worker's
+            initialCapabilities: new HardwareCapabilities([], 4),
+            initialBudget: new(0, 4, 0),
+            logger: NullLogger<HttpRemoteWorker>.Instance
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
@@ -170,11 +170,11 @@ public class DistributionEndToEndTests
             )
             .ReturnsAsync(
                 new ExecutionResult(
-                    true,
-                    0,
-                    string.Empty,
-                    TimeSpan.FromSeconds(1),
-                    null
+                    Success: true,
+                    ExitCode: 0,
+                    StdErr: string.Empty,
+                    Duration: TimeSpan.FromSeconds(1),
+                    Error: null
                 )
             );
         return mock;
@@ -182,10 +182,10 @@ public class DistributionEndToEndTests
 
     private static EncodeTask MakeTask(string id) =>
         new(
-            id,
-            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
-            $"/out/{id}",
-            EncodeTaskType.QualityVariant
+            TaskId: id,
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            OutputPath: $"/out/{id}",
+            Type: EncodeTaskType.QualityVariant
         );
 
     /// <summary>

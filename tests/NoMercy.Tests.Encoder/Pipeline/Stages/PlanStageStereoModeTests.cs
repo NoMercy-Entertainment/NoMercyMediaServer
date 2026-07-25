@@ -61,23 +61,23 @@ public class PlanStageStereoModeTests
             )
             .Returns(
                 new ResolvedCodec(
-                    "copy",
-                    new(
-                        "copy",
-                        null,
-                        [],
-                        [],
-                        [],
-                        new(0, 51, 23),
-                        [RateControlMode.Crf],
-                        true,
-                        true,
-                        int.MaxValue,
-                        "yuv420p10le",
-                        new()
+                    FfmpegEncoderName: "copy",
+                    EncoderInfo: new(
+                        FfmpegName: "copy",
+                        RequiredVendor: null,
+                        Presets: [],
+                        Profiles: [],
+                        Levels: [],
+                        QualityRange: new(0, 51, 23),
+                        SupportedRateControl: [RateControlMode.Crf],
+                        Supports10Bit: true,
+                        SupportsHdr: true,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new()
                     ),
-                    null,
-                    RateControlMode.Crf
+                    Device: null,
+                    DefaultRateControl: RateControlMode.Crf
                 )
             );
 
@@ -118,37 +118,37 @@ public class PlanStageStereoModeTests
 
     private static EncodingProfile BuildCopyProfile() =>
         new(
-            Ulid.NewUlid(),
-            "Stereo Copy Test",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Copy,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                23,
-                5000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                "video/{label}",
-                "video/{label}/playlist"
+            Id: Ulid.NewUlid(),
+            Name: "Stereo Copy Test",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Copy,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 5000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
             ),
-            [],
-            []
+            Audio: [],
+            Subtitles: []
         );
 
     private static MediaInfo BuildStereoMedia() =>
         new(
-            "/media/stereo.mkv",
+            FilePath: "/media/stereo.mkv",
             Format: "matroska",
             Duration: TimeSpan.FromMinutes(90),
             OverallBitRateKbps: 8000,
@@ -156,18 +156,18 @@ public class PlanStageStereoModeTests
             VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
             AudioStreams: [],

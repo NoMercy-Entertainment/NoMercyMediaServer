@@ -18,16 +18,16 @@ public class LiveSessionTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            "1080p",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "h264_nvenc",
-            true,
-            5.0,
-            true
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "h264_nvenc",
+            IsHardwareAccelerated: true,
+            ExpectedSpeed: 5.0,
+            CanRealtime: true
         );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ public class LiveSessionTests
         );
         session.PushSegment(segment);
 
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), true);
+        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), authoritative: true);
 
         // TranscodedPosition = 30s, PlaybackPosition = 10s → BufferAhead = 20s
         session.BufferAhead.Should().Be(TimeSpan.FromSeconds(20));
@@ -187,16 +187,16 @@ public class LiveSessionTests
         session.AttachBufferResetCallback(() => resetCalled = true);
 
         LiveQuality newQuality = new(
-            "720p",
-            "720p",
-            1280,
-            720,
-            VideoCodecType.H264,
-            4000,
-            "libx264",
-            false,
-            1.5,
-            true
+            Id: "720p",
+            Label: "720p",
+            Width: 1280,
+            Height: 720,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 4000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 1.5,
+            CanRealtime: true
         );
 
         await session.ChangeQualityAsync("720p", newQuality, CancellationToken.None);

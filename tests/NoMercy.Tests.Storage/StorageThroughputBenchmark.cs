@@ -81,7 +81,7 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
         }
         finally
         {
-            Directory.Delete(root, true);
+            Directory.Delete(root, recursive: true);
         }
     }
 
@@ -124,8 +124,8 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
     // only difference is whether production and IO overlap.
     private void Report(string label, IStorageDriver driver, string pathStem)
     {
-        (double wSeq, double rSeq) = RunOnce(driver, $"{pathStem}-seq.bin", false);
-        (double wPipe, double rPipe) = RunOnce(driver, $"{pathStem}-pipe.bin", true);
+        (double wSeq, double rSeq) = RunOnce(driver, $"{pathStem}-seq.bin", pipelined: false);
+        (double wPipe, double rPipe) = RunOnce(driver, $"{pathStem}-pipe.bin", pipelined: true);
 
         int mib = PayloadBytes / (1024 * 1024);
         output.WriteLine(
@@ -155,7 +155,7 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
             payload,
             () =>
             {
-                using Stream w = driver.OpenWrite(path, true);
+                using Stream w = driver.OpenWrite(path, overwrite: true);
                 using GeneratedStream src = new(payload);
                 if (pipelined)
                     src.CopyTo(w, BlockSize);

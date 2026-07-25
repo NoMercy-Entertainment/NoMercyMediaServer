@@ -41,7 +41,7 @@ public class CropDetectorTests
             "[Parsed_cropdetect_0 @ 0x7] x1:0 x2:1919 y1:20 y2:1059 w:1920 h:1040 x:0 y:20 crop=1920:1040:0:20",
         ];
 
-        SetupStderr(stderrLines, 0);
+        SetupStderr(stderrLines, exitCode: 0);
         CropDetector detector = new(
             _options,
             _processRunner.Object,
@@ -63,7 +63,7 @@ public class CropDetectorTests
     {
         string[] stderrLines = Enumerable.Repeat("[cropdetect] crop=1920:1080:0:0", 10).ToArray();
 
-        SetupStderr(stderrLines, 0);
+        SetupStderr(stderrLines, exitCode: 0);
         CropDetector detector = new(
             _options,
             _processRunner.Object,
@@ -83,7 +83,7 @@ public class CropDetectorTests
             .Repeat("crop=1920:1040:0:20", 3) // below threshold
             .ToArray();
 
-        SetupStderr(stderrLines, 0);
+        SetupStderr(stderrLines, exitCode: 0);
         CropDetector detector = new(
             _options,
             _processRunner.Object,
@@ -99,7 +99,7 @@ public class CropDetectorTests
     [Fact]
     public async Task Detect_FfmpegNonZeroExit_ReturnsEmptyResult()
     {
-        SetupStderr(["crop=1920:1040:0:20"], 1);
+        SetupStderr(["crop=1920:1040:0:20"], exitCode: 1);
         CropDetector detector = new(
             _options,
             _processRunner.Object,
@@ -130,7 +130,7 @@ public class CropDetectorTests
             "crop=1920:1040:0:20",
         ];
 
-        SetupStderr(stderrLines, 0);
+        SetupStderr(stderrLines, exitCode: 0);
         CropDetector detector = new(
             _options,
             _processRunner.Object,
@@ -216,7 +216,7 @@ public class CropDetectorTests
             "crop=1920:1040:0:20",
         ];
 
-        SetupStderr(stderrLines, 0);
+        SetupStderr(stderrLines, exitCode: 0);
         CropDetector detector = new(
             _options,
             _processRunner.Object,
@@ -244,7 +244,7 @@ public class CropDetectorTests
         // SampleFramesAnalyzed + Confidence should still be filled in for UI.
         string[] stderrLines = Enumerable.Repeat("crop=1920:1040:0:20", 3).ToArray();
 
-        SetupStderr(stderrLines, 0);
+        SetupStderr(stderrLines, exitCode: 0);
         CropDetector detector = new(
             _options,
             _processRunner.Object,
@@ -254,7 +254,7 @@ public class CropDetectorTests
 
         CropResult result = await detector.DetectAsync(
             "/tmp/in.mkv",
-            null,
+            sourceVideoFileId: null,
             CancellationToken.None
         );
 
@@ -275,8 +275,8 @@ public class CropDetectorTests
 
         await detector.DetectAsync(
             "/tmp/in.mkv",
-            null,
-            true,
+            sourceVideoFileId: null,
+            sourceIsHdr: true,
             CancellationToken.None
         );
 
@@ -293,8 +293,8 @@ public class CropDetectorTests
 
         await detector.DetectAsync(
             "/tmp/in.mkv",
-            null,
-            false,
+            sourceVideoFileId: null,
+            sourceIsHdr: false,
             CancellationToken.None
         );
 
@@ -314,8 +314,8 @@ public class CropDetectorTests
 
         await detector.DetectAsync(
             "/tmp/in.mkv",
-            null,
-            null,
+            sourceVideoFileId: null,
+            sourceIsHdr: null,
             CancellationToken.None
         );
 
@@ -332,8 +332,8 @@ public class CropDetectorTests
 
         await detector.DetectAsync(
             "/tmp/in.mkv",
-            null,
-            null,
+            sourceVideoFileId: null,
+            sourceIsHdr: null,
             CancellationToken.None
         );
 

@@ -19,9 +19,9 @@ public class SystemFeaturesTests
     public void PatchResult_Success_ConstructsCorrectly()
     {
         PatchResult result = new(
-            true,
-            "Patch applied successfully.",
-            true
+            Success: true,
+            Message: "Patch applied successfully.",
+            RequiresRestart: true
         );
 
         result.Success.Should().BeTrue();
@@ -33,9 +33,9 @@ public class SystemFeaturesTests
     public void PatchResult_Failure_ConstructsCorrectly()
     {
         PatchResult result = new(
-            false,
-            "Patch failed: insufficient permissions.",
-            false
+            Success: false,
+            Message: "Patch failed: insufficient permissions.",
+            RequiresRestart: false
         );
 
         result.Success.Should().BeFalse();
@@ -47,9 +47,9 @@ public class SystemFeaturesTests
     public void PatchResult_SuccessWithoutRestart_IsValid()
     {
         PatchResult result = new(
-            true,
-            "Already patched.",
-            false
+            Success: true,
+            Message: "Already patched.",
+            RequiresRestart: false
         );
 
         result.Success.Should().BeTrue();
@@ -60,12 +60,12 @@ public class SystemFeaturesTests
     public void QualityCheckResult_PassesThreshold_WhenVmafIsHigh()
     {
         QualityCheckResult result = new(
-            "/media/source.mkv",
-            "/output/encoded.mkv",
-            95.0,
-            0.998,
-            48.5,
-            true
+            SourcePath: "/media/source.mkv",
+            EncodedPath: "/output/encoded.mkv",
+            VmafScore: 95.0,
+            Ssim: 0.998,
+            Psnr: 48.5,
+            PassesThreshold: true
         );
 
         result.VmafScore.Should().BeApproximately(95.0, 0.01);
@@ -78,12 +78,12 @@ public class SystemFeaturesTests
     public void QualityCheckResult_FailsThreshold_WhenVmafIsLow()
     {
         QualityCheckResult result = new(
-            "/media/source.mkv",
-            "/output/encoded.mkv",
-            55.0,
-            0.92,
-            28.0,
-            false
+            SourcePath: "/media/source.mkv",
+            EncodedPath: "/output/encoded.mkv",
+            VmafScore: 55.0,
+            Ssim: 0.92,
+            Psnr: 28.0,
+            PassesThreshold: false
         );
 
         result.VmafScore.Should().BeLessThan(70.0);
@@ -94,12 +94,12 @@ public class SystemFeaturesTests
     public void QualityCheckResult_ZeroScores_IsValid()
     {
         QualityCheckResult result = new(
-            "/media/source.mkv",
-            "/output/encoded.mkv",
-            0.0,
-            0.0,
-            0.0,
-            false
+            SourcePath: "/media/source.mkv",
+            EncodedPath: "/output/encoded.mkv",
+            VmafScore: 0.0,
+            Ssim: 0.0,
+            Psnr: 0.0,
+            PassesThreshold: false
         );
 
         result.VmafScore.Should().Be(0.0);

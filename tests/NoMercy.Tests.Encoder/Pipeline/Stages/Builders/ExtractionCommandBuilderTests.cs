@@ -61,14 +61,20 @@ public class ExtractionCommandBuilderTests : IDisposable
     [Fact]
     public void BuildCommand_ThreeBitmapSubsTwoAttachments_EmitsExactlyOneInputFlag()
     {
-        OutputPlan plan = MakePlan([MakeBitmapSubtitlePlan(0), MakeBitmapSubtitlePlan(1), MakeBitmapSubtitlePlan(2)]
+        OutputPlan plan = MakePlan(
+            MakeBitmapSubtitlePlan(0),
+            MakeBitmapSubtitlePlan(1),
+            MakeBitmapSubtitlePlan(2)
         );
-        MediaInfo mediaInfo = MakeMediaInfo([MakeBitmapStream(0), MakeBitmapStream(1), MakeBitmapStream(2)]
+        MediaInfo mediaInfo = MakeMediaInfo(
+            MakeBitmapStream(0),
+            MakeBitmapStream(1),
+            MakeBitmapStream(2)
         );
         IReadOnlyList<AttachmentInfo> attachments =
         [
-            new(3, "ttf", "Arial.ttf", null),
-            new(4, "ttf", "Comic.ttf", null),
+            new(Index: 3, Codec: "ttf", Filename: "Arial.ttf", MimeType: null),
+            new(Index: 4, Codec: "ttf", Filename: "Comic.ttf", MimeType: null),
         ];
 
         FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
@@ -85,8 +91,8 @@ public class ExtractionCommandBuilderTests : IDisposable
     [Fact]
     public void BuildCommand_BitmapSubs_EmitOneMksOutputEach()
     {
-        OutputPlan plan = MakePlan([MakeBitmapSubtitlePlan(0), MakeBitmapSubtitlePlan(1)]);
-        MediaInfo mediaInfo = MakeMediaInfo([MakeBitmapStream(0), MakeBitmapStream(1)]);
+        OutputPlan plan = MakePlan(MakeBitmapSubtitlePlan(0), MakeBitmapSubtitlePlan(1));
+        MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0), MakeBitmapStream(1));
 
         FfmpegCommand? command = BuildCommand(plan, mediaInfo, []);
 
@@ -116,8 +122,8 @@ public class ExtractionCommandBuilderTests : IDisposable
         MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0));
         IReadOnlyList<AttachmentInfo> attachments =
         [
-            new(5, "ttf", "CM Big Fat Paintbrush_0.ttf", null),
-            new(6, "ttf", "My@Font.ttf", null),
+            new(Index: 5, Codec: "ttf", Filename: "CM Big Fat Paintbrush_0.ttf", MimeType: null),
+            new(Index: 6, Codec: "ttf", Filename: "My@Font.ttf", MimeType: null),
         ];
 
         FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
@@ -139,8 +145,8 @@ public class ExtractionCommandBuilderTests : IDisposable
         MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0));
         IReadOnlyList<AttachmentInfo> attachments =
         [
-            new(5, "ttf", "My Font.ttf", null),
-            new(6, "ttf", "My@Font.ttf", null),
+            new(Index: 5, Codec: "ttf", Filename: "My Font.ttf", MimeType: null),
+            new(Index: 6, Codec: "ttf", Filename: "My@Font.ttf", MimeType: null),
         ];
 
         FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
@@ -165,7 +171,7 @@ public class ExtractionCommandBuilderTests : IDisposable
         MediaInfo mediaInfo = MakeMediaInfo();
         IReadOnlyList<AttachmentInfo> attachments =
         [
-            new(3, "ttf", "Arial.ttf", null),
+            new(Index: 3, Codec: "ttf", Filename: "Arial.ttf", MimeType: null),
         ];
 
         FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
@@ -255,21 +261,21 @@ public class ExtractionCommandBuilderTests : IDisposable
     public void BuildCommand_TextSubtitleStream_IsExcluded()
     {
         SubtitleOutputPlan textPlan = new(
-            SubtitleCodecType.WebVtt,
-            StreamAction.Extract,
-            "en",
-            0,
-            "0:s:0"
+            OutputCodec: SubtitleCodecType.WebVtt,
+            Action: StreamAction.Extract,
+            Language: "en",
+            SourceIndex: 0,
+            MapLabel: "0:s:0"
         );
         OutputPlan plan = MakePlan(textPlan);
         MediaInfo mediaInfo = MakeMediaInfo(
             new SubtitleStreamInfo(
-                0,
-                "subrip",
-                "en",
-                true,
-                false,
-                null
+                Index: 0,
+                Codec: "subrip",
+                Language: "en",
+                IsDefault: true,
+                IsForced: false,
+                Title: null
             )
         );
 
@@ -351,42 +357,42 @@ public class ExtractionCommandBuilderTests : IDisposable
 
     private static OutputPlan MakePlan(params SubtitleOutputPlan[] subtitleOutputs) =>
         new(
-            OutputFormat.Hls,
-            [],
-            [],
-            subtitleOutputs,
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: subtitleOutputs,
+            Thumbnails: null
         );
 
     private static SubtitleOutputPlan MakeBitmapSubtitlePlan(int sourceIndex) =>
         new(
-            SubtitleCodecType.Copy,
-            StreamAction.Extract,
-            "en",
-            sourceIndex,
-            $"0:s:{sourceIndex}"
+            OutputCodec: SubtitleCodecType.Copy,
+            Action: StreamAction.Extract,
+            Language: "en",
+            SourceIndex: sourceIndex,
+            MapLabel: $"0:s:{sourceIndex}"
         );
 
     private static SubtitleStreamInfo MakeBitmapStream(int index) =>
         new(
-            index,
-            "hdmv_pgs_subtitle",
-            "en",
-            index == 0,
-            false,
-            null
+            Index: index,
+            Codec: "hdmv_pgs_subtitle",
+            Language: "en",
+            IsDefault: index == 0,
+            IsForced: false,
+            Title: null
         );
 
     private static MediaInfo MakeMediaInfo(params SubtitleStreamInfo[] subtitleStreams) =>
         new(
-            InputPath,
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
-            [],
-            [],
-            subtitleStreams,
-            []
+            FilePath: InputPath,
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams: [],
+            AudioStreams: [],
+            SubtitleStreams: subtitleStreams,
+            Chapters: []
         );
 }

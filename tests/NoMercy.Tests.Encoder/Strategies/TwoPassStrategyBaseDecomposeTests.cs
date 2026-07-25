@@ -64,11 +64,11 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_one_video_variant_emits_one_pass1_and_one_pass2()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video(1920, 1080)],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(width: 1920, height: 1080)],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
@@ -82,15 +82,16 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_three_variants_emits_three_pass1_and_three_pass2()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
-                Video(1920, 1080, "libx264"),
-                Video(1280, 720, "libx264"),
-                Video(854, 480, "libx264"),
+                Video(width: 1920, height: 1080, encoderName: "libx264"),
+                Video(width: 1280, height: 720, encoderName: "libx264"),
+                Video(width: 854, height: 480, encoderName: "libx264"),
             ],
-            [],
-            [],
-            null
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
@@ -105,11 +106,11 @@ public class TwoPassStrategyBaseDecomposeTests
         // Coordinator depends on iteration order — pass1 tasks first so they
         // can be enqueued together before any pass2 child appears.
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video(1920, 1080), Video(1280, 720)],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(width: 1920, height: 1080), Video(width: 1280, height: 720)],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
@@ -132,11 +133,11 @@ public class TwoPassStrategyBaseDecomposeTests
     {
         // Each pass numbers from 0 independently — coordinator pairs by index.
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video(1920, 1080), Video(1280, 720)],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(width: 1920, height: 1080), Video(width: 1280, height: 720)],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
@@ -144,8 +145,8 @@ public class TwoPassStrategyBaseDecomposeTests
         DecomposedTask[] pass1 = tasks.Where(t => t.Kind == EncodeTaskKind.Pass1).ToArray();
         DecomposedTask[] pass2 = tasks.Where(t => t.Kind == EncodeTaskKind.Pass2).ToArray();
 
-        pass1.Select(t => t.TaskId).Should().Equal([$"{GroupTag}-pass1-0", $"{GroupTag}-pass1-1"]);
-        pass2.Select(t => t.TaskId).Should().Equal([$"{GroupTag}-pass2-0", $"{GroupTag}-pass2-1"]);
+        pass1.Select(t => t.TaskId).Should().Equal($"{GroupTag}-pass1-0", $"{GroupTag}-pass1-1");
+        pass2.Select(t => t.TaskId).Should().Equal($"{GroupTag}-pass2-0", $"{GroupTag}-pass2-1");
     }
 
     [Fact]
@@ -154,11 +155,11 @@ public class TwoPassStrategyBaseDecomposeTests
         // Decompose can't know the stats path yet — that's set by the
         // coordinator after Pass1 completes. Default must be null.
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video()],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video()],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask pass2 = Build()
@@ -174,11 +175,11 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_pass1_label_includes_resolution_and_encoder()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video(1920, 1080, "libx264")],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(width: 1920, height: 1080, encoderName: "libx264")],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask pass1 = Build()
@@ -192,11 +193,11 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_pass2_label_starts_with_pass2_token()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video(1280, 720, "libx264")],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(width: 1280, height: 720, encoderName: "libx264")],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask pass2 = Build()
@@ -209,20 +210,20 @@ public class TwoPassStrategyBaseDecomposeTests
     // ── Cost banding ─────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData([3840, 8])]
-    [InlineData([1920, 4])]
-    [InlineData([1280, 2])]
-    [InlineData([854, 1])]
+    [InlineData(3840, 8)]
+    [InlineData(1920, 4)]
+    [InlineData(1280, 2)]
+    [InlineData(854, 1)]
     public void Decompose_video_cost_matches_width_for_both_passes(int width, int expectedCost)
     {
         // Pass1 and Pass2 do roughly equivalent CPU work per variant — cost
         // bands must match so the dispatcher allocates consistent slots.
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video(width, Math.Max(180, width * 9 / 16))],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(width: width, height: Math.Max(180, width * 9 / 16))],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
@@ -243,30 +244,31 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_audio_outputs_emit_one_task_each_with_und_label_fallback()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [],
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs:
             [
                 new(
-                    "aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    "eng",
-                    "[a0]"
+                    EncoderName: "aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: "eng",
+                    MapLabel: "[a0]"
                 ),
                 new(
-                    "aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    null,
-                    "[a1]"
+                    EncoderName: "aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: null,
+                    MapLabel: "[a1]"
                 ),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] audio = Build()
@@ -283,11 +285,11 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_subtitle_outputs_emit_one_task_each_with_und_label_fallback()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [],
-            [],
-            [Subtitle("eng", 0), Subtitle(null, 1)],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [Subtitle("eng", 0), Subtitle(null, 1)],
+            Thumbnails: null
         );
 
         DecomposedTask[] subs = Build()
@@ -306,11 +308,11 @@ public class TwoPassStrategyBaseDecomposeTests
         // Unlike single-pass, two-pass emits a single named "thumbnails" task
         // with cost=1 — the actual frame-rate logic lives in BuildStage.
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [],
-            [],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         DecomposedTask[] thumbs = Build()
@@ -328,11 +330,11 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_thumbnails_null_omits_thumbnail_task()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video()],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video()],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         Build()
@@ -345,7 +347,7 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_chapter_thumbs_opt_in_emits_one_task_per_chapter()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs: [Video()],
             AudioOutputs: [],
             SubtitleOutputs: [],
@@ -373,7 +375,7 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_chapter_thumbs_opt_out_emits_no_chapter_tasks()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs: [Video()],
             AudioOutputs: [],
             SubtitleOutputs: [],
@@ -392,7 +394,7 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_chapter_thumbs_opt_in_but_no_chapters_emits_no_chapter_tasks()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs: [Video()],
             AudioOutputs: [],
             SubtitleOutputs: [],
@@ -413,11 +415,11 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_empty_plan_returns_single_whole_task()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
@@ -432,18 +434,18 @@ public class TwoPassStrategyBaseDecomposeTests
     public void Decompose_full_plan_emits_pass1_then_pass2_then_audio_then_subs_then_thumbs_then_chapters()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            VideoOutputs: [Video(), Video(1280, 720)],
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(), Video(width: 1280, height: 720)],
             AudioOutputs:
             [
                 new(
-                    "aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    "eng",
-                    "[a0]"
+                    EncoderName: "aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: "eng",
+                    MapLabel: "[a0]"
                 ),
             ],
             SubtitleOutputs: [Subtitle("eng", 0)],
@@ -459,7 +461,15 @@ public class TwoPassStrategyBaseDecomposeTests
         tasks
             .Select(t => t.Kind)
             .Should()
-            .Equal([EncodeTaskKind.Pass1, EncodeTaskKind.Pass1, EncodeTaskKind.Pass2, EncodeTaskKind.Pass2, EncodeTaskKind.Audio, EncodeTaskKind.Subtitle, EncodeTaskKind.Thumbnails, EncodeTaskKind.Chapters]
+            .Equal(
+                EncodeTaskKind.Pass1,
+                EncodeTaskKind.Pass1,
+                EncodeTaskKind.Pass2,
+                EncodeTaskKind.Pass2,
+                EncodeTaskKind.Audio,
+                EncodeTaskKind.Subtitle,
+                EncodeTaskKind.Thumbnails,
+                EncodeTaskKind.Chapters
             );
     }
 
@@ -471,26 +481,26 @@ public class TwoPassStrategyBaseDecomposeTests
         string encoderName = "libx264"
     ) =>
         new(
-            width,
-            height,
-            encoderName,
-            23,
-            5000,
-            "medium",
-            "high",
-            "4.0",
-            false,
-            "yuv420p",
-            "[v0]",
-            []
+            Width: width,
+            Height: height,
+            EncoderName: encoderName,
+            Crf: 23,
+            BitrateKbps: 5000,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.0",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "[v0]",
+            ExtraFlags: []
         );
 
     private static SubtitleOutputPlan Subtitle(string? language, int sourceIndex) =>
         new(
-            SubtitleCodecType.WebVtt,
-            StreamAction.Transcode,
-            language,
-            sourceIndex,
-            $"[s{sourceIndex}]"
+            OutputCodec: SubtitleCodecType.WebVtt,
+            Action: StreamAction.Transcode,
+            Language: language,
+            SourceIndex: sourceIndex,
+            MapLabel: $"[s{sourceIndex}]"
         );
 }

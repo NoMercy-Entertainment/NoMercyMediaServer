@@ -53,7 +53,7 @@ public sealed class FileManagerPathsTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, true);
+            Directory.Delete(_tempRoot, recursive: true);
 
         using MediaContext cleanup = new();
         cleanup.FolderLibrary.RemoveRange(

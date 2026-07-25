@@ -137,6 +137,6 @@ public class LiveSegmentInventoryTests
     private static void CleanUp(string dir)
     {
         if (Directory.Exists(dir))
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
     }
 }

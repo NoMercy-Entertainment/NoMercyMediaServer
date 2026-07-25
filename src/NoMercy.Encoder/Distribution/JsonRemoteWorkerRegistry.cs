@@ -93,12 +93,12 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
             ResourceBudgetSnapshot budget = http.GetAvailableBudget();
             IHardwareCapabilities caps = http.GetCapabilities();
             _persisted[worker.WorkerId] = new(
-                worker.WorkerId,
-                http.BaseUrl,
-                caps.CpuCores,
-                budget.AvailableCpuThreads,
-                budget.AvailableGpuSlots,
-                caps.Gpus.ToList()
+                WorkerId: worker.WorkerId,
+                BaseUrl: http.BaseUrl,
+                CpuCores: caps.CpuCores,
+                AvailableCpuThreads: budget.AvailableCpuThreads,
+                AvailableGpuSlots: budget.AvailableGpuSlots,
+                Gpus: caps.Gpus.ToList()
             );
             FlushToDisk();
         }
@@ -142,7 +142,9 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
                 return;
 
             _logger.LogInformation(
-                "Rehydrating {Count} worker(s) from {Path}", [entries.Count, _filePath]
+                "Rehydrating {Count} worker(s) from {Path}",
+                entries.Count,
+                _filePath
             );
 
             foreach (PersistedWorkerEntry entry in entries)
@@ -169,27 +171,29 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
                 http.Timeout = TimeSpan.FromMinutes(10);
 
                 HttpRemoteWorker worker = new(
-                    entry.WorkerId,
-                    http,
-                    _serializer,
-                    _signingKey,
-                    new HardwareCapabilities(
-                        entry.Gpus ?? [],
-                        entry.CpuCores
+                    workerId: entry.WorkerId,
+                    http: http,
+                    serializer: _serializer,
+                    signingKey: _signingKey,
+                    initialCapabilities: new HardwareCapabilities(
+                        Gpus: entry.Gpus ?? [],
+                        CpuCores: entry.CpuCores
                     ),
-                    new(
-                        entry.AvailableGpuSlots,
-                        entry.AvailableCpuThreads,
-                        0
+                    initialBudget: new(
+                        AvailableGpuSlots: entry.AvailableGpuSlots,
+                        AvailableCpuThreads: entry.AvailableCpuThreads,
+                        GpuUtilization: 0
                     ),
-                    new NullLogger<HttpRemoteWorker>()
+                    logger: new NullLogger<HttpRemoteWorker>()
                 );
 
                 _inner.Register(worker);
                 _persisted[entry.WorkerId] = entry;
 
                 _logger.LogDebug(
-                    "Rehydrated worker {WorkerId} at {BaseUrl}", [entry.WorkerId, entry.BaseUrl]
+                    "Rehydrated worker {WorkerId} at {BaseUrl}",
+                    entry.WorkerId,
+                    entry.BaseUrl
                 );
             }
         }

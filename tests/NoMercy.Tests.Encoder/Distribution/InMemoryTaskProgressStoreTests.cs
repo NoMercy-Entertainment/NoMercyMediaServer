@@ -27,17 +27,17 @@ public class InMemoryTaskProgressStoreTests
         double percent = 50.0
     ) =>
         new(
-            taskId,
-            "worker-1",
-            percent,
-            30,
-            1.5,
-            "encode",
-            100,
-            100,
-            50,
-            100,
-            receivedUtc ?? DateTime.UtcNow
+            TaskId: taskId,
+            WorkerId: "worker-1",
+            PercentComplete: percent,
+            CurrentFps: 30,
+            CurrentSpeed: 1.5,
+            CurrentStage: "encode",
+            ElapsedSeconds: 100,
+            EstimatedRemainingSeconds: 100,
+            CurrentTimeSeconds: 50,
+            DurationSeconds: 100,
+            ReceivedAtUtc: receivedUtc ?? DateTime.UtcNow
         );
 
     [Fact]
@@ -89,7 +89,7 @@ public class InMemoryTaskProgressStoreTests
         // they may still live in the map until an Update triggers eviction.
         InMemoryTaskProgressStore store = new();
         DateTime old = DateTime.UtcNow - TimeSpan.FromMinutes(30);
-        store.Update("stale", Snap("stale", old));
+        store.Update("stale", Snap("stale", receivedUtc: old));
         store.Update("fresh", Snap("fresh"));
 
         IReadOnlyList<TaskProgressSnapshot> all = store.GetAll();
@@ -105,7 +105,7 @@ public class InMemoryTaskProgressStoreTests
         // checking specific tasks see whatever is in the map.
         InMemoryTaskProgressStore store = new();
         DateTime old = DateTime.UtcNow - TimeSpan.FromHours(2);
-        TaskProgressSnapshot snap = Snap("stale", old);
+        TaskProgressSnapshot snap = Snap("stale", receivedUtc: old);
         store.Update("stale", snap);
 
         store.Get("stale").Should().BeSameAs(snap);
@@ -119,7 +119,7 @@ public class InMemoryTaskProgressStoreTests
         InMemoryTaskProgressStore store = new();
         DateTime old = DateTime.UtcNow - TimeSpan.FromHours(1);
         for (int i = 0; i < 500; i++)
-            store.Update($"stale-{i}", Snap($"stale-{i}", old));
+            store.Update($"stale-{i}", Snap($"stale-{i}", receivedUtc: old));
 
         // Trigger the eviction path by exceeding MaxEntries with a fresh entry.
         store.Update("fresh", Snap("fresh"));

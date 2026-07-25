@@ -89,7 +89,7 @@ public class HevcArgumentResolverTests
         // a library-style profile string must fall back to the first
         // declared profile, which is "1" (= Main).
         EncoderInfo vt = Get("hevc_videotoolbox");
-        vt.Profiles.Should().BeEquivalentTo(["1", "2"]);
+        vt.Profiles.Should().BeEquivalentTo("1", "2");
         EncoderArgumentResolver.ResolveProfile("main", vt).Should().Be("1");
     }
 
@@ -131,11 +131,11 @@ public class HevcArgumentResolverTests
         GpuDevice? device = vendor is null
             ? null
             : new GpuDevice(
-                vendor.Value,
-                $"Test {vendor.Value}",
-                16_384,
-                12,
-                [VideoCodecType.H265]
+                Vendor: vendor.Value,
+                Name: $"Test {vendor.Value}",
+                VramMb: 16_384,
+                MaxEncoderSessions: 12,
+                SupportedCodecs: [VideoCodecType.H265]
             );
         return new(ffmpegName, encoder, device, defaultRateControl);
     }

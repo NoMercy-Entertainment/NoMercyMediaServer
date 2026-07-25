@@ -29,7 +29,7 @@ public class AbrLadderGeneratorLegacyTests
     [Fact]
     public void Generate_1080pSource_ProducesTiersUpToSource()
     {
-        MediaInfo media = BuildMedia(1920, 1080, 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, bitRateKbps: 6000);
         VideoOutput reference = BuildReference();
 
         VideoOutput[] ladder = _generator.Generate(media, reference);
@@ -44,7 +44,7 @@ public class AbrLadderGeneratorLegacyTests
     [Fact]
     public void Generate_4KSource_IncludesAllTiersIncluding4K()
     {
-        MediaInfo media = BuildMedia(3840, 2160, 50000);
+        MediaInfo media = BuildMedia(width: 3840, height: 2160, bitRateKbps: 50000);
         VideoOutput reference = BuildReference();
 
         VideoOutput[] ladder = _generator.Generate(media, reference);
@@ -58,7 +58,7 @@ public class AbrLadderGeneratorLegacyTests
     [Fact]
     public void Generate_SkipsTiersAboveSourceResolution()
     {
-        MediaInfo media = BuildMedia(1280, 720, 3000);
+        MediaInfo media = BuildMedia(width: 1280, height: 720, bitRateKbps: 3000);
         VideoOutput reference = BuildReference();
 
         VideoOutput[] ladder = _generator.Generate(media, reference);
@@ -70,8 +70,8 @@ public class AbrLadderGeneratorLegacyTests
     [Fact]
     public void Generate_AnimeSource_ScalesBitratesDown()
     {
-        MediaInfo lowBitrate = BuildMedia(1920, 1080, 1000);
-        MediaInfo highBitrate = BuildMedia(1920, 1080, 8000);
+        MediaInfo lowBitrate = BuildMedia(width: 1920, height: 1080, bitRateKbps: 1000);
+        MediaInfo highBitrate = BuildMedia(width: 1920, height: 1080, bitRateKbps: 8000);
         VideoOutput reference = BuildReference();
 
         VideoOutput[] low = _generator.Generate(lowBitrate, reference);
@@ -89,7 +89,7 @@ public class AbrLadderGeneratorLegacyTests
     [Fact]
     public void Generate_CopiesCodecFromReference()
     {
-        MediaInfo media = BuildMedia(1920, 1080, 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, bitRateKbps: 6000);
         VideoOutput reference = BuildReference() with { Codec = VideoCodecType.H265 };
 
         VideoOutput[] ladder = _generator.Generate(media, reference);
@@ -100,7 +100,7 @@ public class AbrLadderGeneratorLegacyTests
     [Fact]
     public void Generate_WidthsAreEven()
     {
-        MediaInfo media = BuildMedia(1920, 1080, 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, bitRateKbps: 6000);
         VideoOutput reference = BuildReference();
 
         VideoOutput[] ladder = _generator.Generate(media, reference);
@@ -112,15 +112,15 @@ public class AbrLadderGeneratorLegacyTests
     public void Generate_NoVideoStreams_ReturnsEmpty()
     {
         MediaInfo media = new(
-            "/audio-only.m4a",
-            "mp4",
-            TimeSpan.FromMinutes(3),
-            256,
-            1_000_000,
-            [],
-            [],
-            [],
-            []
+            FilePath: "/audio-only.m4a",
+            Format: "mp4",
+            Duration: TimeSpan.FromMinutes(3),
+            OverallBitRateKbps: 256,
+            FileSizeBytes: 1_000_000,
+            VideoStreams: [],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
         VideoOutput[] ladder = _generator.Generate(media, BuildReference());
@@ -131,7 +131,7 @@ public class AbrLadderGeneratorLegacyTests
     [Fact]
     public void Generate_OddSourceHeight_AddsNativeResolutionTier()
     {
-        MediaInfo media = BuildMedia(1920, 1200, 8000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1200, bitRateKbps: 8000);
         VideoOutput reference = BuildReference();
 
         VideoOutput[] ladder = _generator.Generate(media, reference);
@@ -142,53 +142,54 @@ public class AbrLadderGeneratorLegacyTests
 
     private static MediaInfo BuildMedia(int width, int height, long bitRateKbps) =>
         new(
-            "/video.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            bitRateKbps + 500,
-            4_000_000_000,
+            FilePath: "/video.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: bitRateKbps + 500,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    width,
-                    height,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    bitRateKbps
+                    Index: 0,
+                    Codec: "h264",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: bitRateKbps
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static VideoOutput BuildReference() =>
         new(
-            StreamPolicy.Transcode,
-            VideoCodecType.H264,
-            1920,
-            1080,
-            RateControlMode.Crf,
-            23,
-            4000,
-            null,
-            null,
-            "medium",
-            CodecProfile.High,
-            "4.1",
-            null,
-            8,
-            null,
-            2,
-            false,
-            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            Policy: StreamPolicy.Transcode,
+            Codec: VideoCodecType.H264,
+            Width: 1920,
+            Height: 1080,
+            RateControl: RateControlMode.Crf,
+            Crf: 23,
+            BitrateKbps: 4000,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
+            Preset: "medium",
+            CodecProfile: CodecProfile.High,
+            Level: "4.1",
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: null,
+            KeyframeIntervalSeconds: 2,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
 }
 
@@ -246,7 +247,7 @@ public class AbrLadderGeneratorAutoConfigTests
     public void Test3_NeverUpsource_1MbpsSource_DropsHighBitrateTiers()
     {
         // Source at 1000 kbps — tiers whose recommended bitrate > 1000 kbps are dropped.
-        MediaInfo media = Build1080pMedia(1000);
+        MediaInfo media = Build1080pMedia(bitRateKbps: 1000);
         AutoLadderConfig config = new()
         {
             Tiers = LadderTiers.AppleHlsRecommended,
@@ -269,7 +270,7 @@ public class AbrLadderGeneratorAutoConfigTests
         // PercentOfSource = 50, source = 6000 kbps, source height = 1080
         // 1080p: 6000 × (1080/1080)² × 50/100 = 3000 kbps
         // 540p:  6000 × (540/1080)² × 50/100 = 6000 × 0.25 × 0.5 = 750 kbps
-        MediaInfo media = Build1080pMedia(6000);
+        MediaInfo media = Build1080pMedia(bitRateKbps: 6000);
         AutoLadderConfig config = new()
         {
             Tiers = LadderTiers.AppleHlsRecommended,
@@ -349,7 +350,7 @@ public class AbrLadderGeneratorAutoConfigTests
     public void Test7_ReduceFramerate_480pAndBelow_At30fps()
     {
         // 60fps source; tiers ≤ 480p → 30fps; tiers > 480p → 60fps
-        MediaInfo media = Build4KMedia(60.0);
+        MediaInfo media = Build4KMedia(frameRate: 60.0);
         AutoLadderConfig config = new()
         {
             Tiers = LadderTiers.AppleHlsRecommended,
@@ -403,7 +404,7 @@ public class AbrLadderGeneratorAutoConfigTests
             new(1920, 1080, "1080p-b", 6000, null, null),
         ];
 
-        MediaInfo media = Build1080pMedia(20000);
+        MediaInfo media = Build1080pMedia(bitRateKbps: 20000);
         AutoLadderConfig config = new()
         {
             Tiers = closeTiers,
@@ -447,7 +448,7 @@ public class AbrLadderGeneratorAutoConfigTests
     [Fact]
     public void Test11_EmptyTiers_ThrowsInvalidOperationException()
     {
-        MediaInfo media = Build1080pMedia(6000);
+        MediaInfo media = Build1080pMedia(bitRateKbps: 6000);
         AutoLadderConfig config = new()
         {
             Tiers = [],
@@ -478,29 +479,30 @@ public class AbrLadderGeneratorAutoConfigTests
         double frameRate = 24.0
     ) =>
         new(
-            "/video.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            bitRateKbps + 500,
-            4_000_000_000,
+            FilePath: "/video.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: bitRateKbps + 500,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    width,
-                    height,
-                    frameRate,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    bitRateKbps
+                    Index: 0,
+                    Codec: "h264",
+                    Width: width,
+                    Height: height,
+                    FrameRate: frameRate,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: bitRateKbps
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 }

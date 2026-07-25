@@ -41,7 +41,7 @@ public sealed class WebDavDriverBuilderTests
             FolderId,
             "webdav",
             """{"url":"https://dav.example.com/remote.php/webdav/"}""",
-            ""
+            subPath: ""
         );
 
         storage
@@ -66,13 +66,13 @@ public sealed class WebDavDriverBuilderTests
     [Fact]
     public void Build_without_a_credential_resolver_connects_anonymously()
     {
-        WebDavDriverBuilder builder = new(NullLogger.Instance, null);
+        WebDavDriverBuilder builder = new(NullLogger.Instance, credentialResolver: null);
 
         IStorage storage = builder.Build(
             FolderId,
             "webdav",
             """{"url":"https://dav.example.com/remote.php/webdav/"}""",
-            ""
+            subPath: ""
         );
 
         storage.Should().BeOfType<RemoteStorage>();

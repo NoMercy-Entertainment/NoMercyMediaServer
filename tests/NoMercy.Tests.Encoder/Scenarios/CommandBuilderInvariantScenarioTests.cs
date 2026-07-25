@@ -33,7 +33,7 @@ public class CommandBuilderInvariantScenarioTests
     public void SingleRungCopy_NoFilterComplex_VerifiesNoFilterGraphPads()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(OutputPath, VideoCodec: "copy", AudioCodec: "copy", MapStreams: ["0:v", "0:a"])
@@ -63,7 +63,7 @@ public class CommandBuilderInvariantScenarioTests
     public void SingleRungCopy_CopyCodecHasNoEncoderOnlyFlags()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
             .Build(FfmpegPath);
@@ -89,7 +89,7 @@ public class CommandBuilderInvariantScenarioTests
     public void SingleRungTranscode_VideoCodecFollowedByCodecValue()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(
@@ -119,7 +119,7 @@ public class CommandBuilderInvariantScenarioTests
         string filterGraph = "[0:v]split=2[v0][v1];[v0]copy[v0_out];[v1]scale=1280:-2[v1_out]";
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .WithFilterComplex(filterGraph)
             .AddOutput(
@@ -153,7 +153,7 @@ public class CommandBuilderInvariantScenarioTests
                     outputPads
                         .Should()
                         .Contain(
-                            mapValue.Trim(['[', ']']),
+                            mapValue.Trim('[', ']'),
                             "mapped label must be produced by -filter_complex"
                         );
                 }
@@ -167,14 +167,14 @@ public class CommandBuilderInvariantScenarioTests
         FfmpegCommand cmd = new FfmpegCommandBuilder()
             .WithGlobalOptions(
                 new(
-                    true,
+                    Overwrite: true,
                     HideBanner: false,
                     ProgressPipe: true,
                     Threads: 4,
                     AnalyzeDurationUs: 5_000_000
                 )
             )
-            .AddInput(new(InputPath, TimeSpan.FromSeconds(1.5)))
+            .AddInput(new(InputPath, SeekTo: TimeSpan.FromSeconds(1.5)))
             .AddOutput(
                 new(
                     OutputPath,
@@ -227,7 +227,7 @@ public class CommandBuilderInvariantScenarioTests
     public void NoGlobalFlagDuplicates_SingleDashY_SingleDashProgress()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(true, true, true))
+            .WithGlobalOptions(new(Overwrite: true, HideBanner: true, ProgressPipe: true))
             .AddInput(new(InputPath))
             .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
             .Build(FfmpegPath);
@@ -246,7 +246,7 @@ public class CommandBuilderInvariantScenarioTests
     public void AudioOnlyOutput_NoVideoCodecNoHevcTags()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(OutputPath, AudioCodec: "aac", AudioBitrateKbps: 192, MapStreams: ["0:a"])
@@ -265,7 +265,7 @@ public class CommandBuilderInvariantScenarioTests
     public void HevcOutputToMp4Container_IncludesHvc1Tag()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(
@@ -287,7 +287,7 @@ public class CommandBuilderInvariantScenarioTests
     public void DolbyVisionOutput_IncludesDvh1Tag()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(
@@ -311,7 +311,7 @@ public class CommandBuilderInvariantScenarioTests
         Dictionary<string, string> customGlobalFlags = new() { { "-hwaccel", "cuda" } };
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .WithGlobalExtraFlags(customGlobalFlags)
             .AddInput(new(InputPath))
             .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
@@ -330,7 +330,7 @@ public class CommandBuilderInvariantScenarioTests
         Dictionary<string, string> outputCustomFlags = new() { { "-color_primaries", "bt709" } };
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(
@@ -359,7 +359,7 @@ public class CommandBuilderInvariantScenarioTests
     public void BooleanExtraFlagWithEmptyValue_OmitsEmptyToken()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(
@@ -385,7 +385,7 @@ public class CommandBuilderInvariantScenarioTests
     public void MultipleInputs_AllInputsHaveDashI()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new("/media/source1.mkv"))
             .AddInput(new("/media/source2.mkv"))
             .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v", "1:a"]))
@@ -399,7 +399,7 @@ public class CommandBuilderInvariantScenarioTests
     public void OutputMetadataStripping_IncludesMapMetadata()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"], StripSourceMetadata: true)
@@ -417,7 +417,7 @@ public class CommandBuilderInvariantScenarioTests
         OutputStreamTag[] tags = [new("v:0", "language", "eng"), new("a:0", "title", "English")];
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(
@@ -448,7 +448,7 @@ public class CommandBuilderInvariantScenarioTests
         };
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new("/dev/null", VideoCodec: "libx264", MapStreams: ["0:v"], ExtraFlags: pass1Flags)
@@ -469,7 +469,7 @@ public class CommandBuilderInvariantScenarioTests
         string filterGraph = "[0:v]scale=1280:-2[scaled]";
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .WithFilterComplex(filterGraph)
             .AddOutput(new(OutputPath, VideoCodec: "libx264", Crf: 23, MapStreams: ["[scaled]"]))
@@ -492,12 +492,12 @@ public class CommandBuilderInvariantScenarioTests
             Thread.CurrentThread.CurrentCulture = new("de-DE");
 
             FfmpegCommand cmd = new FfmpegCommandBuilder()
-                .WithGlobalOptions(new(false, false, false))
+                .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
                 .AddInput(
                     new(
                         InputPath,
-                        TimeSpan.FromMilliseconds(12_345),
-                        TimeSpan.FromMilliseconds(7_500)
+                        SeekTo: TimeSpan.FromMilliseconds(12_345),
+                        Duration: TimeSpan.FromMilliseconds(7_500)
                     )
                 )
                 .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
@@ -518,7 +518,7 @@ public class CommandBuilderInvariantScenarioTests
     public void OutputPathIsAlwaysLastInItsBlock_NoArgsAfterIt()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(new(OutputPath, VideoCodec: "libx264", Crf: 23, MapStreams: ["0:v"]))
             .Build(FfmpegPath);
@@ -533,7 +533,7 @@ public class CommandBuilderInvariantScenarioTests
     public void MultipleOutputs_EachHasOwnPath_AtEndOfItsBlock()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .WithFilterComplex("[0:v]split=2[v0][v1]")
             .AddOutput(
@@ -557,7 +557,7 @@ public class CommandBuilderInvariantScenarioTests
     public void AudioBitrate_ProducesDashBColonA_WithKSuffix()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(OutputPath, AudioCodec: "aac", AudioBitrateKbps: 192, MapStreams: ["0:a"])
@@ -575,7 +575,7 @@ public class CommandBuilderInvariantScenarioTests
     public void VideoBitrate_ProducesDashBColonV_WithKSuffix()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(OutputPath, VideoCodec: "libx264", VideoBitrateKbps: 5000, MapStreams: ["0:v"])
@@ -593,7 +593,7 @@ public class CommandBuilderInvariantScenarioTests
     public void ProfileAndLevel_AppearsForVideoOutput()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(
@@ -619,7 +619,7 @@ public class CommandBuilderInvariantScenarioTests
     public void PixelFormat_AppearsForVideoOutput()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(OutputPath, VideoCodec: "libx264", PixelFormat: "yuv420p", MapStreams: ["0:v"])
@@ -635,7 +635,7 @@ public class CommandBuilderInvariantScenarioTests
     public void KeyframeInterval_AppearsForVideoOutput()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(false, false, false))
+            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
             .AddInput(new(InputPath))
             .AddOutput(
                 new(OutputPath, VideoCodec: "libx264", KeyframeInterval: 120, MapStreams: ["0:v"])

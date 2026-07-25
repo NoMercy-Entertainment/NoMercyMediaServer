@@ -197,7 +197,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string path = $"/roundtrip-{Ulid.NewUlid()}.txt";
         byte[] data = "hello nfs"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(path, true))
+        await using (Stream w = backend.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
         await using Stream r = backend.OpenRead(path);
@@ -218,7 +218,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         byte[] data = new byte[11 * 1024 * 1024]; // 11 MB
         new Random(99).NextBytes(data);
 
-        await using (Stream w = backend.OpenWrite(path, true))
+        await using (Stream w = backend.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
         backend.GetFileSize(path).Should().Be(data.Length);
@@ -243,11 +243,11 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string fileC = dir + "/c.bin";
         byte[] bytes = "x"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(fileA, true))
+        await using (Stream w = backend.OpenWrite(fileA, overwrite: true))
             await w.WriteAsync(bytes);
-        await using (Stream w = backend.OpenWrite(fileB, true))
+        await using (Stream w = backend.OpenWrite(fileB, overwrite: true))
             await w.WriteAsync(bytes);
-        await using (Stream w = backend.OpenWrite(fileC, true))
+        await using (Stream w = backend.OpenWrite(fileC, overwrite: true))
             await w.WriteAsync(bytes);
 
         IEnumerable<string> txtFiles = backend.EnumerateFileSystemEntries(
@@ -258,7 +258,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
 
         txtFiles.Should().HaveCount(2);
 
-        backend.DeleteDirectory(dir, true);
+        backend.DeleteDirectory(dir, recursive: true);
         backend.DirectoryExists(dir).Should().BeFalse();
     }
 
@@ -270,7 +270,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string dst = $"/move-dst-{Ulid.NewUlid()}.txt";
         byte[] data = "move me"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(src, true))
+        await using (Stream w = backend.OpenWrite(src, overwrite: true))
             await w.WriteAsync(data);
 
         backend.MoveFile(src, dst);
@@ -289,10 +289,10 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string dst = $"/copy-dst-{Ulid.NewUlid()}.txt";
         byte[] data = "copy me"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(src, true))
+        await using (Stream w = backend.OpenWrite(src, overwrite: true))
             await w.WriteAsync(data);
 
-        backend.CopyFile(src, dst, true);
+        backend.CopyFile(src, dst, overwrite: true);
 
         backend.FileExists(src).Should().BeTrue();
         backend.FileExists(dst).Should().BeTrue();
@@ -310,7 +310,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         backend.CreateDirectory(dir);
         backend.DirectoryExists(dir).Should().BeTrue();
 
-        backend.DeleteDirectory(dir, false);
+        backend.DeleteDirectory(dir, recursive: false);
         backend.DirectoryExists(dir).Should().BeFalse();
     }
 
@@ -324,7 +324,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         backend.DirectoryExists(nested).Should().BeTrue();
 
         string top = nested.Split('/')[1];
-        backend.DeleteDirectory("/" + top, true);
+        backend.DeleteDirectory("/" + top, recursive: true);
     }
 
     [SkippableFact]
@@ -333,10 +333,10 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         using NfsStorageDriver backend = RequireBackend();
         string path = $"/nooverwrite-{Ulid.NewUlid()}.txt";
 
-        await using (Stream w = backend.OpenWrite(path, true))
+        await using (Stream w = backend.OpenWrite(path, overwrite: true))
             await w.WriteAsync("original"u8.ToArray());
 
-        Action act = () => backend.OpenWrite(path, false);
+        Action act = () => backend.OpenWrite(path, overwrite: false);
         act.Should().Throw<IOException>().WithMessage("*overwrite*");
 
         backend.DeleteFile(path);
@@ -349,7 +349,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string path = $"/meta-{Ulid.NewUlid()}.txt";
         byte[] data = Encoding.UTF8.GetBytes("metadata test");
 
-        await using (Stream w = backend.OpenWrite(path, true))
+        await using (Stream w = backend.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
         backend.GetFileSize(path).Should().Be(data.Length);
@@ -380,7 +380,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         NfsDriverConfig config = NfsDriverConfig.For(
             StorageBackendsFixture.NfsHost,
             StorageBackendsFixture.NfsExport,
-            4
+            version: 4
         );
 
         NfsStorageDriver? backend;
@@ -417,7 +417,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         byte[] data = new byte[2 * 1024 * 1024];
         new Random(42).NextBytes(data);
 
-        await using (Stream w = backend.OpenWrite(path, true))
+        await using (Stream w = backend.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
         try

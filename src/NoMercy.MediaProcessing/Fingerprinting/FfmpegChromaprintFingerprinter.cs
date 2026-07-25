@@ -66,14 +66,17 @@ public sealed partial class FfmpegChromaprintFingerprinter(
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
             arguments,
-            null,
-            ct
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
         if (!result.IsSuccess)
         {
             logger.LogWarning(
-                "chromaprint fingerprinting failed for {Path} (exit {Exit}): {Stderr}", [filePath, result.ExitCode, result.StdErr]
+                "chromaprint fingerprinting failed for {Path} (exit {Exit}): {Stderr}",
+                filePath,
+                result.ExitCode,
+                result.StdErr
             );
             return null;
         }
@@ -83,7 +86,9 @@ public sealed partial class FfmpegChromaprintFingerprinter(
         if (!fingerprintMatch.Success)
         {
             logger.LogWarning(
-                "chromaprint produced no FINGERPRINT for {Path}; output: {Output}", [filePath, Truncate(output, 200)]
+                "chromaprint produced no FINGERPRINT for {Path}; output: {Output}",
+                filePath,
+                Truncate(output, 200)
             );
             return null;
         }

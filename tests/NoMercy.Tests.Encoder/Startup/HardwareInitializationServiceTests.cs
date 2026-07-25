@@ -146,7 +146,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         await service.StartAsync(CancellationToken.None);
@@ -180,7 +180,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         service.IsReady.Should().BeFalse();
@@ -210,7 +210,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         await service.StartAsync(CancellationToken.None);
@@ -244,7 +244,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         await service.StartAsync(CancellationToken.None);
@@ -289,7 +289,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             tracker,
-            0
+            probeRetryDelayMs: 0
         );
 
         // StartAsync must complete before we signal Binaries — if it blocks
@@ -368,7 +368,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         await service.StartAsync(CancellationToken.None);
@@ -406,7 +406,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         await service.StartAsync(CancellationToken.None);
@@ -449,7 +449,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         await service.StartAsync(CancellationToken.None);
@@ -511,7 +511,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         await service.StartAsync(CancellationToken.None);
@@ -562,7 +562,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         await service.StartAsync(CancellationToken.None);
@@ -614,7 +614,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         await service.StartAsync(CancellationToken.None);
@@ -662,7 +662,7 @@ public class HardwareInitializationServiceTests
             new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
-            0
+            probeRetryDelayMs: 0
         );
 
         await service.StartAsync(CancellationToken.None);

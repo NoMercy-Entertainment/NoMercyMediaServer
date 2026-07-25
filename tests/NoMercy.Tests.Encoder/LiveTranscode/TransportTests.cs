@@ -29,16 +29,16 @@ public class TransportTests
 {
     private static LiveQuality MakeQuality(string id = "720p") =>
         new(
-            id,
-            id,
-            1280,
-            720,
-            VideoCodecType.H264,
-            3000,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: id,
+            Label: id,
+            Width: 1280,
+            Height: 720,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 3000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     private static LiveSession MakeSession(string id = "sess-001") => new(id, MakeQuality());
@@ -71,7 +71,7 @@ public class TransportTests
             NullLogger<LiveStreamingService>.Instance,
             storage,
             TestStorageFactory.CreateSegmentInventory(storage),
-            transport
+            transport: transport
         );
 
         LiveSession session = MakeSession("drain-test");
@@ -136,7 +136,7 @@ public class TransportTests
             NullLogger<LiveStreamingService>.Instance,
             storage,
             TestStorageFactory.CreateSegmentInventory(storage),
-            transport
+            transport: transport
         );
 
         LiveSession session = MakeSession("reaper-test");
@@ -204,8 +204,8 @@ public class TransportTests
         await transport.SendToClientAsync(
             "adaptive-test",
             new QualityChangedMessage(
-                newQuality,
-                QualityChangeReason.AutoAdaptive
+                NewQuality: newQuality,
+                Reason: QualityChangeReason.AutoAdaptive
             ),
             CancellationToken.None
         );
@@ -225,8 +225,8 @@ public class TransportTests
         await transport.SendToClientAsync(
             "user-test",
             new QualityChangedMessage(
-                newQuality,
-                QualityChangeReason.UserRequested
+                NewQuality: newQuality,
+                Reason: QualityChangeReason.UserRequested
             ),
             CancellationToken.None
         );
@@ -246,9 +246,9 @@ public class TransportTests
         CapturingTransport transport = new();
 
         TranscodeErrorMessage message = new(
-            EncodingErrorKind.ProcessCrashed,
-            "FFmpeg exited with code 1",
-            false
+            Kind: EncodingErrorKind.ProcessCrashed,
+            Message: "FFmpeg exited with code 1",
+            Recoverable: false
         );
 
         await transport.SendToClientAsync("error-test", message, CancellationToken.None);
@@ -268,7 +268,7 @@ public class TransportTests
     {
         CapturingTransport transport = new();
 
-        SeekCompletedMessage message = new(120.0, 20);
+        SeekCompletedMessage message = new(NewPositionSeconds: 120.0, FirstSegmentIndex: 20);
 
         await transport.SendToClientAsync("seek-test", message, CancellationToken.None);
 
@@ -295,7 +295,7 @@ public class TransportTests
 
         await transport.SendToClientAsync(
             "session-end",
-            new SessionEndedMessage(reason),
+            new SessionEndedMessage(Reason: reason),
             CancellationToken.None
         );
 

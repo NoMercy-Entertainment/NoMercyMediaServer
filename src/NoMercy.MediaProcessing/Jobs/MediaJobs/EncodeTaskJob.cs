@@ -135,9 +135,12 @@ public class EncodeTaskJob
         catch (Exception ex)
         {
             Log.LogWarning(
-                "[EncodeTaskJob] Skipping task '{Label}' for preset {PresetId}: resolve failed — {Message}", [Task.Label, PresetId, ex.Message]
+                "[EncodeTaskJob] Skipping task '{Label}' for preset {PresetId}: resolve failed — {Message}",
+                Task.Label,
+                PresetId,
+                ex.Message
             );
-            await PublishCompletedAsync(false, ex.Message, []);
+            await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
             return;
         }
 
@@ -145,9 +148,9 @@ public class EncodeTaskJob
         if (!fileMetadata.Success)
         {
             await PublishCompletedAsync(
-                false,
-                "Could not resolve media metadata",
-                []
+                success: false,
+                error: "Could not resolve media metadata",
+                artifacts: []
             );
             return;
         }
@@ -161,7 +164,7 @@ public class EncodeTaskJob
             : destinationStorage;
 
         EncodingRequest request = new(
-            InputFile,
+            InputPath: InputFile,
             OutputDirectory: fileMetadata.Path,
             Profile: encodingProfile,
             MediaTitle: fileMetadata.FileName,
@@ -196,9 +199,12 @@ public class EncodeTaskJob
                 catch (Exception ex)
                 {
                     Log.LogWarning(
-                        "[EncodeTaskJob] Merged task '{Label}': preset {PresetId} resolve failed — {Message}", [Task.Label, presetId, ex.Message]
+                        "[EncodeTaskJob] Merged task '{Label}': preset {PresetId} resolve failed — {Message}",
+                        Task.Label,
+                        presetId,
+                        ex.Message
                     );
-                    await PublishCompletedAsync(false, ex.Message, []);
+                    await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
                     return;
                 }
 
@@ -211,9 +217,11 @@ public class EncodeTaskJob
                 string error =
                     $"Could not rebuild the merged plan for preset set [{string.Join(", ", presetIds)}]";
                 Log.LogError(
-                    "[EncodeTaskJob] Merged task '{Label}' failed: {Error}", [Task.Label, error]
+                    "[EncodeTaskJob] Merged task '{Label}' failed: {Error}",
+                    Task.Label,
+                    error
                 );
-                await PublishCompletedAsync(false, error, []);
+                await PublishCompletedAsync(success: false, error: error, artifacts: []);
                 return;
             }
 
@@ -242,7 +250,7 @@ public class EncodeTaskJob
         IEncoderProcessRegistry? processRegistry = _encoderProcessRegistry;
 
         EventBusProgressObserver progressObserver = new(
-            fileMetadata.Id,
+            jobId: fileMetadata.Id,
             title: fileMetadata.Title,
             baseFolder: fileMetadata.Path,
             sharePath: fileMetadata.Path,
@@ -261,26 +269,30 @@ public class EncodeTaskJob
                 string errorMsg =
                     result.Error?.Message ?? result.EnrichedError?.Message ?? "encode failed";
                 Log.LogWarning(
-                    "[EncodeTaskJob] Task '{Label}' failed: {ErrorMsg}", [Task.Label, errorMsg]
+                    "[EncodeTaskJob] Task '{Label}' failed: {ErrorMsg}",
+                    Task.Label,
+                    errorMsg
                 );
-                await PublishCompletedAsync(false, errorMsg, []);
+                await PublishCompletedAsync(success: false, error: errorMsg, artifacts: []);
                 return;
             }
 
             Log.LogInformation(
-                "[EncodeTaskJob] Task '{Label}' completed in {TotalSeconds:F1}s", [Task.Label, stopwatch.Elapsed.TotalSeconds]
+                "[EncodeTaskJob] Task '{Label}' completed in {TotalSeconds:F1}s",
+                Task.Label,
+                stopwatch.Elapsed.TotalSeconds
             );
 
             List<string> artifactPaths = result
                 .Artifacts.Select(artifact => artifact.Path)
                 .ToList();
-            await PublishCompletedAsync(true, null, artifactPaths);
+            await PublishCompletedAsync(success: true, error: null, artifacts: artifactPaths);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Log.LogError("[EncodeTaskJob] Task '{Label}' threw: {Message}", [Task.Label, ex.Message]);
-            await PublishCompletedAsync(false, ex.Message, []);
+            Log.LogError("[EncodeTaskJob] Task '{Label}' threw: {Message}", Task.Label, ex.Message);
+            await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
             throw;
         }
     }
@@ -364,7 +376,9 @@ public class EncodeTaskJob
         catch (Exception ex)
         {
             Log.LogWarning(
-                "[EncodeTaskJob] Failed to write outcome row for task '{TaskId}': {Message}", [Task.TaskId, ex.Message]
+                "[EncodeTaskJob] Failed to write outcome row for task '{TaskId}': {Message}",
+                Task.TaskId,
+                ex.Message
             );
         }
     }
@@ -413,7 +427,9 @@ public class EncodeTaskJob
         catch (Exception ex)
         {
             Log.LogWarning(
-                "[EncodeTaskJob] Failed to write bundle outcome rows for {Length} tasks: {Message}", [bundledIds.Length, ex.Message]
+                "[EncodeTaskJob] Failed to write bundle outcome rows for {Length} tasks: {Message}",
+                bundledIds.Length,
+                ex.Message
             );
         }
     }
@@ -466,7 +482,7 @@ public class EncodeTaskJob
         /// <summary>
         /// Identifies the movie/episode being encoded. PlanStage needs it to
         /// resolve a BundleLayout, without which FinalizeStage writes neither
-        /// manifest.json nor reconstruction.json. Pure idit never reaches
+        /// manifest.json nor reconstruction.json. Pure identity: it never reaches
         /// the ffmpeg command, which is gated separately on
         /// EncodingOptions.EnableMetadataInjection.
         /// </summary>

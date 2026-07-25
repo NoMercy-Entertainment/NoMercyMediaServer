@@ -48,7 +48,7 @@ public class EncoderContentAnalysisController_Routes_Test
         foreach (MethodInfo method in actions)
         {
             HttpMethodAttribute? attr = method
-                .GetCustomAttributes(httpVerbAttribute, false)
+                .GetCustomAttributes(httpVerbAttribute, inherit: false)
                 .Cast<HttpMethodAttribute>()
                 .FirstOrDefault();
 
@@ -80,11 +80,11 @@ public class EncoderContentAnalysisController_Routes_Test
     // ─── EncoderContentAnalysisController ────────────────────────────────────
 
     [Theory]
-    [InlineData([typeof(HttpPostAttribute), "crop/{videoFileId}", "POST crop/{videoFileId}"])]
-    [InlineData([typeof(HttpPostAttribute), "intro/{seasonId:int}", "POST intro/{seasonId}"])]
-    [InlineData([typeof(HttpPostAttribute), "ocr/{videoFileId}", "POST ocr/{videoFileId}"])]
-    [InlineData([typeof(HttpPostAttribute), "whisper/{videoFileId}", "POST whisper/{videoFileId}"])]
-    [InlineData([typeof(HttpPutAttribute), "segments/{segmentId}", "PUT segments/{segmentId}"])]
+    [InlineData(typeof(HttpPostAttribute), "crop/{videoFileId}", "POST crop/{videoFileId}")]
+    [InlineData(typeof(HttpPostAttribute), "intro/{seasonId:int}", "POST intro/{seasonId}")]
+    [InlineData(typeof(HttpPostAttribute), "ocr/{videoFileId}", "POST ocr/{videoFileId}")]
+    [InlineData(typeof(HttpPostAttribute), "whisper/{videoFileId}", "POST whisper/{videoFileId}")]
+    [InlineData(typeof(HttpPutAttribute), "segments/{segmentId}", "PUT segments/{segmentId}")]
     public void EncoderContentAnalysisController_HasExpectedEndpoint(
         Type httpVerb,
         string routeSuffix,
@@ -102,8 +102,12 @@ public class EncoderContentAnalysisController_Routes_Test
     // ─── EncoderOcrLanguagesController ───────────────────────────────────────
 
     [Theory]
-    [InlineData([typeof(HttpGetAttribute), "languages", "GET /languages"])]
-    [InlineData([typeof(HttpPostAttribute), "languages/{code}/download", "POST /languages/{code}/download"])]
+    [InlineData(typeof(HttpGetAttribute), "languages", "GET /languages")]
+    [InlineData(
+        typeof(HttpPostAttribute),
+        "languages/{code}/download",
+        "POST /languages/{code}/download"
+    )]
     public void EncoderOcrLanguagesController_HasExpectedEndpoint(
         Type httpVerb,
         string routeSuffix,

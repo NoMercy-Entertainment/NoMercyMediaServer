@@ -79,7 +79,7 @@ public sealed class ServerUpdateDecisionTests : IDisposable
         try
         {
             if (Directory.Exists(_tempAppPath))
-                Directory.Delete(_tempAppPath, true);
+                Directory.Delete(_tempAppPath, recursive: true);
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
@@ -89,7 +89,7 @@ public sealed class ServerUpdateDecisionTests : IDisposable
     public async Task DownloadServerUpdate_NoAssetsPublished_ReturnsNoAssetFound()
     {
         Software.Version = new(1, 0, 0);
-        Binaries binaries = BuildBinaries(WithReleaseThen("v9.9.9", []));
+        Binaries binaries = BuildBinaries(WithReleaseThen("v9.9.9", assets: []));
 
         ServerUpdateResult result = await binaries.DownloadServerUpdate();
 

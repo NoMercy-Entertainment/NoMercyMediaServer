@@ -24,11 +24,11 @@ public class GpuResidentActivationTests
     public void Resolve_EnabledNvidiaEligible_ReturnsCudaPlan()
     {
         GpuAccelPlan? plan = GpuResidentActivation.Resolve(
-            true,
-            true,
-            GpuVendor.Nvidia,
-            EligiblePlan(),
-            HasCuda
+            enabled: true,
+            hasGpu: true,
+            vendor: GpuVendor.Nvidia,
+            plan: EligiblePlan(),
+            hasFilter: HasCuda
         );
 
         plan.Should().NotBeNull();
@@ -73,25 +73,26 @@ public class GpuResidentActivationTests
 
     private static OutputPlan EligiblePlan() =>
         new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
-                    1920,
-                    1080,
-                    "h264_nvenc",
-                    23,
-                    5000,
-                    "p4",
-                    "high",
-                    "4.1",
-                    false,
-                    "yuv420p",
-                    "[v0]",
-                    new()
+                    Width: 1920,
+                    Height: 1080,
+                    EncoderName: "h264_nvenc",
+                    Crf: 23,
+                    BitrateKbps: 5000,
+                    Preset: "p4",
+                    Profile: "high",
+                    Level: "4.1",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: "[v0]",
+                    ExtraFlags: new()
                 ),
             ],
-            [],
-            [],
-            null
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 }

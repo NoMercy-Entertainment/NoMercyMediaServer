@@ -38,7 +38,7 @@ public class LocalStorageIntegrationTests : IDisposable
         try
         {
             if (Directory.Exists(_root))
-                Directory.Delete(_root, true);
+                Directory.Delete(_root, recursive: true);
         }
         catch
         {
@@ -138,7 +138,7 @@ public class LocalStorageIntegrationTests : IDisposable
             CancellationToken.None
         );
 
-        await _storage.DeleteDirectoryAsync(dir, true, CancellationToken.None);
+        await _storage.DeleteDirectoryAsync(dir, recursive: true, CancellationToken.None);
 
         Directory.Exists(dir).Should().BeFalse();
     }
@@ -167,7 +167,7 @@ public class LocalStorageIntegrationTests : IDisposable
         await _storage.CopyAsync(from, to, CancellationToken.None);
 
         File.Exists(from).Should().BeTrue();
-        (await _storage.ReadAsync(to, CancellationToken.None)).Should().Equal([0x11, 0x22]);
+        (await _storage.ReadAsync(to, CancellationToken.None)).Should().Equal(0x11, 0x22);
     }
 
     [Fact]
@@ -210,13 +210,13 @@ public class LocalStorageIntegrationTests : IDisposable
             StorageEntry e in _storage.ListAsync(
                 _root,
                 "*.txt",
-                true,
+                recursive: true,
                 CancellationToken.None
             )
         )
             recursive.Add(e);
 
-        recursive.Select(e => Path.GetFileName(e.Path)).Should().BeEquivalentTo(["a.txt", "c.txt"]);
+        recursive.Select(e => Path.GetFileName(e.Path)).Should().BeEquivalentTo("a.txt", "c.txt");
         recursive.All(e => !e.IsDirectory).Should().BeTrue();
     }
 
@@ -292,7 +292,7 @@ public class LocalStorageIntegrationTests : IDisposable
         {
             try
             {
-                Directory.Delete(outsideDir, true);
+                Directory.Delete(outsideDir, recursive: true);
             }
             catch
             { /* best-effort */

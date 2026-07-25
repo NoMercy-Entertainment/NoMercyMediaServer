@@ -16,6 +16,7 @@ using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
+using ThumbnailOutput = NoMercy.Encoder.Profiles.ThumbnailOutput;
 using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Optimizer;
@@ -25,7 +26,7 @@ public class ExecutionGraphBuilderThumbnailTests
     [Fact]
     public void Thumbnail_HdrSource_DependsOnTonemapNode()
     {
-        MediaInfo media = BuildMedia("smpte2084", 3840, 2160);
+        MediaInfo media = BuildMedia(transfer: "smpte2084", width: 3840, height: 2160);
         EncodingProfile profile = BuildProfileWithThumbnails();
 
         List<ExecutionNode> nodes = new ExecutionGraphBuilder().BuildGraph(
@@ -45,7 +46,7 @@ public class ExecutionGraphBuilderThumbnailTests
     [Fact]
     public void Thumbnail_SdrSource_HasNoVideoDependency()
     {
-        MediaInfo media = BuildMedia("bt709", 1920, 1080);
+        MediaInfo media = BuildMedia(transfer: "bt709", width: 1920, height: 1080);
         EncodingProfile profile = BuildProfileWithThumbnails();
 
         List<ExecutionNode> nodes = new ExecutionGraphBuilder().BuildGraph(
@@ -61,83 +62,84 @@ public class ExecutionGraphBuilderThumbnailTests
 
     private static MediaInfo BuildMedia(string transfer, int width, int height) =>
         new(
-            "/media/test.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            50000,
-            30_000_000_000,
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 50000,
+            FileSizeBytes: 30_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "hevc",
-                    width,
-                    height,
-                    24.0,
-                    transfer == "smpte2084" ? 10 : 8,
-                    transfer == "smpte2084" ? "yuv420p10le" : "yuv420p",
-                    transfer == "smpte2084" ? "bt2020" : "bt709",
-                    transfer,
-                    transfer == "smpte2084" ? "bt2020nc" : "bt709",
-                    true,
-                    45000
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: transfer == "smpte2084" ? 10 : 8,
+                    PixelFormat: transfer == "smpte2084" ? "yuv420p10le" : "yuv420p",
+                    ColorPrimaries: transfer == "smpte2084" ? "bt2020" : "bt709",
+                    ColorTransfer: transfer,
+                    ColorSpace: transfer == "smpte2084" ? "bt2020nc" : "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 45000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile BuildProfileWithThumbnails() =>
         new(
-            Ulid.NewUlid(),
-            "Thumb Test",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H265,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                22,
-                5000,
-                null,
-                null,
-                "medium",
-                CodecProfile.Main,
-                "5.1",
-                null,
-                8,
-                null,
-                2,
-                true,
-                "video/{label}",
-                "video/{label}/playlist"
+            Id: Ulid.NewUlid(),
+            Name: "Thumb Test",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H265,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 22,
+                BitrateKbps: 5000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.Main,
+                Level: "5.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: true,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
             ),
-            [],
-            [],
-            new(320, 10)
+            Audio: [],
+            Subtitles: [],
+            Thumbnails: new(320, 10)
         );
 
     private static ResolvedCodec[] ResolveSingle() =>
         [
             new(
-                "libx265",
-                new(
-                    "libx265",
-                    null,
-                    ["medium"],
-                    ["main"],
-                    ["5.1"],
-                    new(0, 51, 28),
-                    [RateControlMode.Crf],
-                    true,
-                    true,
-                    int.MaxValue,
-                    "yuv420p10le",
-                    new()
+                FfmpegEncoderName: "libx265",
+                EncoderInfo: new(
+                    FfmpegName: "libx265",
+                    RequiredVendor: null,
+                    Presets: ["medium"],
+                    Profiles: ["main"],
+                    Levels: ["5.1"],
+                    QualityRange: new(0, 51, 28),
+                    SupportedRateControl: [RateControlMode.Crf],
+                    Supports10Bit: true,
+                    SupportsHdr: true,
+                    MaxConcurrentSessions: int.MaxValue,
+                    PixelFormat10Bit: "yuv420p10le",
+                    VendorSpecificFlags: new()
                 ),
-                null,
-                RateControlMode.Crf
+                Device: null,
+                DefaultRateControl: RateControlMode.Crf
             ),
         ];
 }

@@ -59,7 +59,7 @@ public class PluginClaimsAugmentorTests
     [Fact]
     public async Task UnauthenticatedPluginResult_ContributesNoClaims()
     {
-        FakeAuthPlugin plugin = new("plan", "pro", false);
+        FakeAuthPlugin plugin = new("plan", "pro", isAuthenticated: false);
         FakePluginManager manager = FakePluginManager.WithAuth(plugin);
         PluginClaimsAugmentor augmentor = new(manager, NullLogger<PluginClaimsAugmentor>.Instance);
 

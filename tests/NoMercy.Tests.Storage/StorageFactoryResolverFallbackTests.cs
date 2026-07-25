@@ -41,7 +41,7 @@ public sealed class StorageFactoryResolverFallbackTests
         StorageFactory factory = new(
             driver.Object,
             NullLogger<StorageFactory>.Instance,
-            null
+            driverConfigResolver: null
         );
 
         IStorage storage = factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);

@@ -31,7 +31,7 @@ public class JsonCheckpointStoreTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+            Directory.Delete(_tempDir, recursive: true);
 
         GC.SuppressFinalize(this);
     }
@@ -52,10 +52,10 @@ public class JsonCheckpointStoreTests : IDisposable
     {
         JobCheckpoint original = Build(
             _tempDir,
-            "/tmp/x264-pass.log",
-            true,
-            42,
-            "TwoPass"
+            statsFilePath: "/tmp/x264-pass.log",
+            pass1Completed: true,
+            lastCompletedSegment: 42,
+            encodeMode: "TwoPass"
         );
 
         await _store.SaveAsync(original);
@@ -144,14 +144,14 @@ public class JsonCheckpointStoreTests : IDisposable
         string? encodeMode = null
     ) =>
         new(
-            "job-" + Guid.NewGuid().ToString("N")[..8],
-            "/media/source.mkv",
-            outputDirectory,
-            [0, 1],
-            DateTime.UtcNow,
-            statsFilePath,
-            pass1Completed,
-            lastCompletedSegment,
-            encodeMode
+            JobId: "job-" + Guid.NewGuid().ToString("N")[..8],
+            InputPath: "/media/source.mkv",
+            OutputDirectory: outputDirectory,
+            CompletedGroupIndices: [0, 1],
+            LastUpdated: DateTime.UtcNow,
+            StatsFilePath: statsFilePath,
+            Pass1Completed: pass1Completed,
+            LastCompletedSegment: lastCompletedSegment,
+            EncodeMode: encodeMode
         );
 }

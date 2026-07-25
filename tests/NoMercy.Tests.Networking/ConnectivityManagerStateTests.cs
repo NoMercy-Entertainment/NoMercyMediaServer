@@ -75,9 +75,9 @@ public sealed class ConnectivityManagerStateTests
     [Fact]
     public async Task EvaluateAsync_WhenFirstStrategySucceeds_SetsDirectAccessState()
     {
-        StubStrategy winning = new("PortForward", 1, ConnectivityType.PortForward, true);
-        StubStrategy skipped = new("Stun", 2, ConnectivityType.StunHolePunch, true);
-        ConnectivityManager manager = BuildManager([winning, skipped]);
+        StubStrategy winning = new("PortForward", 1, ConnectivityType.PortForward, succeeds: true);
+        StubStrategy skipped = new("Stun", 2, ConnectivityType.StunHolePunch, succeeds: true);
+        ConnectivityManager manager = BuildManager(winning, skipped);
 
         await manager.EvaluateAsync(CancellationToken.None);
 
@@ -87,9 +87,9 @@ public sealed class ConnectivityManagerStateTests
     [Fact]
     public async Task EvaluateAsync_WhenAllStrategiesFail_SetsLocalOnlyState()
     {
-        StubStrategy a = new("PortForward", 1, ConnectivityType.PortForward, false);
-        StubStrategy b = new("Stun", 2, ConnectivityType.StunHolePunch, false);
-        ConnectivityManager manager = BuildManager([a, b]);
+        StubStrategy a = new("PortForward", 1, ConnectivityType.PortForward, succeeds: false);
+        StubStrategy b = new("Stun", 2, ConnectivityType.StunHolePunch, succeeds: false);
+        ConnectivityManager manager = BuildManager(a, b);
 
         await manager.EvaluateAsync(CancellationToken.None);
 
@@ -109,9 +109,9 @@ public sealed class ConnectivityManagerStateTests
     [Fact]
     public async Task EvaluateAsync_FirstStrategyFails_SecondSucceeds_SetsHolePunchedState()
     {
-        StubStrategy fail = new("PortForward", 1, ConnectivityType.PortForward, false);
-        StubStrategy win = new("Stun", 2, ConnectivityType.StunHolePunch, true);
-        ConnectivityManager manager = BuildManager([fail, win]);
+        StubStrategy fail = new("PortForward", 1, ConnectivityType.PortForward, succeeds: false);
+        StubStrategy win = new("Stun", 2, ConnectivityType.StunHolePunch, succeeds: true);
+        ConnectivityManager manager = BuildManager(fail, win);
 
         await manager.EvaluateAsync(CancellationToken.None);
 
@@ -127,7 +127,7 @@ public sealed class ConnectivityManagerStateTests
             "CloudflareTunnel",
             3,
             ConnectivityType.CloudflareTunnel,
-            true
+            succeeds: true
         );
         ConnectivityManager manager = BuildManager(cf);
 
@@ -139,9 +139,9 @@ public sealed class ConnectivityManagerStateTests
     [Fact]
     public async Task EvaluateAsync_FirstSuccessWins_LaterStrategyNotAttempted()
     {
-        StubStrategy first = new("PortForward", 1, ConnectivityType.PortForward, true);
-        StubStrategy second = new("Stun", 2, ConnectivityType.StunHolePunch, true);
-        ConnectivityManager manager = BuildManager([first, second]);
+        StubStrategy first = new("PortForward", 1, ConnectivityType.PortForward, succeeds: true);
+        StubStrategy second = new("Stun", 2, ConnectivityType.StunHolePunch, succeeds: true);
+        ConnectivityManager manager = BuildManager(first, second);
 
         await manager.EvaluateAsync(CancellationToken.None);
 
@@ -152,7 +152,7 @@ public sealed class ConnectivityManagerStateTests
     [Fact]
     public async Task EvaluateAsync_StateChangedEvent_FiresWithCorrectState()
     {
-        StubStrategy strategy = new("PortForward", 1, ConnectivityType.PortForward, true);
+        StubStrategy strategy = new("PortForward", 1, ConnectivityType.PortForward, succeeds: true);
         ConnectivityManager manager = BuildManager(strategy);
         List<ConnectivityState> observed = [];
         manager.StateChanged += s => observed.Add(s);
@@ -165,7 +165,7 @@ public sealed class ConnectivityManagerStateTests
     [Fact]
     public async Task EvaluateAsync_AllFail_ActiveStrategyIsLocalOnly()
     {
-        StubStrategy fail = new("PortForward", 1, ConnectivityType.PortForward, false);
+        StubStrategy fail = new("PortForward", 1, ConnectivityType.PortForward, succeeds: false);
         ConnectivityManager manager = BuildManager(fail);
 
         await manager.EvaluateAsync(CancellationToken.None);
@@ -181,7 +181,7 @@ public sealed class ConnectivityManagerStateTests
         OrderTrackingStrategy low = new("Low", 1, ConnectivityType.PortForward, attemptOrder);
         OrderTrackingStrategy high = new("High", 2, ConnectivityType.StunHolePunch, attemptOrder);
 
-        ConnectivityManager manager = BuildManager([high, low]);
+        ConnectivityManager manager = BuildManager(high, low);
 
         await manager.EvaluateAsync(CancellationToken.None);
 

@@ -32,7 +32,7 @@ public sealed class StorageBackendsSmokeTests(StorageBackendsFixture fix)
         string path = $"smoke/{Ulid.NewUlid()}.bin";
         byte[] data = "hello s3"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(path, true))
+        await using (Stream w = driver.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
         await using Stream r = driver.OpenRead(path);
         using MemoryStream ms = new();
@@ -49,7 +49,7 @@ public sealed class StorageBackendsSmokeTests(StorageBackendsFixture fix)
         string path = $"smoke-{Ulid.NewUlid()}.bin";
         byte[] data = "hello webdav"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(path, true))
+        await using (Stream w = driver.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
         await using Stream r = driver.OpenRead(path);
         using MemoryStream ms = new();
@@ -66,7 +66,7 @@ public sealed class StorageBackendsSmokeTests(StorageBackendsFixture fix)
         string path = $"smoke-{Ulid.NewUlid()}.bin";
         byte[] data = "hello smb"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(path, true))
+        await using (Stream w = driver.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
         driver.FileExists(path).Should().BeTrue();
         await using Stream r = driver.OpenRead(path);
@@ -93,7 +93,7 @@ public sealed class StorageBackendsSmokeTests(StorageBackendsFixture fix)
         // Round-trip a fresh file.
         string path = $"/smoke-{Ulid.NewUlid()}.bin";
         byte[] data = "hello nfs"u8.ToArray();
-        await using (Stream w = nfs.OpenWrite(path, true))
+        await using (Stream w = nfs.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
         await using Stream r = nfs.OpenRead(path);
         using MemoryStream ms = new();

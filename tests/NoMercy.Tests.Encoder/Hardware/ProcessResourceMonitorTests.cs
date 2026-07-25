@@ -56,11 +56,11 @@ public class ProcessResourceMonitorTests
     {
         ProcessResourceMonitor sut = new();
         GpuDevice nvidia = new(
-            GpuVendor.Nvidia,
-            "RTX 4080",
-            16_384,
-            12,
-            [VideoCodecType.H264]
+            Vendor: GpuVendor.Nvidia,
+            Name: "RTX 4080",
+            VramMb: 16_384,
+            MaxEncoderSessions: 12,
+            SupportedCodecs: [VideoCodecType.H264]
         );
 
         double util = sut.GetGpuEncodeUtilization(nvidia.Name);

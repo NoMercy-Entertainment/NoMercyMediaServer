@@ -24,24 +24,24 @@ public class DiscIdentificationTests
 {
     private static DiscCandidate MakeCandidate(string title, double confidence) =>
         new(
-            "tmdb",
-            "1",
-            title,
-            2024,
-            null,
-            null,
-            confidence
+            Source: "tmdb",
+            StableId: "1",
+            Title: title,
+            Year: 2024,
+            PosterUrl: null,
+            BackdropUrl: null,
+            Confidence: confidence
         );
 
     [Fact]
     public void TopCandidate_EmptyCandidates_ReturnsNull()
     {
         DiscIdentification identification = new(
-            MediaKind.Movie,
-            [],
-            0,
-            false,
-            true
+            Kind: MediaKind.Movie,
+            Candidates: [],
+            TopConfidence: 0,
+            AutoApply: false,
+            NeedsManualAssignment: true
         );
 
         identification.TopCandidate.Should().BeNull();
@@ -54,11 +54,11 @@ public class DiscIdentificationTests
         DiscCandidate second = MakeCandidate("Second", 0.5);
 
         DiscIdentification identification = new(
-            MediaKind.Movie,
-            [first, second],
-            0.95,
-            true,
-            false
+            Kind: MediaKind.Movie,
+            Candidates: [first, second],
+            TopConfidence: 0.95,
+            AutoApply: true,
+            NeedsManualAssignment: false
         );
 
         identification.TopCandidate.Should().BeSameAs(first);

@@ -20,6 +20,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Startup;
+using AudioOutput = NoMercy.Encoder.Profiles.AudioOutput;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using ContainerCompatibility = NoMercy.Encoder.Profiles.ContainerCompatibility;
@@ -27,10 +28,14 @@ using DownmixConfig = NoMercy.Encoder.Profiles.DownmixConfig;
 using DownmixMode = NoMercy.Encoder.Profiles.DownmixMode;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using HardwarePreference = NoMercy.Encoder.Profiles.HardwarePreference;
+using HlsDerivatives = NoMercy.Encoder.Profiles.HlsDerivatives;
+using LoudnessConfig = NoMercy.Encoder.Profiles.LoudnessConfig;
 using LoudnessMode = NoMercy.Encoder.Profiles.LoudnessMode;
 using RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
+using SubtitleOutput = NoMercy.Encoder.Profiles.SubtitleOutput;
 using SubtitlePolicy = NoMercy.Encoder.Profiles.SubtitlePolicy;
+using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Integration;
 
@@ -207,7 +212,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
         try
         {
             if (Directory.Exists(_testDir))
-                Directory.Delete(_testDir, true);
+                Directory.Delete(_testDir, recursive: true);
         }
         catch
         {
@@ -285,20 +290,20 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
 
         EncodingProfile profile = BuildProfile(container, video, audio);
         EncodingRequest request = new(
-            _inputFile,
-            outputDir,
-            profile
+            InputPath: _inputFile,
+            OutputDirectory: outputDir,
+            Profile: profile
         );
 
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(2));
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
-        EncodingResult result = await encoder.EncodeAsync(request, null, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request, progress: null, cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
                 $"ffmpeg must accept {container}/{video}/{audio}. "
-                         + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
 
@@ -350,20 +355,20 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             codecProfile
         );
         EncodingRequest request = new(
-            _inputFile,
-            outputDir,
-            profile
+            InputPath: _inputFile,
+            OutputDirectory: outputDir,
+            Profile: profile
         );
 
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(2));
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
-        EncodingResult result = await encoder.EncodeAsync(request, null, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request, progress: null, cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
                 $"ffmpeg must accept {video} {bitDepth}-bit profile={codecProfile}. "
-                         + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
 
@@ -416,7 +421,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             .Success.Should()
             .BeTrue(
                 $"ffmpeg must accept rate_control={rateControl} encode_mode={encodeMode}. "
-                         + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
 
@@ -465,8 +470,8 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
                     Channels = channels,
                     Loudness = new(
                         loudness,
-                        loudness == LoudnessMode.EbuR128 ? -16 : null,
-                        loudness == LoudnessMode.EbuR128 ? -1.5 : null
+                        TargetLufs: loudness == LoudnessMode.EbuR128 ? -16 : null,
+                        TruePeakDb: loudness == LoudnessMode.EbuR128 ? -1.5 : null
                     ),
                     Downmix = downmix == DownmixMode.Auto ? null : new DownmixConfig(downmix),
                 },
@@ -479,7 +484,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             .Success.Should()
             .BeTrue(
                 $"ffmpeg must accept loudness={loudness} downmix={downmix} channels={channels}. "
-                         + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
 
@@ -521,12 +526,12 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             Subtitles =
             [
                 new(
-                    policy,
-                    codec,
-                    ["und", "eng"],
-                    false,
-                    null,
-                    "subs/:language:"
+                    Policy: policy,
+                    Codec: codec,
+                    AllowedLanguages: ["und", "eng"],
+                    IncludeForced: false,
+                    OcrLanguage: null,
+                    PlaylistNameTemplate: "subs/:language:"
                 ),
             ],
         };
@@ -537,7 +542,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             .Success.Should()
             .BeTrue(
                 $"ffmpeg must accept subtitle policy={policy} codec={codec}. "
-                         + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
 
@@ -548,13 +553,13 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
     )
     {
         EncodingRequest request = new(
-            inputPath,
-            outputDir,
-            profile
+            InputPath: inputPath,
+            OutputDirectory: outputDir,
+            Profile: profile
         );
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(2));
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
-        return await encoder.EncodeAsync(request, null, cts.Token);
+        return await encoder.EncodeAsync(request, progress: null, cts.Token);
     }
 
     private static EncodingProfile BuildProfile(
@@ -565,46 +570,47 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
         CodecProfile codecProfile = CodecProfile.Auto
     ) =>
         new(
-            Ulid.NewUlid(),
-            $"oracle-{container}-{video}-{audio}",
-            container,
-            new(
-                StreamPolicy.Transcode,
-                video,
-                320,
-                180,
-                RateControlMode.Crf,
-                40,
-                0,
-                null,
-                null,
-                "ultrafast",
-                codecProfile,
-                null,
-                null,
-                bitDepth,
-                null,
-                2,
-                false,
-                "video/:framesize:",
-                "video/:framesize:/playlist"
+            Id: Ulid.NewUlid(),
+            Name: $"oracle-{container}-{video}-{audio}",
+            Container: container,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: video,
+                Width: 320,
+                Height: 180,
+                RateControl: RateControlMode.Crf,
+                Crf: 40,
+                BitrateKbps: 0,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "ultrafast",
+                CodecProfile: codecProfile,
+                Level: null,
+                Tune: null,
+                BitDepth: bitDepth,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/:framesize:",
+                PlaylistNameTemplate: "video/:framesize:/playlist"
             ),
+            Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    audio,
-                    128,
-                    2,
-                    48000,
-                    ["und"],
-                    null,
-                    new(LoudnessMode.None),
-                    null,
-                    "audio/:codec:",
-                    "audio/:codec:/playlist"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: audio,
+                    BitrateKbps: 128,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["und"],
+                    DefaultLanguage: null,
+                    Loudness: new(LoudnessMode.None),
+                    Downmix: null,
+                    SegmentNameTemplate: "audio/:codec:",
+                    PlaylistNameTemplate: "audio/:codec:/playlist"
                 ),
             ],
-            []
+            Subtitles: []
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,

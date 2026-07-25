@@ -138,7 +138,7 @@ public class DeviceDropRuleCronJobTests : IDisposable
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.Devices.Add(
-                NewDevice(owner, "fp-3", DateTime.UtcNow.AddHours(-30), "10.0.0.5")
+                NewDevice(owner, "fp-3", DateTime.UtcNow.AddHours(-30), lanIp: "10.0.0.5")
             );
             await seed.SaveChangesAsync();
         }
@@ -161,7 +161,7 @@ public class DeviceDropRuleCronJobTests : IDisposable
         {
             // The stale device — same LanIp, hasn't been seen in the efuse window.
             seed.Devices.Add(
-                NewDevice(owner, "fp-old", DateTime.UtcNow.AddHours(-30), "10.0.0.9")
+                NewDevice(owner, "fp-old", DateTime.UtcNow.AddHours(-30), lanIp: "10.0.0.9")
             );
             // A different fingerprint reclaimed that LAN IP recently via mDNS.
             seed.Devices.Add(

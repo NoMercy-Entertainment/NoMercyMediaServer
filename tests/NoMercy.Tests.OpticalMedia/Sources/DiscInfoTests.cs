@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.Analysis;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Sources;
 
@@ -19,15 +20,15 @@ public class DiscInfoTests
 {
     private static DiscTitle MakeTitle(int index, TimeSpan duration, bool isMainFeature = false) =>
         new(
-            index,
-            $"Title {index}",
-            duration,
-            [],
-            [],
-            [],
-            [],
-            0,
-            isMainFeature
+            Index: index,
+            Name: $"Title {index}",
+            Duration: duration,
+            VideoStreams: [],
+            AudioStreams: [],
+            Subtitles: [],
+            Chapters: [],
+            EstimatedSizeBytes: 0,
+            IsMainFeature: isMainFeature
         );
 
     [Fact]
@@ -64,8 +65,8 @@ public class DiscInfoTests
     [Fact]
     public void MainTitleDurationSec_FlaggedMainFeature_PrefersFlaggedOverLongest()
     {
-        DiscTitle title1 = MakeTitle(0, TimeSpan.FromSeconds(3600), true);
-        DiscTitle title2 = MakeTitle(1, TimeSpan.FromSeconds(5400), false);
+        DiscTitle title1 = MakeTitle(0, TimeSpan.FromSeconds(3600), isMainFeature: true);
+        DiscTitle title2 = MakeTitle(1, TimeSpan.FromSeconds(5400), isMainFeature: false);
 
         DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [title1, title2], null, TimeSpan.Zero);
 
@@ -131,9 +132,9 @@ public class DiscInfoTests
     [Fact]
     public void MainTitleDurationSec_MultipleTitles_OnlyMainFeatureFlaggedButShorter()
     {
-        DiscTitle mainFeature = MakeTitle(0, TimeSpan.FromSeconds(1800), true);
-        DiscTitle bonus1 = MakeTitle(1, TimeSpan.FromSeconds(3600), false);
-        DiscTitle bonus2 = MakeTitle(2, TimeSpan.FromSeconds(2700), false);
+        DiscTitle mainFeature = MakeTitle(0, TimeSpan.FromSeconds(1800), isMainFeature: true);
+        DiscTitle bonus1 = MakeTitle(1, TimeSpan.FromSeconds(3600), isMainFeature: false);
+        DiscTitle bonus2 = MakeTitle(2, TimeSpan.FromSeconds(2700), isMainFeature: false);
 
         DiscInfo disc = new(
             OpticalDiscType.Dvd,
@@ -151,7 +152,7 @@ public class DiscInfoTests
     [Fact]
     public void MainTitleDurationSec_FirstTitleIsMain_ReturnsItsDuration()
     {
-        DiscTitle main = MakeTitle(0, TimeSpan.FromSeconds(7200), true);
+        DiscTitle main = MakeTitle(0, TimeSpan.FromSeconds(7200), isMainFeature: true);
         DiscInfo disc = new(OpticalDiscType.Dvd, "TEST", [main], null, TimeSpan.Zero);
 
         int result = disc.MainTitleDurationSec;
@@ -198,10 +199,10 @@ public class DiscInfoTests
     {
         DiscInfo disc = new(
             OpticalDiscType.BluRay,
-            DiscLabel: "VOLUME_LABEL",
-            Titles: [],
-            AudioTracks: null,
-            TotalDuration: TimeSpan.Zero,
+            "VOLUME_LABEL",
+            [],
+            null,
+            TimeSpan.Zero,
             DiscTitle: "The Dark Knight"
         );
 

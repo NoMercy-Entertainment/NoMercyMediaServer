@@ -92,11 +92,11 @@ public class AnamorphicEdgeCaseTests
     private async Task<string> BuildFilterGraph(MediaInfo media, int outWidth, int outHeight)
     {
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [BuildVideoOutput(outWidth, outHeight, "[v0]")],
-            [BuildAudioOutput()],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildVideoOutput(outWidth, outHeight, "[v0]")],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
         ExecutionPlan plan = BuildPlan(outputPlan);
         BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
@@ -113,51 +113,52 @@ public class AnamorphicEdgeCaseTests
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
+            Groups:
             [
                 new(
-                    "group_0",
-                    [new("decode_0", OperationType.Decode, [], new())],
-                    null,
-                    0,
-                    4,
-                    false,
-                    1
+                    GroupId: "group_0",
+                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 4,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            outputPlan
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: outputPlan
         );
 
     private static VideoOutputPlan BuildVideoOutput(int width, int height, string mapLabel) =>
         new(
-            width,
-            height,
-            "libx264",
-            23,
-            4000,
-            "medium",
-            "high",
-            "4.1",
-            false,
-            "yuv420p",
-            mapLabel,
-            new()
+            Width: width,
+            Height: height,
+            EncoderName: "libx264",
+            Crf: 23,
+            BitrateKbps: 4000,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.1",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: mapLabel,
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>
         new(
-            "aac",
-            192,
-            2,
-            48000,
-            StreamAction.Transcode,
-            "en",
-            "0:a:0"
+            EncoderName: "aac",
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: "en",
+            MapLabel: "0:a:0"
         );
 
     private static VideoStreamInfo BuildVideoStream(string? sar) =>
         new(
-            0,
+            Index: 0,
             Codec: "mpeg2video",
             Width: 720,
             Height: 576,
@@ -174,14 +175,15 @@ public class AnamorphicEdgeCaseTests
 
     private static MediaInfo BuildMediaInfo(int width, int height, string? sar) =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            4_000_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
+                    Index: 0,
                     Codec: "mpeg2video",
                     Width: width,
                     Height: height,
@@ -196,8 +198,8 @@ public class AnamorphicEdgeCaseTests
                     SampleAspectRatio: sar
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 }

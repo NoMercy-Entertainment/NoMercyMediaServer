@@ -49,7 +49,7 @@ public class InboxController_Routes_Test
         foreach (MethodInfo method in PublicActions(controller))
         {
             HttpMethodAttribute? attr = method
-                .GetCustomAttributes(httpVerbAttribute, false)
+                .GetCustomAttributes(httpVerbAttribute, inherit: false)
                 .Cast<HttpMethodAttribute>()
                 .FirstOrDefault();
 
@@ -93,12 +93,12 @@ public class InboxController_Routes_Test
     // -------------------------------------------------------------------------
 
     [Theory]
-    [InlineData([typeof(HttpGetAttribute), "", "GET / (list)"])]
-    [InlineData([typeof(HttpGetAttribute), "{id}", "GET /{id}"])]
-    [InlineData([typeof(HttpGetAttribute), "{id}/matches", "GET /{id}/matches"])]
-    [InlineData([typeof(HttpPostAttribute), "{id}/assign", "POST /{id}/assign"])]
-    [InlineData([typeof(HttpPostAttribute), "{id}/dismiss", "POST /{id}/dismiss"])]
-    [InlineData([typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}"])]
+    [InlineData(typeof(HttpGetAttribute), "", "GET / (list)")]
+    [InlineData(typeof(HttpGetAttribute), "{id}", "GET /{id}")]
+    [InlineData(typeof(HttpGetAttribute), "{id}/matches", "GET /{id}/matches")]
+    [InlineData(typeof(HttpPostAttribute), "{id}/assign", "POST /{id}/assign")]
+    [InlineData(typeof(HttpPostAttribute), "{id}/dismiss", "POST /{id}/dismiss")]
+    [InlineData(typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}")]
     public void InboxController_HasExpectedEndpoint(
         Type httpVerb,
         string routeSuffix,
@@ -141,7 +141,7 @@ public class InboxController_Routes_Test
         Assert.Equal("603", request.Match.ExternalId);
         Assert.Equal("The Matrix", request.Match.Title);
         Assert.Equal(1999, request.Match.Year);
-        Assert.Equal(0.97, request.Match.Score, 5);
+        Assert.Equal(0.97, request.Match.Score, precision: 5);
         Assert.Equal(Ulid.Parse("01HZXY7ABCDEF0123456789012"), request.TargetLibraryId);
         Assert.Equal(Ulid.Parse("01HZXY7ABCDEF0123456789013"), request.TargetFolderId);
         Assert.Equal(Ulid.Parse("01HZXY7ABCDEF0123456789014"), request.TargetProfileId);

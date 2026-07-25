@@ -113,7 +113,7 @@ public class LicenseTokenClientTests
                     Content = new StringContent(body, Encoding.UTF8, "application/json"),
                 };
             },
-            "my-access-token"
+            accessToken: "my-access-token"
         );
 
         await sut.RequestAsync(CancellationToken.None);

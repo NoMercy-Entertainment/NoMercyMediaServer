@@ -52,12 +52,12 @@ public sealed class RemoteStoragePathGuardTests
     private static RemoteStorage BuildS3Storage()
     {
         S3StorageDriver driver = new(
-            "test-bucket",
-            "us-east-1",
-            null,
-            "http://localhost:19999",
-            "test-access-key",
-            "test-secret-key"
+            bucket: "test-bucket",
+            region: "us-east-1",
+            prefix: null,
+            endpoint: "http://localhost:19999",
+            accessKey: "test-access-key",
+            secretKey: "test-secret-key"
         );
         return new(driver);
     }

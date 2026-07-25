@@ -24,18 +24,18 @@ public class TaskResourceHelperTests
 {
     private static VideoOutputPlan VideoWith(string encoderName) =>
         new(
-            1920,
-            1080,
-            encoderName,
-            23,
-            0,
-            "medium",
-            "main",
-            "4.0",
-            false,
-            "yuv420p",
-            "[v]",
-            []
+            Width: 1920,
+            Height: 1080,
+            EncoderName: encoderName,
+            Crf: 23,
+            BitrateKbps: 0,
+            Preset: "medium",
+            Profile: "main",
+            Level: "4.0",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "[v]",
+            ExtraFlags: []
         );
 
     // ── GPU encoder detection ──────────────────────────────────────────────
@@ -136,7 +136,7 @@ public class TaskResourceHelperTests
     [Fact]
     public void CpuOnly_CustomThreadCount_FlowsThrough()
     {
-        ResourceRequirement req = TaskResourceHelper.CpuOnly(8);
+        ResourceRequirement req = TaskResourceHelper.CpuOnly(cpuThreads: 8);
 
         req.CpuThreads.Should().Be(8);
     }

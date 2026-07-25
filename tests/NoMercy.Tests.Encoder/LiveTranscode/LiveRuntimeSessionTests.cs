@@ -45,16 +45,16 @@ public class LiveRuntimeSessionTests
         new(
             (session ?? SessionMock()).Object,
             target ?? TimeSpan.FromSeconds(4),
-            scratchDir
+            scratchDirectory: scratchDir
         );
 
     private static Segment Seg(int index, double startSec = 0, double durSec = 4) =>
         new(
-            index,
-            TimeSpan.FromSeconds(startSec),
-            TimeSpan.FromSeconds(durSec),
-            $"/scratch/segment-{index}.ts",
-            1024
+            Index: index,
+            StartTime: TimeSpan.FromSeconds(startSec),
+            Duration: TimeSpan.FromSeconds(durSec),
+            FilePath: $"/scratch/segment-{index}.ts",
+            SizeBytes: 1024
         );
 
     // ── Construction state ───────────────────────────────────────────────────
@@ -132,7 +132,7 @@ public class LiveRuntimeSessionTests
         // CompareExchange loop must short-circuit when new == current.
         LiveRuntimeSession runtime = Build();
         InvokeBuffer(runtime, Seg(3));
-        InvokeBuffer(runtime, Seg(3, 12, 5)); // replacement
+        InvokeBuffer(runtime, Seg(3, startSec: 12, durSec: 5)); // replacement
 
         runtime.HighestSegmentIndex.Should().Be(3);
     }
@@ -143,7 +143,7 @@ public class LiveRuntimeSessionTests
     public void TryGetSegment_returns_buffered_segment_by_index()
     {
         LiveRuntimeSession runtime = Build();
-        Segment original = Seg(7, 28);
+        Segment original = Seg(7, startSec: 28);
         InvokeBuffer(runtime, original);
 
         bool found = runtime.TryGetSegment(7, out Segment retrieved);
@@ -169,8 +169,8 @@ public class LiveRuntimeSessionTests
         // Drainer occasionally rewrites a segment (e.g. re-encode on quality change).
         // The dictionary must yield the LATEST value, not the original.
         LiveRuntimeSession runtime = Build();
-        InvokeBuffer(runtime, Seg(2, 8, 4));
-        Segment replacement = Seg(2, 8, 5);
+        InvokeBuffer(runtime, Seg(2, startSec: 8, durSec: 4));
+        Segment replacement = Seg(2, startSec: 8, durSec: 5);
         InvokeBuffer(runtime, replacement);
 
         runtime.TryGetSegment(2, out Segment seg);
@@ -192,7 +192,7 @@ public class LiveRuntimeSessionTests
 
         IReadOnlyList<Segment> snapshot = runtime.SnapshotSegments();
 
-        snapshot.Select(s => s.Index).Should().Equal([0, 1, 3, 5]);
+        snapshot.Select(s => s.Index).Should().Equal(0, 1, 3, 5);
     }
 
     [Fact]

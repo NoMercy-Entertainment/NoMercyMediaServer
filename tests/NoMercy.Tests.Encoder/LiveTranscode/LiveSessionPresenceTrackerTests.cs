@@ -31,16 +31,16 @@ public class LiveSessionPresenceTrackerTests
 
     private static LiveQuality MakeQuality() =>
         new(
-            "1080p",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     private static (
@@ -90,7 +90,7 @@ public class LiveSessionPresenceTrackerTests
     public async Task ConnectionClosed_AfterGraceWindow_DisposesSession()
     {
         (LiveStreamingService service, LiveSessionPresenceTracker tracker, string sessionId) =
-            Build(1);
+            Build(graceSeconds: 1);
 
         tracker.OnSubscribed(ConnA, sessionId);
         tracker.OnConnectionClosed(ConnA);
@@ -104,7 +104,7 @@ public class LiveSessionPresenceTrackerTests
     public async Task Reconnect_WithinGraceWindow_KeepsSession()
     {
         (LiveStreamingService service, LiveSessionPresenceTracker tracker, string sessionId) =
-            Build(1);
+            Build(graceSeconds: 1);
 
         tracker.OnSubscribed(ConnA, sessionId);
         tracker.OnConnectionClosed(ConnA);
@@ -126,7 +126,7 @@ public class LiveSessionPresenceTrackerTests
     public async Task Unsubscribe_ThenConnectionClosed_LeavesGracefulTeardownToCaller()
     {
         (LiveStreamingService service, LiveSessionPresenceTracker tracker, string sessionId) =
-            Build(1);
+            Build(graceSeconds: 1);
 
         tracker.OnSubscribed(ConnA, sessionId);
 

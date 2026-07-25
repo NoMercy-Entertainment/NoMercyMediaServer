@@ -212,7 +212,7 @@ public sealed class ChromeCastServiceReflectionUtilityTests
     {
         ChromeCastService service = BuildService();
 
-        string json = service.BuildLaunchJson(1, null, true);
+        string json = service.BuildLaunchJson(1, null, useAndroidReceiver: true);
 
         Assert.Contains("\"appId\":\"925B4C3C\"", json);
         Assert.Contains("\"requestId\":1", json);
@@ -226,7 +226,7 @@ public sealed class ChromeCastServiceReflectionUtilityTests
     {
         ChromeCastService service = BuildService();
 
-        string json = service.BuildLaunchJson(2, null, false);
+        string json = service.BuildLaunchJson(2, null, useAndroidReceiver: false);
 
         Assert.Contains("\"appId\":\"925B4C3C\"", json);
         Assert.Contains("\"requestId\":2", json);
@@ -243,7 +243,7 @@ public sealed class ChromeCastServiceReflectionUtilityTests
         string json = service.BuildLaunchJson(
             3,
             new { accessToken = "abc" },
-            true
+            useAndroidReceiver: true
         );
 
         Assert.Contains("androidReceiverCompatible", json);
@@ -259,7 +259,7 @@ public sealed class ChromeCastServiceReflectionUtilityTests
         string json = service.BuildLaunchJson(
             4,
             new { accessToken = "xyz" },
-            false
+            useAndroidReceiver: false
         );
 
         Assert.Contains("\"WEB\"", json);
@@ -273,7 +273,7 @@ public sealed class ChromeCastServiceReflectionUtilityTests
     {
         ChromeCastService service = BuildService();
 
-        string json = service.BuildLaunchJson(999, null, true);
+        string json = service.BuildLaunchJson(999, null, useAndroidReceiver: true);
 
         Assert.Contains("\"requestId\":999", json);
     }

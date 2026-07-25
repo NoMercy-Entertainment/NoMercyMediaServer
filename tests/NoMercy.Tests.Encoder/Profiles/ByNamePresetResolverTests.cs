@@ -29,9 +29,9 @@ public class ByNamePresetResolverTests
     public void Resolve_NoParent_ReturnsRootProfile()
     {
         PresetResolveRequest root = new(
-            "root",
-            BaseProfileJson("root", 8000),
-            null
+            Name: "root",
+            ProfileJson: BaseProfileJson("root", 8000),
+            ParentName: null
         );
         FakeLookup lookup = new();
 
@@ -45,9 +45,9 @@ public class ByNamePresetResolverTests
     public void Resolve_ChildOverridesParentBitrate()
     {
         PresetResolveRequest child = new(
-            "child",
-            BaseProfileJson("child", 6000),
-            "parent"
+            Name: "child",
+            ProfileJson: BaseProfileJson("child", 6000),
+            ParentName: "parent"
         );
         FakeLookup lookup = new() { ["parent"] = new("parent", BaseProfileJson("parent", 12000)) };
 
@@ -63,9 +63,9 @@ public class ByNamePresetResolverTests
         // Child profile only specifies the name + nothing else — populating an
         // EncodingProfile with that JSON should leave parent fields intact.
         PresetResolveRequest child = new(
-            "child",
-            "{\"Name\":\"child\"}",
-            "parent"
+            Name: "child",
+            ProfileJson: "{\"Name\":\"child\"}",
+            ParentName: "parent"
         );
         FakeLookup lookup = new() { ["parent"] = new("parent", BaseProfileJson("parent", 9000)) };
 
@@ -87,13 +87,13 @@ public class ByNamePresetResolverTests
             ["parent"] = new(
                 "parent",
                 "{\"Video\":{\"BitrateKbps\":8000}}",
-                "grandparent"
+                ParentName: "grandparent"
             ),
         };
         PresetResolveRequest child = new(
-            "child",
-            "{\"Name\":\"child\"}",
-            "parent"
+            Name: "child",
+            ProfileJson: "{\"Name\":\"child\"}",
+            ParentName: "parent"
         );
 
         EncodingProfile profile = _resolver.Resolve(child, lookup);
@@ -109,9 +109,9 @@ public class ByNamePresetResolverTests
     public void Resolve_MissingParent_Throws()
     {
         PresetResolveRequest leaf = new(
-            "child",
-            BaseProfileJson("child", 5000),
-            "vanished_parent"
+            Name: "child",
+            ProfileJson: BaseProfileJson("child", 5000),
+            ParentName: "vanished_parent"
         );
         FakeLookup lookup = new();
 
@@ -126,8 +126,8 @@ public class ByNamePresetResolverTests
         // A → B → A
         FakeLookup lookup = new()
         {
-            ["A"] = new("A", BaseProfileJson("A", 1000), "B"),
-            ["B"] = new("B", BaseProfileJson("B", 2000), "A"),
+            ["A"] = new("A", BaseProfileJson("A", 1000), ParentName: "B"),
+            ["B"] = new("B", BaseProfileJson("B", 2000), ParentName: "A"),
         };
         PresetResolveRequest start = lookup["A"];
 
@@ -145,7 +145,7 @@ public class ByNamePresetResolverTests
         {
             string name = $"P{i}";
             string? parent = i < 11 ? $"P{i + 1}" : null;
-            lookup[name] = new(name, BaseProfileJson(name, 1000 + i), parent);
+            lookup[name] = new(name, BaseProfileJson(name, 1000 + i), ParentName: parent);
         }
         PresetResolveRequest leaf = lookup["P0"];
 
@@ -157,7 +157,7 @@ public class ByNamePresetResolverTests
     [Fact]
     public void Resolve_EmptyProfileJson_Throws()
     {
-        PresetResolveRequest leaf = new("broken", "null");
+        PresetResolveRequest leaf = new(Name: "broken", ProfileJson: "null");
         FakeLookup lookup = new();
 
         Action act = () => _resolver.Resolve(leaf, lookup);
@@ -170,32 +170,32 @@ public class ByNamePresetResolverTests
     private static string BaseProfileJson(string name, int bitrateKbps)
     {
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
-            name,
-            Container.HlsFmp4,
-            new(
-                StreamPolicy.Transcode,
-                NoMercy.Encoder.Codecs.VideoCodecType.H264,
-                1920,
-                1080,
-                RateControlMode.Vbr,
-                0,
-                bitrateKbps,
-                null,
-                null,
-                null,
-                CodecProfile.Auto,
-                null,
-                null,
-                8,
-                null,
-                2,
-                false,
-                "v",
-                "p"
+            Id: Ulid.NewUlid(),
+            Name: name,
+            Container: Container.HlsFmp4,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: NoMercy.Encoder.Codecs.VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Vbr,
+                Crf: 0,
+                BitrateKbps: bitrateKbps,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: null,
+                CodecProfile: CodecProfile.Auto,
+                Level: null,
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "v",
+                PlaylistNameTemplate: "p"
             ),
-            [],
-            []
+            Audio: [],
+            Subtitles: []
         );
         return JsonConvert.SerializeObject(profile);
     }

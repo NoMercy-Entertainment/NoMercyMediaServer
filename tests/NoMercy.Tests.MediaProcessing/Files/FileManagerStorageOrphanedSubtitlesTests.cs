@@ -10,8 +10,10 @@
 // -----------------------------------------------------------------------------
 
 using System.Reflection;
+using Moq;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
@@ -42,7 +44,7 @@ public sealed class FileManagerStorageOrphanedSubtitlesTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, true);
+            Directory.Delete(_tempRoot, recursive: true);
     }
 
     [Fact]

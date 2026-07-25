@@ -31,11 +31,11 @@ public class LivePlaylistBuilderTests
     public void Build_EmptySegments_EmitsEventPlaylistWithNoEntries()
     {
         LivePlaylistRequest request = new(
-            "s",
-            [],
-            TimeSpan.FromSeconds(6),
-            false,
-            "/seg/{index}.ts"
+            SessionId: "s",
+            Segments: [],
+            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            IsComplete: false,
+            SegmentUrlTemplate: "/seg/{index}.ts"
         );
 
         string playlist = _builder.Build(request);
@@ -52,11 +52,11 @@ public class LivePlaylistBuilderTests
     public void Build_WithSegments_EmitsExtinfAndUrlPerSegment()
     {
         LivePlaylistRequest request = new(
-            "s",
-            [MakeSegment(0, 0, 6), MakeSegment(1, 6, 6)],
-            TimeSpan.FromSeconds(6),
-            false,
-            "/seg/{index}.ts"
+            SessionId: "s",
+            Segments: [MakeSegment(0, 0, 6), MakeSegment(1, 6, 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            IsComplete: false,
+            SegmentUrlTemplate: "/seg/{index}.ts"
         );
 
         string playlist = _builder.Build(request);
@@ -70,11 +70,11 @@ public class LivePlaylistBuilderTests
     public void Build_Complete_EmitsVodTypeAndEndlist()
     {
         LivePlaylistRequest request = new(
-            "s",
-            [MakeSegment(0, 0, 6)],
-            TimeSpan.FromSeconds(6),
-            true,
-            "/seg/{index}.ts"
+            SessionId: "s",
+            Segments: [MakeSegment(0, 0, 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            IsComplete: true,
+            SegmentUrlTemplate: "/seg/{index}.ts"
         );
 
         string playlist = _builder.Build(request);
@@ -88,11 +88,11 @@ public class LivePlaylistBuilderTests
     public void Build_MediaSequence_FollowsFirstSegmentIndex()
     {
         LivePlaylistRequest request = new(
-            "s",
-            [MakeSegment(5, 30, 6), MakeSegment(6, 36, 6)],
-            TimeSpan.FromSeconds(6),
-            false,
-            "/seg/{index}.ts"
+            SessionId: "s",
+            Segments: [MakeSegment(5, 30, 6), MakeSegment(6, 36, 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            IsComplete: false,
+            SegmentUrlTemplate: "/seg/{index}.ts"
         );
 
         string playlist = _builder.Build(request);
@@ -104,11 +104,11 @@ public class LivePlaylistBuilderTests
     public void Build_TargetDuration_UsesLongestSegmentWhenGreaterThanTarget()
     {
         LivePlaylistRequest request = new(
-            "s",
-            [MakeSegment(0, 0, 9.2)],
-            TimeSpan.FromSeconds(6),
-            false,
-            "/seg/{index}.ts"
+            SessionId: "s",
+            Segments: [MakeSegment(0, 0, 9.2)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            IsComplete: false,
+            SegmentUrlTemplate: "/seg/{index}.ts"
         );
 
         string playlist = _builder.Build(request);
@@ -120,11 +120,11 @@ public class LivePlaylistBuilderTests
     public void Build_EmptyUrlTemplate_Throws()
     {
         LivePlaylistRequest request = new(
-            "s",
-            [],
-            TimeSpan.FromSeconds(6),
-            false,
-            ""
+            SessionId: "s",
+            Segments: [],
+            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            IsComplete: false,
+            SegmentUrlTemplate: ""
         );
 
         Action act = () => _builder.Build(request);
@@ -136,11 +136,11 @@ public class LivePlaylistBuilderTests
     public void Build_IndexSubstitution_ReplacesAllIndexPlaceholders()
     {
         LivePlaylistRequest request = new(
-            "abc",
-            [MakeSegment(2, 12, 6)],
-            TimeSpan.FromSeconds(6),
-            false,
-            "/live/{index}.ts"
+            SessionId: "abc",
+            Segments: [MakeSegment(2, 12, 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            IsComplete: false,
+            SegmentUrlTemplate: "/live/{index}.ts"
         );
 
         string playlist = _builder.Build(request);
@@ -155,12 +155,12 @@ public class LivePlaylistBuilderTests
         // up front regardless of how few have actually been produced (only one
         // buffered here). This is what lets the client show a full-length bar.
         LivePlaylistRequest request = new(
-            "s",
-            [MakeSegment(0, 0, 6)],
-            TimeSpan.FromSeconds(6),
-            false,
-            "/seg/{index}.ts",
-            TimeSpan.FromSeconds(20)
+            SessionId: "s",
+            Segments: [MakeSegment(0, 0, 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            IsComplete: false,
+            SegmentUrlTemplate: "/seg/{index}.ts",
+            TotalDuration: TimeSpan.FromSeconds(20)
         );
 
         string playlist = _builder.Build(request);
@@ -186,11 +186,11 @@ public class LivePlaylistBuilderTests
             Thread.CurrentThread.CurrentCulture = new("nl-NL");
 
             LivePlaylistRequest request = new(
-                "s",
-                [MakeSegment(0, 0, 6.5)],
-                TimeSpan.FromSeconds(6),
-                false,
-                "/seg/{index}.ts"
+                SessionId: "s",
+                Segments: [MakeSegment(0, 0, 6.5)],
+                TargetSegmentDuration: TimeSpan.FromSeconds(6),
+                IsComplete: false,
+                SegmentUrlTemplate: "/seg/{index}.ts"
             );
 
             string playlist = _builder.Build(request);
@@ -212,11 +212,11 @@ public class LivePlaylistBuilderTests
     public void BuildMaster_EmitsVideoVariantPointingAtRelativeMediaPlaylist()
     {
         LiveMasterPlaylistRequest request = new(
-            "playlist.m3u8",
-            1920,
-            1080,
-            5000,
-            []
+            VideoPlaylistUri: "playlist.m3u8",
+            Width: 1920,
+            Height: 1080,
+            BitrateKbps: 5000,
+            AudioRenditions: []
         );
 
         string master = _builder.BuildMaster(request);
@@ -234,13 +234,14 @@ public class LivePlaylistBuilderTests
     public void BuildMaster_EmitsOneAudioMediaEntryPerRendition_WithDisplayNames()
     {
         LiveMasterPlaylistRequest request = new(
-            "playlist.m3u8",
-            1920,
-            1080,
-            5000,
+            VideoPlaylistUri: "playlist.m3u8",
+            Width: 1920,
+            Height: 1080,
+            BitrateKbps: 5000,
+            AudioRenditions:
             [
-                new("eng", "/2/Show/S01E01/audio_eng_aac/audio_eng_aac.m3u8", true),
-                new("jpn", "/2/Show/S01E01/audio_jpn_aac/audio_jpn_aac.m3u8", false),
+                new("eng", "/2/Show/S01E01/audio_eng_aac/audio_eng_aac.m3u8", IsDefault: true),
+                new("jpn", "/2/Show/S01E01/audio_jpn_aac/audio_jpn_aac.m3u8", IsDefault: false),
             ]
         );
 
@@ -261,13 +262,14 @@ public class LivePlaylistBuilderTests
     public void BuildMaster_MarksOnlyTheDefaultRenditionDefaultYes()
     {
         LiveMasterPlaylistRequest request = new(
-            "playlist.m3u8",
-            1280,
-            720,
-            3000,
+            VideoPlaylistUri: "playlist.m3u8",
+            Width: 1280,
+            Height: 720,
+            BitrateKbps: 3000,
+            AudioRenditions:
             [
-                new("jpn", "/a/jpn.m3u8", false),
-                new("eng", "/a/eng.m3u8", true),
+                new("jpn", "/a/jpn.m3u8", IsDefault: false),
+                new("eng", "/a/eng.m3u8", IsDefault: true),
             ]
         );
 
@@ -284,11 +286,11 @@ public class LivePlaylistBuilderTests
     public void BuildMaster_NoRenditions_OmitsAudioGroupFromVariant()
     {
         LiveMasterPlaylistRequest request = new(
-            "playlist.m3u8",
-            1920,
-            1080,
-            5000,
-            []
+            VideoPlaylistUri: "playlist.m3u8",
+            Width: 1920,
+            Height: 1080,
+            BitrateKbps: 5000,
+            AudioRenditions: []
         );
 
         string master = _builder.BuildMaster(request);

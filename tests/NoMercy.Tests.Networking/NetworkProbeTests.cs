@@ -40,7 +40,7 @@ public sealed class NetworkProbeTests : IDisposable
         // never accept a connection without a live host at that address.
         NetworkProbe.ProbeTargets = ["192.0.2.1", "192.0.2.2"];
 
-        bool result = await NetworkProbe.CheckConnectivity(500);
+        bool result = await NetworkProbe.CheckConnectivity(timeoutMs: 500);
 
         Assert.False(result);
     }

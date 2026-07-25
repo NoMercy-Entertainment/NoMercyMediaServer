@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Distribution;
+using Xunit;
 
 namespace NoMercy.Tests.Encoder.Distribution;
 
@@ -23,7 +24,7 @@ public class LicenseTokenClientCacheTests
     private static KeyValuePair<string, (IntrospectResult Result, DateTime CachedAt)> Entry(
         string token,
         DateTime cachedAt
-    ) => new(token, (new IntrospectResult(true, [], null), cachedAt));
+    ) => new(token, (new IntrospectResult(Active: true, Scopes: [], Message: null), cachedAt));
 
     [Fact]
     public void ExpiredIntrospectKeys_SelectsEntriesAtOrPastTtl_KeepsFreshOnes()

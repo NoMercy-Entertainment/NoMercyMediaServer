@@ -81,7 +81,7 @@ public class MkvChapterPassthroughTest
 
     private static OutputPlan CreatePlanWithChapters() =>
         new(
-            OutputFormat.Mkv,
+            Format: OutputFormat.Mkv,
             VideoOutputs:
             [
                 new(
@@ -107,7 +107,8 @@ public class MkvChapterPassthroughTest
 
     private static OutputPlan CreatePlanWithoutChapters() =>
         new(
-            OutputFormat.Mkv,
+            Format: OutputFormat.Mkv,
+            VideoOutputs:
             [
                 new(
                     1920,
@@ -124,8 +125,8 @@ public class MkvChapterPassthroughTest
                     new()
                 ),
             ],
-            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
-            [],
-            null
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 }

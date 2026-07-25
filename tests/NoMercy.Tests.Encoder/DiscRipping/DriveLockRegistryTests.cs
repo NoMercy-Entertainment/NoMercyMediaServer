@@ -99,10 +99,10 @@ public class DriveLockRegistryTests
     // -----------------------------------------------------------------------
 
     private static ProcessResult SuccessResult() =>
-        new(0, "", "", TimeSpan.Zero);
+        new(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero);
 
     private static ProcessResult FailureResult() =>
-        new(1, "", "err", TimeSpan.Zero);
+        new(ExitCode: 1, StdOut: "", StdErr: "err", Duration: TimeSpan.Zero);
 
     private static IDiscRipper BuildRipper(DriveLockRegistry registry, IProcessRunner processRunner)
     {
@@ -126,7 +126,7 @@ public class DriveLockRegistryTests
 
     private static RipRequest MakeRequest(string drivePath, string? volumeUuid = null) =>
         new(
-            drivePath,
+            DrivePath: drivePath,
             SelectedTitleIndices: [1],
             MetadataId: null,
             Custom: null,
@@ -161,7 +161,7 @@ public class DriveLockRegistryTests
         IDiscRipper ripper1 = BuildRipper(registry, runner1.Object);
         IDiscRipper ripper2 = BuildRipper(registry, runner2.Object);
 
-        RipRequest request = MakeRequest("/dev/sr0", "vol-uuid-same");
+        RipRequest request = MakeRequest("/dev/sr0", volumeUuid: "vol-uuid-same");
 
         Task<DiscRipResult[]> rip1 = ripper1.RipAsync(request, "/tmp/rip1", CancellationToken.None);
 
@@ -209,8 +209,8 @@ public class DriveLockRegistryTests
         IDiscRipper ripperA = BuildRipper(registry, runnerA.Object);
         IDiscRipper ripperB = BuildRipper(registry, runnerB.Object);
 
-        RipRequest requestA = MakeRequest("/dev/sr0", "vol-uuid-A");
-        RipRequest requestB = MakeRequest("/dev/sr1", "vol-uuid-B");
+        RipRequest requestA = MakeRequest("/dev/sr0", volumeUuid: "vol-uuid-A");
+        RipRequest requestB = MakeRequest("/dev/sr1", volumeUuid: "vol-uuid-B");
 
         Task<DiscRipResult[]> ripA = ripperA.RipAsync(
             requestA,
@@ -253,7 +253,7 @@ public class DriveLockRegistryTests
             .ReturnsAsync(SuccessResult());
 
         IDiscRipper ripper = BuildRipper(registry, runner.Object);
-        RipRequest request = MakeRequest("/dev/sr0", "vol-uuid-success");
+        RipRequest request = MakeRequest("/dev/sr0", volumeUuid: "vol-uuid-success");
 
         await ripper.RipAsync(request, "/tmp/rip", CancellationToken.None);
 
@@ -280,7 +280,7 @@ public class DriveLockRegistryTests
             .ReturnsAsync(FailureResult());
 
         IDiscRipper ripper = BuildRipper(registry, runner.Object);
-        RipRequest request = MakeRequest("/dev/sr0", "vol-uuid-fail");
+        RipRequest request = MakeRequest("/dev/sr0", volumeUuid: "vol-uuid-fail");
 
         // RipAsync does not throw on ffmpeg exit ≠ 0 — it returns a failed result
         DiscRipResult[] results = await ripper.RipAsync(

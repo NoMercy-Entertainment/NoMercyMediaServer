@@ -24,11 +24,11 @@ public class HolderBackedHardwareCapabilitiesTests
 {
     private static GpuDevice GpuFor(VideoCodecType codec) =>
         new(
-            GpuVendor.Nvidia,
-            "RTX 4080",
-            16384,
-            8,
-            [codec]
+            Vendor: GpuVendor.Nvidia,
+            Name: "RTX 4080",
+            VramMb: 16384,
+            MaxEncoderSessions: 8,
+            SupportedCodecs: [codec]
         );
 
     [Fact]
@@ -74,7 +74,7 @@ public class HolderBackedHardwareCapabilitiesTests
         GpuDevice gpu = GpuFor(VideoCodecType.H265);
         HardwareCapabilitiesHolder holder = new()
         {
-            Current = new HardwareCapabilities([gpu], 24),
+            Current = new HardwareCapabilities([gpu], CpuCores: 24),
         };
         HolderBackedHardwareCapabilities subject = new(holder);
 
@@ -88,7 +88,7 @@ public class HolderBackedHardwareCapabilitiesTests
     {
         HardwareCapabilitiesHolder holder = new()
         {
-            Current = new HardwareCapabilities([GpuFor(VideoCodecType.H265)], 8),
+            Current = new HardwareCapabilities([GpuFor(VideoCodecType.H265)], CpuCores: 8),
         };
         HolderBackedHardwareCapabilities subject = new(holder);
 
@@ -106,7 +106,7 @@ public class HolderBackedHardwareCapabilitiesTests
 
         subject.HasGpu.Should().BeFalse();
 
-        holder.Current = new HardwareCapabilities([GpuFor(VideoCodecType.Av1)], 16);
+        holder.Current = new HardwareCapabilities([GpuFor(VideoCodecType.Av1)], CpuCores: 16);
 
         subject.HasGpu.Should().BeTrue();
         subject.Gpus.Should().ContainSingle();

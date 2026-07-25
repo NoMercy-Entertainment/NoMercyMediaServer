@@ -61,7 +61,7 @@ public class BinariesAgeGateTests
     {
         GithubReleaseResponse[] releases =
         [
-            Release(20, true),
+            Release(20, draft: true),
             Release(25, prerelease: true),
             Release(30), // the only eligible stable release
         ];

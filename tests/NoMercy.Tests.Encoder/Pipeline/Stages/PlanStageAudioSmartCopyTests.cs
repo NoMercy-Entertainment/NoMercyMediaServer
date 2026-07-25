@@ -68,26 +68,27 @@ public class PlanStageAudioSmartCopyTests
         string language = "eng"
     ) =>
         new(
-            "/music/test.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(3),
-            bitRateKbps,
-            5_000_000,
-            [],
+            FilePath: "/music/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(3),
+            OverallBitRateKbps: bitRateKbps,
+            FileSizeBytes: 5_000_000,
+            VideoStreams: [],
+            AudioStreams:
             [
                 new(
-                    0,
-                    codec,
-                    channels,
-                    sampleRate,
-                    bitRateKbps,
-                    language,
-                    true,
-                    false
+                    Index: 0,
+                    Codec: codec,
+                    Channels: channels,
+                    SampleRate: sampleRate,
+                    BitRateKbps: bitRateKbps,
+                    Language: language,
+                    IsDefault: true,
+                    IsForced: false
                 ),
             ],
-            [],
-            []
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static AudioOutput BuildAudioOutput(
@@ -97,17 +98,17 @@ public class PlanStageAudioSmartCopyTests
         int sampleRateHz = 48000
     ) =>
         new(
-            StreamPolicy.Transcode,
-            codec,
-            bitrateKbps,
-            channels,
-            sampleRateHz,
-            [],
-            null,
-            null,
-            null,
-            "audio_{lang}_{codec}/audio_{lang}_{codec}",
-            "audio_{lang}_{codec}/audio_{lang}_{codec}"
+            Policy: StreamPolicy.Transcode,
+            Codec: codec,
+            BitrateKbps: bitrateKbps,
+            Channels: channels,
+            SampleRateHz: sampleRateHz,
+            AllowedLanguages: [],
+            DefaultLanguage: null,
+            Loudness: null,
+            Downmix: null,
+            SegmentNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}",
+            PlaylistNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}"
         );
 
     private static EncodingProfile BuildProfile(
@@ -115,12 +116,12 @@ public class PlanStageAudioSmartCopyTests
         Container container = Container.HlsFmp4
     ) =>
         new(
-            Ulid.NewUlid(),
-            "AudioSmartCopy",
-            container,
-            null,
-            audio,
-            []
+            Id: Ulid.NewUlid(),
+            Name: "AudioSmartCopy",
+            Container: container,
+            Video: null,
+            Audio: audio,
+            Subtitles: []
         );
 
     [Fact]
@@ -193,7 +194,7 @@ public class PlanStageAudioSmartCopyTests
         MediaInfo media = BuildAudioOnlyMedia("aac", bitRateKbps: 192);
         EncodingProfile profile = BuildProfile([
             BuildAudioOutput(AudioCodecType.Aac),
-            BuildAudioOutput(AudioCodecType.Eac3, 448),
+            BuildAudioOutput(AudioCodecType.Eac3, bitrateKbps: 448),
         ]);
 
         ValidateInput input = new(media, profile);

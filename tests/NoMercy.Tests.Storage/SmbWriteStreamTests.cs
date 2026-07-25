@@ -62,7 +62,7 @@ public sealed class SmbWriteStreamTests
                 )
             );
         SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin", 1024);
+        using SmbWriteStream stream = new(session, new object(), "/out.bin", chunkSize: 1024);
         byte[] payload = [1, 2, 3, 4, 5];
 
         stream.Write(payload, 0, payload.Length);
@@ -96,7 +96,7 @@ public sealed class SmbWriteStreamTests
                 )
             );
         SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin", 3);
+        using SmbWriteStream stream = new(session, new object(), "/out.bin", chunkSize: 3);
         byte[] payload = [1, 2, 3, 4, 5, 6, 7];
 
         stream.Write(payload, 0, payload.Length);
@@ -134,7 +134,7 @@ public sealed class SmbWriteStreamTests
                 )
             );
         SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin", 100);
+        using SmbWriteStream stream = new(session, new object(), "/out.bin", chunkSize: 100);
         byte[] payload = [1, 2, 3, 4, 5];
 
         stream.Write(payload, 0, payload.Length);
@@ -178,7 +178,7 @@ public sealed class SmbWriteStreamTests
 
         stream.Write(new ReadOnlySpan<byte>([9, 8, 7]));
 
-        captured.Should().Equal([9, 8, 7]);
+        captured.Should().Equal(9, 8, 7);
     }
 
     [Fact]

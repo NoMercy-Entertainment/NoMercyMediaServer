@@ -29,11 +29,11 @@ public class NvencSessionCapTests
         {
             gpus.Add(
                 new(
-                    GpuVendor.Nvidia,
-                    "Test GPU",
-                    8192,
-                    cap,
-                    [VideoCodecType.H264, VideoCodecType.H265]
+                    Vendor: GpuVendor.Nvidia,
+                    Name: "Test GPU",
+                    VramMb: 8192,
+                    MaxEncoderSessions: cap,
+                    SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
                 )
             );
         }
@@ -59,7 +59,7 @@ public class NvencSessionCapTests
         // 0 active sessions, cap 3 — no throw
         NvencSessionCap cap = new(MakeHardware(3), MakeRegistry(0));
 
-        Action act = () => cap.EnforceForGpuEncode("RTX 3080", true);
+        Action act = () => cap.EnforceForGpuEncode("RTX 3080", requiresGpu: true);
 
         act.Should().NotThrow();
     }
@@ -70,7 +70,7 @@ public class NvencSessionCapTests
         // 3 active sessions, cap 3 — should throw 409 with correct rule id
         NvencSessionCap cap = new(MakeHardware(3), MakeRegistry(3));
 
-        Action act = () => cap.EnforceForGpuEncode("RTX 3080", true);
+        Action act = () => cap.EnforceForGpuEncode("RTX 3080", requiresGpu: true);
 
         EncoderRuntimeException ex = act.Should().Throw<EncoderRuntimeException>().Which;
 
@@ -85,7 +85,7 @@ public class NvencSessionCapTests
         // CPU-only system — no GPUs, cap check is meaningless
         NvencSessionCap cap = new(MakeHardware(), MakeRegistry(99));
 
-        Action act = () => cap.EnforceForGpuEncode("(none)", true);
+        Action act = () => cap.EnforceForGpuEncode("(none)", requiresGpu: true);
 
         act.Should().NotThrow();
     }
@@ -94,9 +94,9 @@ public class NvencSessionCapTests
     public void EnforceForGpuEncode_uses_lowest_cap_across_multiple_GPUs()
     {
         // Two GPUs: consumer cap 3, pro cap 8 — effective cap is 3
-        NvencSessionCap cap = new(MakeHardware([3, 8]), MakeRegistry(3));
+        NvencSessionCap cap = new(MakeHardware(3, 8), MakeRegistry(3));
 
-        Action act = () => cap.EnforceForGpuEncode("Multi-GPU", true);
+        Action act = () => cap.EnforceForGpuEncode("Multi-GPU", requiresGpu: true);
 
         act.Should().Throw<EncoderRuntimeException>().Which.HttpStatusCode.Should().Be(409);
     }
@@ -107,7 +107,7 @@ public class NvencSessionCapTests
         // Saturated GPU but software encode was requested — no throw
         NvencSessionCap cap = new(MakeHardware(3), MakeRegistry(3));
 
-        Action act = () => cap.EnforceForGpuEncode("RTX 3080", false);
+        Action act = () => cap.EnforceForGpuEncode("RTX 3080", requiresGpu: false);
 
         act.Should().NotThrow();
     }

@@ -148,7 +148,9 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         {
             PublishProgress("error", "Drive is already in use by another rip job");
             Log.LogWarning(
-                "[DiscRipJob] Drive {Drive} is busy — job {JobId} rejected", [Request.DrivePath, JobId]
+                "[DiscRipJob] Drive {Drive} is busy — job {JobId} rejected",
+                Request.DrivePath,
+                JobId
             );
             return;
         }
@@ -194,7 +196,9 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 "Destination folder or library no longer exists — rip output left in output directory"
             );
             Log.LogWarning(
-                "[DiscRipJob] Target folder {FolderId} or library {LibraryId} not found after rip", [TargetFolderId, TargetLibraryId]
+                "[DiscRipJob] Target folder {FolderId} or library {LibraryId} not found after rip",
+                TargetFolderId,
+                TargetLibraryId
             );
             return;
         }
@@ -207,7 +211,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         {
             // Separator-agnostic leaf so the synthetic label is identical on
             // Windows and Linux (Path.GetFileName treats '\' as literal on Linux).
-            string trimmedDrivePath = Request.DrivePath.TrimEnd(['/', '\\']);
+            string trimmedDrivePath = Request.DrivePath.TrimEnd('/', '\\');
             string label = trimmedDrivePath[(trimmedDrivePath.LastIndexOfAny(['\\', '/']) + 1)..];
             discInfo = new(Request.DiscType, label, [], null, TimeSpan.Zero);
         }
@@ -240,12 +244,12 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                     effectiveRequest = Request with
                     {
                         Custom = new(
-                            top.Title,
-                            top.Year,
-                            top.Type == MediaType.Movie ? MediaType.Movie : MediaType.TvShow,
-                            top.PosterUrl,
-                            top.SeasonNumber,
-                            top.EpisodeNumber
+                            Title: top.Title,
+                            Year: top.Year,
+                            Type: top.Type == MediaType.Movie ? MediaType.Movie : MediaType.TvShow,
+                            PosterUrl: top.PosterUrl,
+                            SeasonNumber: top.SeasonNumber,
+                            EpisodeStartNumber: top.EpisodeNumber
                         ),
                     };
                 }
@@ -256,12 +260,12 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                         $"pending_{res.TitleIndex:D2}.json"
                     );
                     DiscRipPendingState pendingState = new(
-                        res.OutputPath,
-                        res.TitleIndex,
-                        Request.DrivePath,
-                        discInfo.MainTitleDurationSec,
-                        identification.Candidates.Take(5).ToArray(),
-                        DateTimeOffset.UtcNow
+                        RipOutputPath: res.OutputPath,
+                        TitleIndex: res.TitleIndex,
+                        DrivePath: Request.DrivePath,
+                        DiscDurationSec: discInfo.MainTitleDurationSec,
+                        Candidates: identification.Candidates.Take(5).ToArray(),
+                        CreatedAt: DateTimeOffset.UtcNow
                     );
                     await File.WriteAllTextAsync(
                         pendingPath,
@@ -301,7 +305,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             await using (
                 Stream dst = await folderStorage.OpenWriteAsync(
                     folderRelative,
-                    true,
+                    overwrite: true,
                     CancellationToken.None
                 )
             )
@@ -329,7 +333,9 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 );
 
                 Log.LogInformation(
-                    "[DiscRipJob] Dispatching VideoEncodeJob for {File} — preset {PresetId}", [destinationHostPath, resolvedPresetId.HasValue ? resolvedPresetId.Value.ToString() : "folder-default"]
+                    "[DiscRipJob] Dispatching VideoEncodeJob for {File} — preset {PresetId}",
+                    destinationHostPath,
+                    resolvedPresetId.HasValue ? resolvedPresetId.Value.ToString() : "folder-default"
                 );
 
                 IJobDispatcher? dispatcher = JobDispatcher;
@@ -388,7 +394,9 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             }
 
             Log.LogInformation(
-                "[DiscRipJob] Title {Index} moved to {Dest}", [res.TitleIndex, folderRelative]
+                "[DiscRipJob] Title {Index} moved to {Dest}",
+                res.TitleIndex,
+                folderRelative
             );
         }
 
@@ -422,14 +430,16 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         {
             release = await MusicBrainzReleaseClient.WithAllAppends(
                 Guid.Parse(releaseMbid),
-                false
+                priority: false
             );
         }
         catch (Exception ex)
         {
             Log.LogWarning(
                 ex,
-                "[DiscRipJob] MusicBrainz release fetch failed for {Mbid}: {Message}", [releaseMbid, ex.Message]
+                "[DiscRipJob] MusicBrainz release fetch failed for {Mbid}: {Message}",
+                releaseMbid,
+                ex.Message
             );
         }
 
@@ -455,7 +465,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         }
 
         AlbumArtSource? coverSource = coverUrl is not null
-            ? new AlbumArtSource(null, coverUrl, AlbumArtType.Front)
+            ? new AlbumArtSource(FilePath: null, Url: coverUrl, Type: AlbumArtType.Front)
             : null;
 
         // Pick the first CD medium whose track count matches the number of
@@ -484,32 +494,37 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             string? genre = release.Genres is { Length: > 0 } ? release.Genres[0].Name : null;
 
             AudioMetadata metadata = new(
-                trackTitle,
-                trackArtist,
-                albumArtist,
-                albumTitle,
-                res.TitleIndex,
-                1,
-                releaseYear,
-                genre,
-                recordingMbid,
-                releaseId,
-                null,
-                coverSource
+                Title: trackTitle,
+                Artist: trackArtist,
+                AlbumArtist: albumArtist,
+                Album: albumTitle,
+                TrackNumber: res.TitleIndex,
+                DiscNumber: 1,
+                Year: releaseYear,
+                Genre: genre,
+                MusicBrainzTrackId: recordingMbid,
+                MusicBrainzReleaseId: releaseId,
+                AcoustIdFingerprint: null,
+                CoverArt: coverSource
             );
 
             try
             {
                 await AudioMetadataWriter.WriteTagsAsync(res.OutputPath, metadata, ct);
                 Log.LogInformation(
-                    "[DiscRipJob] Tagged {Path} — {Artist} / {Title}", [res.OutputPath, trackArtist, trackTitle]
+                    "[DiscRipJob] Tagged {Path} — {Artist} / {Title}",
+                    res.OutputPath,
+                    trackArtist,
+                    trackTitle
                 );
             }
             catch (Exception ex)
             {
                 Log.LogWarning(
                     ex,
-                    "[DiscRipJob] Tag write failed for {Path}: {Message}", [res.OutputPath, ex.Message]
+                    "[DiscRipJob] Tag write failed for {Path}: {Message}",
+                    res.OutputPath,
+                    ex.Message
                 );
             }
         }
@@ -583,14 +598,14 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             new DriveStateChangedEvent
             {
                 DriveStateData = new(
-                    methodName,
-                    Request?.DrivePath ?? string.Empty,
-                    null,
-                    true,
-                    (Request?.DiscType.ToString() ?? "none").ToLowerInvariant(),
-                    DateTime.UtcNow,
-                    JobId,
-                    message
+                    Method: methodName,
+                    Drive: Request?.DrivePath ?? string.Empty,
+                    VolumeLabel: null,
+                    HasDisc: true,
+                    DiscType: (Request?.DiscType.ToString() ?? "none").ToLowerInvariant(),
+                    Timestamp: DateTime.UtcNow,
+                    JobId: JobId,
+                    Message: message
                 ),
             }
         );

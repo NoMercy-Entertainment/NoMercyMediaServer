@@ -106,7 +106,7 @@ public class SqliteRetryingExecutionStrategyTests
         // maxRetries: 1 keeps this test fast (one real backoff sleep) while still proving
         // the loop honors an explicit bound rather than retrying forever.
         await Assert.ThrowsAsync<SqliteException>(() =>
-            SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(Operation, 1)
+            SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(Operation, maxRetries: 1)
         );
 
         Assert.Equal(2, attempts); // initial attempt + 1 retry
@@ -128,7 +128,7 @@ public class SqliteRetryingExecutionStrategyTests
 
         int result = await SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(
             Operation,
-            3
+            maxRetries: 3
         );
 
         Assert.Equal(42, result);
@@ -148,7 +148,7 @@ public class SqliteRetryingExecutionStrategyTests
         }
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(Operation, 3)
+            SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(Operation, maxRetries: 3)
         );
 
         Assert.Equal(1, attempts);

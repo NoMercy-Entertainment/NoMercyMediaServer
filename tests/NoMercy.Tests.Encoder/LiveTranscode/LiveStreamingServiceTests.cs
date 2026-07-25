@@ -20,16 +20,16 @@ public class LiveStreamingServiceTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            "720p",
-            "720p",
-            1280,
-            720,
-            VideoCodecType.H264,
-            3000,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: "720p",
+            Label: "720p",
+            Width: 1280,
+            Height: 720,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 3000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     private static LiveSession MakeSession(string id = "sess-001") => new(id, MakeQuality());
@@ -82,7 +82,7 @@ public class LiveStreamingServiceTests
         session.PushSegment(seg1);
         session.Complete();
 
-        await WaitForBufferAsync(svc, session.SessionId, 2);
+        await WaitForBufferAsync(svc, session.SessionId, expectedCount: 2);
 
         svc.TryGetRuntime(session.SessionId, out LiveRuntimeSession runtime).Should().BeTrue();
         runtime.TryGetSegment(0, out Segment found0).Should().BeTrue();
@@ -126,11 +126,11 @@ public class LiveStreamingServiceTests
         );
         session.Complete();
 
-        await WaitForBufferAsync(svc, session.SessionId, 3);
+        await WaitForBufferAsync(svc, session.SessionId, expectedCount: 3);
 
         svc.TryGetRuntime(session.SessionId, out LiveRuntimeSession runtime).Should().BeTrue();
         IReadOnlyList<Segment> snap = runtime.SnapshotSegments();
-        snap.Select(s => s.Index).Should().Equal([0, 1, 2]);
+        snap.Select(s => s.Index).Should().Equal(0, 1, 2);
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class LiveStreamingServiceTests
         finally
         {
             if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, true);
+                Directory.Delete(tempDir, recursive: true);
         }
     }
 
@@ -240,7 +240,7 @@ public class LiveStreamingServiceTests
 
         svc.Register(s1, TimeSpan.FromSeconds(6));
         svc.Register(s2, TimeSpan.FromSeconds(6));
-        svc.ActiveSessionIds.Should().BeEquivalentTo(["a", "b"]);
+        svc.ActiveSessionIds.Should().BeEquivalentTo("a", "b");
 
         await svc.RemoveAsync("a");
         svc.ActiveSessionIds.Should().BeEquivalentTo("b");
@@ -252,7 +252,7 @@ public class LiveStreamingServiceTests
         LiveStreamingService svc = NewService();
         LiveSession session = MakeSession("child-1");
 
-        svc.Register(session, targetSegmentDuration: TimeSpan.FromSeconds(6), isAudioRenditionChild: true);
+        svc.Register(session, TimeSpan.FromSeconds(6), isAudioRenditionChild: true);
 
         svc.TryGetRuntime("child-1", out LiveRuntimeSession runtime).Should().BeTrue();
         runtime.IsAudioRenditionChild.Should().BeTrue();
@@ -267,8 +267,8 @@ public class LiveStreamingServiceTests
         LiveSession childB = MakeSession("audio-jpn");
 
         svc.Register(parent, TimeSpan.FromSeconds(6));
-        svc.Register(childA, targetSegmentDuration: TimeSpan.FromSeconds(6), isAudioRenditionChild: true);
-        svc.Register(childB, targetSegmentDuration: TimeSpan.FromSeconds(6), isAudioRenditionChild: true);
+        svc.Register(childA, TimeSpan.FromSeconds(6), isAudioRenditionChild: true);
+        svc.Register(childB, TimeSpan.FromSeconds(6), isAudioRenditionChild: true);
         svc.StampChildAudioSessions("parent", ["audio-eng", "audio-jpn"]);
 
         await svc.RemoveAsync("parent");

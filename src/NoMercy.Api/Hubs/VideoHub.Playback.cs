@@ -179,7 +179,10 @@ public partial class VideoHub
         if (string.IsNullOrEmpty(type) || listId is null)
         {
             _logger.LogWarning(
-                "{Name}: [VideoHub.StartPlaybackCommand] ignored — null arg (type='{Null}', listId={Set})", [user.Name, type ?? "<null>", (listId is null ? "<null>" : "set")]
+                "{Name}: [VideoHub.StartPlaybackCommand] ignored — null arg (type='{Null}', listId={Set})",
+                user.Name,
+                type ?? "<null>",
+                (listId is null ? "<null>" : "set")
             );
             return;
         }
@@ -221,8 +224,8 @@ public partial class VideoHub
                         "failure.playback_start",
                         user2.Id,
                         deviceId2,
-                        ex.GetType().Name,
-                        ex.Message
+                        errorCode: ex.GetType().Name,
+                        message: ex.Message
                     );
                 }
                 catch (Exception logEx)
@@ -250,8 +253,8 @@ public partial class VideoHub
                         "failure.playback_start",
                         user2.Id,
                         deviceId2,
-                        ex.GetType().Name,
-                        ex.Message
+                        errorCode: ex.GetType().Name,
+                        message: ex.Message
                     );
                 }
                 catch (Exception logEx)
@@ -566,12 +569,12 @@ public partial class VideoHub
                     }
 
                     LaunchCustomData? launchData = await _castTokenService.MintAsync(
-                        user.Id,
-                        serverIdString,
-                        serverUrl,
-                        targetUlid,
-                        intent,
-                        locale
+                        userId: user.Id,
+                        serverId: serverIdString,
+                        serverUrl: serverUrl,
+                        deviceId: targetUlid,
+                        intent: intent,
+                        clientLocale: locale
                     );
 
                     if (launchData is null)
@@ -587,13 +590,15 @@ public partial class VideoHub
                     await _chromeCast.LaunchAndroidReceiver(
                         receiverName,
                         launchData,
-                        apkOnline
+                        useAndroidReceiver: apkOnline
                     );
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(
-                        "Server-side video Cast launch failed for {TargetIp}: {Message}", [targetIp, ex.Message]
+                        "Server-side video Cast launch failed for {TargetIp}: {Message}",
+                        targetIp,
+                        ex.Message
                     );
                 }
             });

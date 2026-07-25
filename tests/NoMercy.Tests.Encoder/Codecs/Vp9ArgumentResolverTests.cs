@@ -43,7 +43,7 @@ public class Vp9ArgumentResolverTests
     public void LibVpxVp9_UsesNumericProfiles()
     {
         EncoderInfo vpx = Get("libvpx-vp9");
-        vpx.Profiles.Should().BeEquivalentTo(["0", "1", "2", "3"]);
+        vpx.Profiles.Should().BeEquivalentTo("0", "1", "2", "3");
         // "main" from H264/HEVC profile strings must fall back to profile "0"
         // (the first profile) — the value ffmpeg's -profile actually accepts.
         EncoderArgumentResolver.ResolveProfile("main", vpx).Should().Be("0");
@@ -118,11 +118,11 @@ public class Vp9ArgumentResolverTests
         GpuDevice? device = vendor is null
             ? null
             : new GpuDevice(
-                vendor.Value,
-                $"Test {vendor.Value}",
-                16_384,
-                12,
-                [VideoCodecType.Vp9]
+                Vendor: vendor.Value,
+                Name: $"Test {vendor.Value}",
+                VramMb: 16_384,
+                MaxEncoderSessions: 12,
+                SupportedCodecs: [VideoCodecType.Vp9]
             );
         return new(ffmpegName, encoder, device, defaultRateControl);
     }

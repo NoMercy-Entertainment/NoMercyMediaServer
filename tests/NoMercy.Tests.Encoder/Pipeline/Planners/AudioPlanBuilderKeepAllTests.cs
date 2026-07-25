@@ -28,58 +28,58 @@ public class AudioPlanBuilderKeepAllTests
 {
     private static AudioStreamInfo Audio(int index, string lang, long kbps) =>
         new(
-            index,
-            "eac3",
-            6,
-            48000,
-            kbps,
-            lang,
-            index == 1,
-            false
+            Index: index,
+            Codec: "eac3",
+            Channels: 6,
+            SampleRate: 48000,
+            BitRateKbps: kbps,
+            Language: lang,
+            IsDefault: index == 1,
+            IsForced: false
         );
 
     private static MediaInfo MediaWith(params AudioStreamInfo[] audio) =>
         new(
-            "/movie.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(48),
-            8000,
-            1,
-            [],
-            audio,
-            [],
-            []
+            FilePath: "/movie.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(48),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 1,
+            VideoStreams: [],
+            AudioStreams: audio,
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static AudioOutput AllLanguages(StreamPolicy policy = StreamPolicy.Transcode) =>
         new(
-            policy,
-            AudioCodecType.Aac,
-            192,
-            6,
-            48000,
-            AllowedLanguages.All,
-            null,
-            null,
-            null,
-            ":type:_:language:_:codec:/:type:_:language:_:codec:",
-            ":type:_:language:_:codec:/:type:_:language:_:codec:"
+            Policy: policy,
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192,
+            Channels: 6,
+            SampleRateHz: 48000,
+            AllowedLanguages: AllowedLanguages.All,
+            DefaultLanguage: null,
+            Loudness: null,
+            Downmix: null,
+            SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+            PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
         );
 
     private static EncodingProfile ProfileWith(params AudioOutput[] audio) =>
         new(
-            Ulid.NewUlid(),
-            "keep-all",
-            Container.HlsFmp4,
-            null,
-            audio,
-            []
+            Id: Ulid.NewUlid(),
+            Name: "keep-all",
+            Container: Container.HlsFmp4,
+            Video: null,
+            Audio: audio,
+            Subtitles: []
         );
 
     [Fact]
     public void TwoEnglishAudioTracks_ProduceTwoDistinctPlans()
     {
-        MediaInfo media = MediaWith([Audio(1, "eng", 768), Audio(2, "eng", 960)]);
+        MediaInfo media = MediaWith(Audio(1, "eng", 768), Audio(2, "eng", 960));
         EncodingProfile profile = ProfileWith(AllLanguages());
 
         AudioOutputPlan[] plans = AudioPlanBuilder.Build(profile, media);
@@ -95,7 +95,10 @@ public class AudioPlanBuilderKeepAllTests
     [Fact]
     public void MultiLanguageAudio_KeepsEveryLanguage()
     {
-        MediaInfo media = MediaWith([Audio(1, "eng", 768), Audio(2, "jpn", 640), Audio(3, "fra", 448)]
+        MediaInfo media = MediaWith(
+            Audio(1, "eng", 768),
+            Audio(2, "jpn", 640),
+            Audio(3, "fra", 448)
         );
         EncodingProfile profile = ProfileWith(AllLanguages());
 

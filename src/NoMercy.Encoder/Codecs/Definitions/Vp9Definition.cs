@@ -26,70 +26,73 @@ public class Vp9Definition : ICodecDefinition
             // NOTE: vp9_nvenc, vp9_amf, vp9_videotoolbox do NOT exist.
             // VP9 hardware encoding is Intel-only (QSV + VAAPI).
             new(
-                "libvpx-vp9",
-                null,
-                [],
+                FfmpegName: "libvpx-vp9",
+                RequiredVendor: null,
+                Presets: [],
                 // ffmpeg's -profile option for VP9 takes the numeric profile id
                 // (0/1/2/3), NOT the "profileN" spelling — libvpx-vp9 rejects the
                 // string form ("Unable to parse option value profile0"). The
                 // 8/10-bit meaning is documented in the block comment above.
-                ["0", "1", "2", "3"],
-                [],
-                new(0, 63, 33),
+                Profiles: ["0", "1", "2", "3"],
+                Levels: [],
+                QualityRange: new(Min: 0, Max: 63, Default: 33),
+                SupportedRateControl:
                 [
                     RateControlMode.Crf,
                     RateControlMode.Cqp,
                     RateControlMode.Cbr,
                     RateControlMode.Vbr,
                 ],
-                true,
-                false,
-                int.MaxValue,
-                "yuv420p10le",
-                new()
+                Supports10Bit: true,
+                SupportsHdr: false,
+                MaxConcurrentSessions: int.MaxValue,
+                PixelFormat10Bit: "yuv420p10le",
+                VendorSpecificFlags: new()
             ),
             // Intel Quick Sync Video — vp9_qsv
             // 7 presets (veryfast→veryslow). Quality range 1-51 (NOT 0). Unlimited sessions.
             // Intel-only — no NVIDIA or AMD VP9 hardware encoder exists.
             new(
-                "vp9_qsv",
-                GpuVendor.Intel,
-                ["veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"],
-                [],
-                [],
-                new(1, 51, 33),
+                FfmpegName: "vp9_qsv",
+                RequiredVendor: GpuVendor.Intel,
+                Presets: ["veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"],
+                Profiles: [],
+                Levels: [],
+                QualityRange: new(Min: 1, Max: 51, Default: 33),
+                SupportedRateControl:
                 [
                     RateControlMode.Icq,
                     RateControlMode.Cqp,
                     RateControlMode.Cbr,
                     RateControlMode.Vbr,
                 ],
-                false,
-                false,
-                int.MaxValue,
-                "",
-                new()
+                Supports10Bit: false,
+                SupportsHdr: false,
+                MaxConcurrentSessions: int.MaxValue,
+                PixelFormat10Bit: "",
+                VendorSpecificFlags: new()
             ),
             // Intel VAAPI — vp9_vaapi
             // No presets. 4 profiles: numeric 0-3 (mirrors libvpx-vp9 profile numbering).
             // QP 0-255 (VA-API full range). Linux VA-API path. Unlimited sessions.
             new(
-                "vp9_vaapi",
-                GpuVendor.Intel,
-                [],
-                ["0", "1", "2", "3"],
-                [],
-                new(0, 255, 100),
+                FfmpegName: "vp9_vaapi",
+                RequiredVendor: GpuVendor.Intel,
+                Presets: [],
+                Profiles: ["0", "1", "2", "3"],
+                Levels: [],
+                QualityRange: new(Min: 0, Max: 255, Default: 100),
+                SupportedRateControl:
                 [
                     RateControlMode.Cqp,
                     RateControlMode.Cbr,
                     RateControlMode.Vbr,
                 ],
-                false,
-                false,
-                int.MaxValue,
-                "",
-                new()
+                Supports10Bit: false,
+                SupportsHdr: false,
+                MaxConcurrentSessions: int.MaxValue,
+                PixelFormat10Bit: "",
+                VendorSpecificFlags: new()
             ),
         ];
 }

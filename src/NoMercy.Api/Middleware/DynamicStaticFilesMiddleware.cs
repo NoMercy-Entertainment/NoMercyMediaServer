@@ -110,7 +110,9 @@ public class DynamicStaticFilesMiddleware(
             if (!Folders.TryGetValue(folderId, out FolderRef folderRef))
             {
                 logger.LogInformation(
-                    "[DynamicStaticFiles] folder {FolderId} not registered (request: {Path})", [folderId, context.Request.Path]
+                    "[DynamicStaticFiles] folder {FolderId} not registered (request: {Path})",
+                    folderId,
+                    context.Request.Path
                 );
                 await next(context);
                 return;
@@ -135,15 +137,19 @@ public class DynamicStaticFilesMiddleware(
             try
             {
                 storage = storageFactory.For(
-                    folderId,
-                    folderRef.DriverId,
-                    folderRef.SubPath
+                    folderId: folderId,
+                    driverId: folderRef.DriverId,
+                    subPath: folderRef.SubPath
                 );
             }
             catch (Exception fEx)
             {
                 logger.LogInformation(
-                    "[DynamicStaticFiles] factory.For failed for folder {FolderId} driver {DriverId} subPath '{SubPath}': {Message}", [folderId, folderRef.DriverId, folderRef.SubPath, fEx.Message]
+                    "[DynamicStaticFiles] factory.For failed for folder {FolderId} driver {DriverId} subPath '{SubPath}': {Message}",
+                    folderId,
+                    folderRef.DriverId,
+                    folderRef.SubPath,
+                    fEx.Message
                 );
                 await next(context);
                 return;
@@ -157,7 +163,11 @@ public class DynamicStaticFilesMiddleware(
             catch (Exception eEx)
             {
                 logger.LogInformation(
-                    "[DynamicStaticFiles] storage.Exists threw on '{RelativeWithinFolder}' (folder {FolderId}, driver {DriverId}): {Message}", [relativeWithinFolder, folderId, folderRef.DriverId, eEx.Message]
+                    "[DynamicStaticFiles] storage.Exists threw on '{RelativeWithinFolder}' (folder {FolderId}, driver {DriverId}): {Message}",
+                    relativeWithinFolder,
+                    folderId,
+                    folderRef.DriverId,
+                    eEx.Message
                 );
                 await next(context);
                 return;
@@ -166,7 +176,11 @@ public class DynamicStaticFilesMiddleware(
             if (!exists)
             {
                 logger.LogInformation(
-                    "[DynamicStaticFiles] not found: folder={FolderId} driver={DriverId} subPath='{SubPath}' relative='{RelativeWithinFolder}'", [folderId, folderRef.DriverId, folderRef.SubPath, relativeWithinFolder]
+                    "[DynamicStaticFiles] not found: folder={FolderId} driver={DriverId} subPath='{SubPath}' relative='{RelativeWithinFolder}'",
+                    folderId,
+                    folderRef.DriverId,
+                    folderRef.SubPath,
+                    relativeWithinFolder
                 );
                 await next(context);
                 return;
@@ -197,11 +211,18 @@ public class DynamicStaticFilesMiddleware(
 
             if (resolvedAtMs > 1000 || stopwatch.ElapsedMilliseconds > 2000)
                 logger.LogWarning(
-                    "[DynamicStaticFiles] SLOW serve '{RelativeWithinFolder}' prep={ResolvedAtMs}ms total={ElapsedMilliseconds}ms (driver={Name})", [relativeWithinFolder, resolvedAtMs, stopwatch.ElapsedMilliseconds, storage.GetType().Name]
+                    "[DynamicStaticFiles] SLOW serve '{RelativeWithinFolder}' prep={ResolvedAtMs}ms total={ElapsedMilliseconds}ms (driver={Name})",
+                    relativeWithinFolder,
+                    resolvedAtMs,
+                    stopwatch.ElapsedMilliseconds,
+                    storage.GetType().Name
                 );
             else
                 logger.LogDebug(
-                    "[DynamicStaticFiles] serve '{RelativeWithinFolder}' prep={ResolvedAtMs}ms total={ElapsedMilliseconds}ms", [relativeWithinFolder, resolvedAtMs, stopwatch.ElapsedMilliseconds]
+                    "[DynamicStaticFiles] serve '{RelativeWithinFolder}' prep={ResolvedAtMs}ms total={ElapsedMilliseconds}ms",
+                    relativeWithinFolder,
+                    resolvedAtMs,
+                    stopwatch.ElapsedMilliseconds
                 );
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
@@ -209,7 +230,9 @@ public class DynamicStaticFilesMiddleware(
             // Race: file or its containing directory vanished between Exists()
             // and Size()/OpenRead(). Translate to 404 instead of an opaque 500.
             logger.LogWarning(
-                "[DynamicStaticFiles] file vanished mid-serve for '{Path}': {Message}", [context.Request.Path, ex.Message]
+                "[DynamicStaticFiles] file vanished mid-serve for '{Path}': {Message}",
+                context.Request.Path,
+                ex.Message
             );
             if (!context.Response.HasStarted)
                 context.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -220,7 +243,9 @@ public class DynamicStaticFilesMiddleware(
             // error). 502 reflects "we couldn't reach the backend that holds
             // this file" — distinct from "the file doesn't exist."
             logger.LogWarning(
-                "[DynamicStaticFiles] storage transport failure for '{Path}': {Message}", [context.Request.Path, ex.Message]
+                "[DynamicStaticFiles] storage transport failure for '{Path}': {Message}",
+                context.Request.Path,
+                ex.Message
             );
             if (!context.Response.HasStarted)
                 context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
@@ -237,7 +262,9 @@ public class DynamicStaticFilesMiddleware(
             // 500 with a stack trace body. Logged at Error so genuine bugs
             // remain visible in the sink.
             logger.LogError(
-                "[DynamicStaticFiles] unhandled exception for path '{Path}': {Ex}", [context.Request.Path, ex]
+                "[DynamicStaticFiles] unhandled exception for path '{Path}': {Ex}",
+                context.Request.Path,
+                ex
             );
             if (!context.Response.HasStarted)
                 context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
@@ -255,7 +282,9 @@ public class DynamicStaticFilesMiddleware(
         if (fileLength == 0)
         {
             logger.LogWarning(
-                "[DynamicStaticFiles] storage reports 0 bytes for '{Path}' (driver={Name})", [context.Request.Path, storage.GetType().Name]
+                "[DynamicStaticFiles] storage reports 0 bytes for '{Path}' (driver={Name})",
+                context.Request.Path,
+                storage.GetType().Name
             );
         }
 

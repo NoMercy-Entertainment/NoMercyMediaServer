@@ -51,16 +51,16 @@ public class ProtocolMessageTests
     public void LiveQuality_Constructs_AndJsonRoundTrips()
     {
         LiveQuality quality = new(
-            "1080p",
-            "1080p HD",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            4000,
-            "h264_nvenc",
-            true,
-            1.8,
-            true
+            Id: "1080p",
+            Label: "1080p HD",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 4000,
+            Encoder: "h264_nvenc",
+            IsHardwareAccelerated: true,
+            ExpectedSpeed: 1.8,
+            CanRealtime: true
         );
 
         quality.Id.Should().Be("1080p");
@@ -91,26 +91,26 @@ public class ProtocolMessageTests
     public void SessionCreatedMessage_Constructs_AndJsonRoundTrips()
     {
         LiveQuality selected = new(
-            "720p",
-            "720p",
-            1280,
-            720,
-            VideoCodecType.H264,
-            2500,
-            "libx264",
-            false,
-            2.5,
-            true
+            Id: "720p",
+            Label: "720p",
+            Width: 1280,
+            Height: 720,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 2500,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.5,
+            CanRealtime: true
         );
 
         LiveQuality[] qualities = [selected];
 
         SessionCreatedMessage message = new(
-            "sess-abc123",
-            5400.0,
-            qualities,
-            selected,
-            "/segments/0.ts"
+            SessionId: "sess-abc123",
+            DurationSeconds: 5400.0,
+            AvailableQualities: qualities,
+            SelectedQuality: selected,
+            FirstSegmentUrl: "/segments/0.ts"
         );
 
         message.SessionId.Should().Be("sess-abc123");
@@ -140,11 +140,11 @@ public class ProtocolMessageTests
     public void SegmentReadyMessage_Constructs_AndJsonRoundTrips()
     {
         SegmentReadyMessage message = new(
-            3,
-            18.0,
-            6.0,
-            "/segments/3.ts",
-            204800L
+            Index: 3,
+            StartTimeSeconds: 18.0,
+            DurationSeconds: 6.0,
+            RelativeUrl: "/segments/3.ts",
+            SizeBytes: 204800L
         );
 
         message.Index.Should().Be(3);
@@ -173,7 +173,7 @@ public class ProtocolMessageTests
     [Fact]
     public void SeekCompletedMessage_Constructs_AndJsonRoundTrips()
     {
-        SeekCompletedMessage message = new(120.5, 20);
+        SeekCompletedMessage message = new(NewPositionSeconds: 120.5, FirstSegmentIndex: 20);
 
         message.NewPositionSeconds.Should().Be(120.5);
         message.FirstSegmentIndex.Should().Be(20);
@@ -206,21 +206,21 @@ public class ProtocolMessageTests
     public void QualityChangedMessage_Constructs_AndJsonRoundTrips()
     {
         LiveQuality newQuality = new(
-            "480p",
-            "480p",
-            854,
-            480,
-            VideoCodecType.H265,
-            1200,
-            "libx265",
-            false,
-            3.1,
-            true
+            Id: "480p",
+            Label: "480p",
+            Width: 854,
+            Height: 480,
+            Codec: VideoCodecType.H265,
+            BitrateKbps: 1200,
+            Encoder: "libx265",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 3.1,
+            CanRealtime: true
         );
 
         QualityChangedMessage message = new(
-            newQuality,
-            QualityChangeReason.AutoAdaptive
+            NewQuality: newQuality,
+            Reason: QualityChangeReason.AutoAdaptive
         );
 
         message.NewQuality.Id.Should().Be("480p");
@@ -244,9 +244,9 @@ public class ProtocolMessageTests
     public void TranscodeStateMessage_Constructs_AndJsonRoundTrips()
     {
         TranscodeStateMessage message = new(
-            1.4,
-            30.0,
-            LiveSessionState.Transcoding
+            Speed: 1.4,
+            BufferAheadSeconds: 30.0,
+            State: LiveSessionState.Transcoding
         );
 
         message.Speed.Should().Be(1.4);
@@ -272,9 +272,9 @@ public class ProtocolMessageTests
     public void TranscodeErrorMessage_Constructs_AndJsonRoundTrips()
     {
         TranscodeErrorMessage message = new(
-            EncodingErrorKind.HardwareFailure,
-            "NVENC session failed",
-            true
+            Kind: EncodingErrorKind.HardwareFailure,
+            Message: "NVENC session failed",
+            Recoverable: true
         );
 
         message.Kind.Should().Be(EncodingErrorKind.HardwareFailure);
@@ -309,7 +309,7 @@ public class ProtocolMessageTests
     [Fact]
     public void SessionEndedMessage_Constructs_AndJsonRoundTrips()
     {
-        SessionEndedMessage message = new(SessionEndReason.Completed);
+        SessionEndedMessage message = new(Reason: SessionEndReason.Completed);
 
         message.Reason.Should().Be(SessionEndReason.Completed);
 
@@ -329,7 +329,7 @@ public class ProtocolMessageTests
     [Fact]
     public void RequestSeekMessage_Constructs_AndJsonRoundTrips()
     {
-        RequestSeekMessage message = new(247.5);
+        RequestSeekMessage message = new(PositionSeconds: 247.5);
 
         message.PositionSeconds.Should().Be(247.5);
 
@@ -343,7 +343,7 @@ public class ProtocolMessageTests
     [Fact]
     public void RequestQualityMessage_WithId_JsonRoundTrips()
     {
-        RequestQualityMessage message = new("1080p");
+        RequestQualityMessage message = new(QualityId: "1080p");
 
         message.QualityId.Should().Be("1080p");
 
@@ -359,7 +359,7 @@ public class ProtocolMessageTests
     [Fact]
     public void RequestQualityMessage_WithNull_JsonRoundTrips()
     {
-        RequestQualityMessage message = new(null);
+        RequestQualityMessage message = new(QualityId: null);
 
         message.QualityId.Should().BeNull();
 
@@ -375,7 +375,7 @@ public class ProtocolMessageTests
     [Fact]
     public void ReportPositionMessage_Constructs_AndJsonRoundTrips()
     {
-        ReportPositionMessage message = new(83.25);
+        ReportPositionMessage message = new(CurrentTimeSeconds: 83.25);
 
         message.CurrentTimeSeconds.Should().Be(83.25);
 

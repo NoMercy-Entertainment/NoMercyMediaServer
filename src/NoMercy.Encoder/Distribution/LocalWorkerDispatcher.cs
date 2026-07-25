@@ -50,7 +50,10 @@ public class LocalWorkerDispatcher(
             EncodeTask task = tasks[i];
 
             logger.LogInformation(
-                "Dispatching task {TaskId} ({Type}) locally → {Output}", [task.TaskId, task.Type, task.OutputPath]
+                "Dispatching task {TaskId} ({Type}) locally → {Output}",
+                task.TaskId,
+                task.Type,
+                task.OutputPath
             );
 
             try
@@ -85,17 +88,19 @@ public class LocalWorkerDispatcher(
                 );
 
                 results[i] = new(
-                    task.TaskId,
-                    exec.Success,
-                    task.OutputPath,
-                    exec.Duration,
-                    exec.Success ? null : ErrorMessage(exec.Error)
+                    TaskId: task.TaskId,
+                    Success: exec.Success,
+                    OutputPath: task.OutputPath,
+                    Duration: exec.Duration,
+                    Error: exec.Success ? null : ErrorMessage(exec.Error)
                 );
 
                 if (!exec.Success)
                 {
                     logger.LogWarning(
-                        "Local task {TaskId} failed: {Error}", [task.TaskId, results[i].Error]
+                        "Local task {TaskId} failed: {Error}",
+                        task.TaskId,
+                        results[i].Error
                     );
                 }
             }
@@ -107,11 +112,11 @@ public class LocalWorkerDispatcher(
             {
                 logger.LogError(ex, "Local task {TaskId} threw", task.TaskId);
                 results[i] = new(
-                    task.TaskId,
-                    false,
-                    task.OutputPath,
-                    TimeSpan.Zero,
-                    ex.Message
+                    TaskId: task.TaskId,
+                    Success: false,
+                    OutputPath: task.OutputPath,
+                    Duration: TimeSpan.Zero,
+                    Error: ex.Message
                 );
             }
         }

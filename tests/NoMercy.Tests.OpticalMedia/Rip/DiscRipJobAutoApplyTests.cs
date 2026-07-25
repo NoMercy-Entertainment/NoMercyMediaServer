@@ -12,13 +12,16 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
 using NoMercy.Events;
 using NoMercy.Events.DriveMonitor;
 using NoMercy.NmSystem.Dto;
+using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.Storage;
+using NoMercyQueue.Core.Interfaces;
 using OpticalMediaType = NoMercy.OpticalMedia.Metadata.MediaType;
 
 namespace NoMercy.Tests.OpticalMedia.Rip;
@@ -57,7 +60,7 @@ public class DiscRipJobAutoApplyTests
 
     private static RipRequest MakeNoCustomRequest(string drivePath = "D:\\Inception") =>
         new(
-            drivePath,
+            DrivePath: drivePath,
             SelectedTitleIndices: [1],
             MetadataId: null,
             Custom: null,
@@ -89,12 +92,12 @@ public class DiscRipJobAutoApplyTests
 
     private static DiscRipResult MakeRipResult(string outputPath) =>
         new(
-            1,
-            outputPath,
-            true,
-            TimeSpan.FromMinutes(100),
-            1_000_000,
-            null
+            TitleIndex: 1,
+            OutputPath: outputPath,
+            Success: true,
+            Duration: TimeSpan.FromMinutes(100),
+            OutputSizeBytes: 1_000_000,
+            Error: null
         );
 
     private static Mock<IStorage> MakeStorageMock(string hostPath)
@@ -197,22 +200,23 @@ public class DiscRipJobAutoApplyTests
                 .Setup(i => i.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(
                     new DiscIdentification(
-                        MediaKind.Movie,
+                        Kind: MediaKind.Movie,
+                        Candidates:
                         [
                             new(
-                                "tmdb",
-                                "27205",
-                                "Inception",
-                                2010,
-                                null,
-                                null,
-                                0.95,
-                                OpticalMediaType.Movie
+                                Source: "tmdb",
+                                StableId: "27205",
+                                Title: "Inception",
+                                Year: 2010,
+                                PosterUrl: null,
+                                BackdropUrl: null,
+                                Confidence: 0.95,
+                                Type: OpticalMediaType.Movie
                             ),
                         ],
-                        0.95,
-                        true,
-                        false
+                        TopConfidence: 0.95,
+                        AutoApply: true,
+                        NeedsManualAssignment: false
                     )
                 );
 
@@ -274,22 +278,23 @@ public class DiscRipJobAutoApplyTests
                 .Setup(i => i.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(
                     new DiscIdentification(
-                        MediaKind.Movie,
+                        Kind: MediaKind.Movie,
+                        Candidates:
                         [
                             new(
-                                "tmdb",
-                                "27205",
-                                "Maybe Inception",
-                                2010,
-                                null,
-                                null,
-                                0.4,
-                                OpticalMediaType.Movie
+                                Source: "tmdb",
+                                StableId: "27205",
+                                Title: "Maybe Inception",
+                                Year: 2010,
+                                PosterUrl: null,
+                                BackdropUrl: null,
+                                Confidence: 0.4,
+                                Type: OpticalMediaType.Movie
                             ),
                         ],
-                        0.4,
-                        false,
-                        false
+                        TopConfidence: 0.4,
+                        AutoApply: false,
+                        NeedsManualAssignment: false
                     )
                 );
 
@@ -344,7 +349,7 @@ public class DiscRipJobAutoApplyTests
             if (File.Exists(tempFile))
                 File.Delete(tempFile);
             if (Directory.Exists(outputDir))
-                Directory.Delete(outputDir, true);
+                Directory.Delete(outputDir, recursive: true);
         }
     }
 

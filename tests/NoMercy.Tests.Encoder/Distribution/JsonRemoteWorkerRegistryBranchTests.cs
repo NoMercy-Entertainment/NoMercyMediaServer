@@ -19,6 +19,7 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.Distribution;
 
@@ -58,7 +59,7 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     {
         try
         {
-            Directory.Delete(_dir, true);
+            Directory.Delete(_dir, recursive: true);
         }
         catch
         {
@@ -74,24 +75,23 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     {
         // A corrupted persistence file could end up with empty WorkerId after
         // a partial write. Rehydration must skip such entries silently.
-        WritePersistedEntries([
-                new
-                {
-                    WorkerId = "",
-                    BaseUrl = "http://valid.local/",
-                    CpuCores = 4,
-                    AvailableCpuThreads = 4,
-                    AvailableGpuSlots = 0,
-                },
-                new
-                {
-                    WorkerId = "valid-worker",
-                    BaseUrl = "http://valid.local/",
-                    CpuCores = 4,
-                    AvailableCpuThreads = 4,
-                    AvailableGpuSlots = 0,
-                }
-            ]
+        WritePersistedEntries(
+            new
+            {
+                WorkerId = "",
+                BaseUrl = "http://valid.local/",
+                CpuCores = 4,
+                AvailableCpuThreads = 4,
+                AvailableGpuSlots = 0,
+            },
+            new
+            {
+                WorkerId = "valid-worker",
+                BaseUrl = "http://valid.local/",
+                CpuCores = 4,
+                AvailableCpuThreads = 4,
+                AvailableGpuSlots = 0,
+            }
         );
 
         JsonRemoteWorkerRegistry sut = BuildRegistry();
@@ -144,24 +144,23 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     {
         // BaseUrl is non-empty but not parseable as an absolute Uri —
         // Uri.TryCreate returns false and the entry is dropped.
-        WritePersistedEntries([
-                new
-                {
-                    WorkerId = "bad-uri",
-                    BaseUrl = "not a uri at all",
-                    CpuCores = 4,
-                    AvailableCpuThreads = 4,
-                    AvailableGpuSlots = 0,
-                },
-                new
-                {
-                    WorkerId = "good-uri",
-                    BaseUrl = "http://good.local/",
-                    CpuCores = 4,
-                    AvailableCpuThreads = 4,
-                    AvailableGpuSlots = 0,
-                }
-            ]
+        WritePersistedEntries(
+            new
+            {
+                WorkerId = "bad-uri",
+                BaseUrl = "not a uri at all",
+                CpuCores = 4,
+                AvailableCpuThreads = 4,
+                AvailableGpuSlots = 0,
+            },
+            new
+            {
+                WorkerId = "good-uri",
+                BaseUrl = "http://good.local/",
+                CpuCores = 4,
+                AvailableCpuThreads = 4,
+                AvailableGpuSlots = 0,
+            }
         );
 
         JsonRemoteWorkerRegistry sut = BuildRegistry();
@@ -256,13 +255,13 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
 
     private JsonRemoteWorkerRegistry BuildRegistry() =>
         new(
-            new(),
-            _path,
-            MakeHttpClientFactory(),
-            _serializer,
-            _signingKey,
-            NullLogger<JsonRemoteWorkerRegistry>.Instance,
-            MakeStorage()
+            inner: new(),
+            filePath: _path,
+            httpClientFactory: MakeHttpClientFactory(),
+            serializer: _serializer,
+            signingKey: _signingKey,
+            logger: NullLogger<JsonRemoteWorkerRegistry>.Instance,
+            storage: MakeStorage()
         );
 
     private static IHttpClientFactory MakeHttpClientFactory()
@@ -278,13 +277,13 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
 
     private HttpRemoteWorker MakeWorker(string id, string baseUrl) =>
         new(
-            id,
-            new(new NoOpHandler()) { BaseAddress = new(baseUrl) },
-            _serializer,
-            _signingKey,
-            new HardwareCapabilities([], 4),
-            new(0, 4, 0),
-            NullLogger<HttpRemoteWorker>.Instance
+            workerId: id,
+            http: new(new NoOpHandler()) { BaseAddress = new(baseUrl) },
+            serializer: _serializer,
+            signingKey: _signingKey,
+            initialCapabilities: new HardwareCapabilities([], 4),
+            initialBudget: new(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0),
+            logger: NullLogger<HttpRemoteWorker>.Instance
         );
 
     private void WritePersistedEntries(params object[] entries)
@@ -311,9 +310,9 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
         public string WorkerId { get; } = workerId;
 
         public ResourceBudgetSnapshot GetAvailableBudget() =>
-            new(0, 1, 0);
+            new(AvailableGpuSlots: 0, AvailableCpuThreads: 1, GpuUtilization: 0);
 
-        public IHardwareCapabilities GetCapabilities() => new HardwareCapabilities([], 1);
+        public IHardwareCapabilities GetCapabilities() => new HardwareCapabilities([], CpuCores: 1);
 
         public Task<RemoteEncodingResult> ExecuteJobAsync(
             EncodingJob job,

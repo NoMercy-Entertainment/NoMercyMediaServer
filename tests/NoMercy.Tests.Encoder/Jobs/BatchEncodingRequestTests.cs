@@ -20,16 +20,16 @@ public class BatchEncodingRequestTests
 {
     private static EncodingProfile BuildProfile() =>
         new(
-            Ulid.NewUlid(),
-            "HLS 1080p",
-            Container.HlsTs,
-            null,
-            [],
-            []
+            Id: Ulid.NewUlid(),
+            Name: "HLS 1080p",
+            Container: Container.HlsTs,
+            Video: null,
+            Audio: [],
+            Subtitles: []
         );
 
     private static EncodingRequest BuildRequest(string inputPath) =>
-        new(inputPath, "/output/batch", BuildProfile());
+        new(InputPath: inputPath, OutputDirectory: "/output/batch", Profile: BuildProfile());
 
     [Fact]
     public void BatchEncodingRequest_WithThreeItems_IsConstructable()
@@ -41,7 +41,7 @@ public class BatchEncodingRequestTests
             BuildRequest("/media/c.mkv"),
         ];
 
-        BatchEncodingRequest request = new(items, new());
+        BatchEncodingRequest request = new(Items: items, Options: new());
 
         request.Items.Should().HaveCount(3);
         request.Items.Should().Contain(r => r.InputPath == "/media/a.mkv");
@@ -53,13 +53,13 @@ public class BatchEncodingRequestTests
     public void BatchEncodingRequest_WithOptions_PreservesOptions()
     {
         BatchOptions options = new(
-            true,
-            true,
-            2,
-            BatchCancellationMode.CancelAll
+            ShareAnalysis: true,
+            ParallelEncoding: true,
+            MaxParallel: 2,
+            CancelMode: BatchCancellationMode.CancelAll
         );
 
-        BatchEncodingRequest request = new([BuildRequest("/media/a.mkv")], options);
+        BatchEncodingRequest request = new(Items: [BuildRequest("/media/a.mkv")], Options: options);
 
         request.Options.ShareAnalysis.Should().BeTrue();
         request.Options.ParallelEncoding.Should().BeTrue();
@@ -71,7 +71,7 @@ public class BatchEncodingRequestTests
     public void BatchEncodingRequest_WithEmptyItems_IsConstructable()
     {
         // Empty items array is constructable — caller validation is responsibility of the consumer
-        BatchEncodingRequest request = new([], new());
+        BatchEncodingRequest request = new(Items: [], Options: new());
 
         request.Items.Should().BeEmpty();
     }
@@ -80,7 +80,7 @@ public class BatchEncodingRequestTests
     public void BatchEncodingRequest_EmptyItems_ShouldBeRejected_ByConsumer()
     {
         // Demonstrate that a caller validating for empty items can detect it
-        BatchEncodingRequest request = new([], new());
+        BatchEncodingRequest request = new(Items: [], Options: new());
 
         bool isRejected = request.Items.Length == 0;
         isRejected.Should().BeTrue();

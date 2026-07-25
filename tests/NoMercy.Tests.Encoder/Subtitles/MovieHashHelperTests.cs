@@ -28,7 +28,7 @@ public class MovieHashHelperTests
     {
         // Empty file: hash = fileSize + 0 + 0 = 0.
         using MemoryStream stream = new();
-        ulong hash = MovieHashHelper.ComputeMovieHash(stream, 0);
+        ulong hash = MovieHashHelper.ComputeMovieHash(stream, fileSize: 0);
         hash.Should().Be(0UL);
     }
 
@@ -84,7 +84,7 @@ public class MovieHashHelperTests
         byte[] data = [1, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
         using MemoryStream stream = new(data);
 
-        ulong hash = MovieHashHelper.ComputeMovieHash(stream, data.Length);
+        ulong hash = MovieHashHelper.ComputeMovieHash(stream, fileSize: data.Length);
 
         // First 8 bytes LE = 0x0000_0000_0000_0001
         // Both head and tail read the same 13 bytes (overlap, small file)
@@ -96,9 +96,9 @@ public class MovieHashHelperTests
     }
 
     [Theory]
-    [InlineData([0UL, "0000000000000000"])]
-    [InlineData([0xDEADBEEFUL, "00000000deadbeef"])]
-    [InlineData([0x1234567890ABCDEFUL, "1234567890abcdef"])]
+    [InlineData(0UL, "0000000000000000")]
+    [InlineData(0xDEADBEEFUL, "00000000deadbeef")]
+    [InlineData(0x1234567890ABCDEFUL, "1234567890abcdef")]
     public void FormatHash_FormatsAsLowercaseHex16(ulong hash, string expected)
     {
         MovieHashHelper.FormatHash(hash).Should().Be(expected);

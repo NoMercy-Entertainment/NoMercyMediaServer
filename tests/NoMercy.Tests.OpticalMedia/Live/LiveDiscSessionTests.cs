@@ -31,15 +31,15 @@ public class LiveDiscSessionTests
 {
     private static MediaInfo MakeMediaInfo(string path) =>
         new(
-            path,
-            "mpegts",
-            TimeSpan.FromMinutes(90),
-            8000,
-            0,
-            [],
-            [],
-            [],
-            []
+            FilePath: path,
+            Format: "mpegts",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 0,
+            VideoStreams: [],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static (
@@ -59,10 +59,10 @@ public class LiveDiscSessionTests
     }
 
     [Theory]
-    [InlineData([OpticalDiscType.BluRay, "D:\\", 3, "bluray:D:/?playlist=3"])]
-    [InlineData([OpticalDiscType.Dvd, "D:\\", 1, "D:/"])]
-    [InlineData([OpticalDiscType.Cd, "/dev/sr0", 2, "/dev/sr0"])]
-    [InlineData([OpticalDiscType.None, "D:\\", 0, "D:"])]
+    [InlineData(OpticalDiscType.BluRay, "D:\\", 3, "bluray:D:/?playlist=3")]
+    [InlineData(OpticalDiscType.Dvd, "D:\\", 1, "D:/")]
+    [InlineData(OpticalDiscType.Cd, "/dev/sr0", 2, "/dev/sr0")]
+    [InlineData(OpticalDiscType.None, "D:\\", 0, "D:")]
     public async Task StartAsync_BuildsInputPathForDiscType(
         OpticalDiscType discType,
         string drivePath,

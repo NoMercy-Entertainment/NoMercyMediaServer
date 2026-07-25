@@ -91,7 +91,7 @@ internal sealed class InMemoryStorageDriver : IStorageDriver
         string key = Key(path);
         if (!_files.TryGetValue(key, out byte[]? bytes))
             throw new FileNotFoundException($"no such object: {path}", path);
-        return new MemoryStream(bytes, false);
+        return new MemoryStream(bytes, writable: false);
     }
 
     public Stream OpenWrite(string path, bool overwrite)

@@ -42,7 +42,7 @@ public sealed class FileManagerHashingBranchGapTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, true);
+            Directory.Delete(_tempRoot, recursive: true);
     }
 
     private static FileManager BuildFileManager()

@@ -15,6 +15,7 @@ using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.DTOs.Specials;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.TvShows;
@@ -297,10 +298,10 @@ public class SpecialItemsDtoTests
             Trailer = "yt-trailer-1",
         };
 
-        Episode episodeA = BuildEpisode(1, 1, "00:10:00", true);
-        Episode episodeB = BuildEpisode(2, 1, null, false);
-        Episode episodeC = BuildEpisode(3, 0, "00:05:00", true);
-        Episode episodeE = BuildEpisode(4, 1, null, true);
+        Episode episodeA = BuildEpisode(1, 1, "00:10:00", hasVideoFile: true);
+        Episode episodeB = BuildEpisode(2, 1, null, hasVideoFile: false);
+        Episode episodeC = BuildEpisode(3, 0, "00:05:00", hasVideoFile: true);
+        Episode episodeE = BuildEpisode(4, 1, null, hasVideoFile: true);
 
         tv.Episodes.Add(episodeA);
         tv.Episodes.Add(episodeB);
@@ -374,7 +375,7 @@ public class SpecialItemsDtoTests
             Title = "Bare Show",
             Duration = null,
         };
-        tv.Episodes.Add(BuildEpisode(1, 1, "00:01:00", true));
+        tv.Episodes.Add(BuildEpisode(1, 1, "00:01:00", hasVideoFile: true));
 
         SpecialItemsDto dto = new(tv);
 

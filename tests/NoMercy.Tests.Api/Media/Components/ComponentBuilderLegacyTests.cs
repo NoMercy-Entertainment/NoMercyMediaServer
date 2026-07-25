@@ -69,7 +69,7 @@ public class ComponentBuilderLegacyTests
     public void WithUpdate_SetsWhenAndLink()
     {
         ComponentDto<string> dto = new ComponentBuilder<string>()
-            .WithUpdate("always", "/some/link")
+            .WithUpdate(when: "always", link: "/some/link")
             .Build();
 
         dto.Update.When.Should().Be("always");
@@ -80,7 +80,7 @@ public class ComponentBuilderLegacyTests
     public void WithUpdate_OnlyWhen_LeavesLinkAsDefault()
     {
         ComponentDto<string> dto = new ComponentBuilder<string>()
-            .WithUpdate("always")
+            .WithUpdate(when: "always")
             .Build();
 
         dto.Update.When.Should().Be("always");

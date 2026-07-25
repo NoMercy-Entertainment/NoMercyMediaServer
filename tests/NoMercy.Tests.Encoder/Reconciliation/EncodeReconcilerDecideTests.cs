@@ -33,11 +33,11 @@ public class EncodeReconcilerDecideTests
         ExistingOutputSnapshot existing = new(
             fingerprint,
             AllPresentFiles(),
-            0
+            ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, false, 0, existing)
+            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
         );
 
         decision.Action.Should().Be(ReconciliationAction.Skip);
@@ -58,11 +58,11 @@ public class EncodeReconcilerDecideTests
         ExistingOutputSnapshot existing = new(
             fingerprint,
             AllPresentFiles(),
-            0
+            ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, false, 1, existing)
+            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 1, existing)
         );
 
         decision.Action.Should().Be(ReconciliationAction.Partial);
@@ -84,9 +84,9 @@ public class EncodeReconcilerDecideTests
         ReconciliationDecision decision = _reconciler.Decide(
             new(
                 profile,
-                false,
-                0,
-                new(ProfileFingerprint.Compute(profile), AllPresentFiles(), 0)
+                IsSingleFileOutput: false,
+                BitmapSubtitleStreamCount: 0,
+                new(ProfileFingerprint.Compute(profile), AllPresentFiles(), ValidOcrSidecarCount: 0)
             )
         );
 
@@ -107,9 +107,9 @@ public class EncodeReconcilerDecideTests
         ReconciliationDecision decision = _reconciler.Decide(
             new(
                 profile,
-                false,
-                0,
-                new(ProfileFingerprint.Compute(profile), withoutSprite, 0)
+                IsSingleFileOutput: false,
+                BitmapSubtitleStreamCount: 0,
+                new(ProfileFingerprint.Compute(profile), withoutSprite, ValidOcrSidecarCount: 0)
             )
         );
 
@@ -126,10 +126,10 @@ public class EncodeReconcilerDecideTests
         List<ExistingOutputEntry> files = AllPresentFiles()
             .Where(f => !f.RelativePath.StartsWith("subtitles/", StringComparison.Ordinal))
             .ToList();
-        ExistingOutputSnapshot existing = new(fingerprint, files, 0);
+        ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, false, 0, existing)
+            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
         );
 
         decision.Action.Should().Be(ReconciliationAction.Partial);
@@ -150,10 +150,10 @@ public class EncodeReconcilerDecideTests
         List<ExistingOutputEntry> files = AllPresentFiles()
             .Where(f => !f.RelativePath.StartsWith("audio_", StringComparison.Ordinal))
             .ToList();
-        ExistingOutputSnapshot existing = new(fingerprint, files, 0);
+        ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, false, 0, existing)
+            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
         );
 
         decision.Action.Should().Be(ReconciliationAction.Partial);
@@ -168,11 +168,11 @@ public class EncodeReconcilerDecideTests
         ExistingOutputSnapshot existing = new(
             "stale-fingerprint-from-before-the-preset-was-edited",
             AllPresentFiles(),
-            0
+            ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, false, 0, existing)
+            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
         );
 
         decision.Action.Should().Be(ReconciliationAction.Full);
@@ -187,10 +187,10 @@ public class EncodeReconcilerDecideTests
         // of an operator's entire library the moment the server upgrades —
         // unacceptable for a self-hosted product.
         EncodingProfile profile = MakeHlsProfile();
-        ExistingOutputSnapshot existing = new(null, AllPresentFiles(), 0);
+        ExistingOutputSnapshot existing = new(null, AllPresentFiles(), ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, false, 0, existing)
+            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
         );
 
         decision.Action.Should().Be(ReconciliationAction.Skip);
@@ -200,10 +200,10 @@ public class EncodeReconcilerDecideTests
     public void Decide_ReturnsPartialOcrOnly_WhenNoFingerprintAndBitmapOcrVttIsMissing()
     {
         EncodingProfile profile = MakeHlsProfile();
-        ExistingOutputSnapshot existing = new(null, AllPresentFiles(), 0);
+        ExistingOutputSnapshot existing = new(null, AllPresentFiles(), ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, false, 2, existing)
+            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 2, existing)
         );
 
         decision.Action.Should().Be(ReconciliationAction.Partial);
@@ -226,10 +226,10 @@ public class EncodeReconcilerDecideTests
                     : f
             )
             .ToList();
-        ExistingOutputSnapshot existing = new(fingerprint, files, 0);
+        ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, false, 0, existing)
+            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
         );
 
         decision.Action.Should().Be(ReconciliationAction.Partial);
@@ -244,16 +244,16 @@ public class EncodeReconcilerDecideTests
         ExistingOutputSnapshot existing = new(
             fingerprint,
             AllPresentFiles(),
-            5
+            ValidOcrSidecarCount: 5
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
             new(
                 profile,
-                false,
-                0,
+                IsSingleFileOutput: false,
+                BitmapSubtitleStreamCount: 0,
                 existing,
-                true
+                Force: true
             )
         );
 
@@ -271,10 +271,10 @@ public class EncodeReconcilerDecideTests
                 || !f.RelativePath.EndsWith(".m3u8", StringComparison.Ordinal)
             )
             .ToList();
-        ExistingOutputSnapshot existing = new(fingerprint, files, 0);
+        ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, false, 0, existing)
+            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
         );
 
         decision.Action.Should().Be(ReconciliationAction.Full);
@@ -288,8 +288,8 @@ public class EncodeReconcilerDecideTests
         ReconciliationDecision decision = _reconciler.Decide(
             new(
                 profile,
-                true,
-                0,
+                IsSingleFileOutput: true,
+                BitmapSubtitleStreamCount: 0,
                 ExistingOutputSnapshot.Empty
             )
         );
@@ -304,11 +304,11 @@ public class EncodeReconcilerDecideTests
         ExistingOutputSnapshot existing = new(
             null,
             [new ExistingOutputEntry("Movie Title.NoMercy.mkv", 900_000_000)],
-            0
+            ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, true, 1, existing)
+            new(profile, IsSingleFileOutput: true, BitmapSubtitleStreamCount: 1, existing)
         );
 
         decision.Action.Should().Be(ReconciliationAction.Partial);
@@ -331,7 +331,7 @@ public class EncodeReconcilerDecideTests
         ExistingOutputSnapshot existing = new(
             ProfileFingerprint.Compute(profile),
             FilesWithoutChapters(),
-            0
+            ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
@@ -339,7 +339,7 @@ public class EncodeReconcilerDecideTests
                 profile,
                 IsSingleFileOutput: false,
                 BitmapSubtitleStreamCount: 0,
-                Existing: existing,
+                existing,
                 SourceChapterCount: 0
             )
         );
@@ -360,7 +360,7 @@ public class EncodeReconcilerDecideTests
         ExistingOutputSnapshot existing = new(
             ProfileFingerprint.Compute(profile),
             FilesWithoutChapters(),
-            0
+            ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
@@ -368,7 +368,7 @@ public class EncodeReconcilerDecideTests
                 profile,
                 IsSingleFileOutput: false,
                 BitmapSubtitleStreamCount: 0,
-                Existing: existing,
+                existing,
                 SourceChapterCount: 6
             )
         );
@@ -405,69 +405,69 @@ public class EncodeReconcilerDecideTests
 
     private static EncodingProfile MakeHlsProfile() =>
         new(
-            Ulid.NewUlid(),
-            "web-1080p",
-            Container.HlsFmp4,
-            MakeVideoOutput(),
-            [MakeAudioOutput()],
-            [MakeSubtitleOutput()]
+            Id: Ulid.NewUlid(),
+            Name: "web-1080p",
+            Container: Container.HlsFmp4,
+            Video: MakeVideoOutput(),
+            Audio: [MakeAudioOutput()],
+            Subtitles: [MakeSubtitleOutput()]
         );
 
     private static EncodingProfile MakeMkvProfile() =>
         new(
-            Ulid.NewUlid(),
-            "archive-mkv",
-            Container.Mkv,
-            MakeVideoOutput(),
-            [MakeAudioOutput()],
-            []
+            Id: Ulid.NewUlid(),
+            Name: "archive-mkv",
+            Container: Container.Mkv,
+            Video: MakeVideoOutput(),
+            Audio: [MakeAudioOutput()],
+            Subtitles: []
         );
 
     private static VideoOutput MakeVideoOutput() =>
         new(
-            StreamPolicy.Transcode,
-            VideoCodecType.H264,
-            1920,
-            1080,
-            NoMercy.Encoder.Profiles.RateControlMode.Crf,
-            23,
-            4000,
-            null,
-            null,
-            "medium",
-            CodecProfile.High,
-            null,
-            null,
-            8,
-            null,
-            4,
-            false,
-            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            Policy: StreamPolicy.Transcode,
+            Codec: VideoCodecType.H264,
+            Width: 1920,
+            Height: 1080,
+            RateControl: NoMercy.Encoder.Profiles.RateControlMode.Crf,
+            Crf: 23,
+            BitrateKbps: 4000,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
+            Preset: "medium",
+            CodecProfile: CodecProfile.High,
+            Level: null,
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: null,
+            KeyframeIntervalSeconds: 4,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
 
     private static AudioOutput MakeAudioOutput() =>
         new(
-            StreamPolicy.Transcode,
-            AudioCodecType.Aac,
-            128,
-            2,
-            48000,
-            ["eng"],
-            "eng",
-            null,
-            null,
-            ":type:_:language:_:codec:/:type:_:language:_:codec:",
-            ":type:_:language:_:codec:/:type:_:language:_:codec:"
+            Policy: StreamPolicy.Transcode,
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 128,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: ["eng"],
+            DefaultLanguage: "eng",
+            Loudness: null,
+            Downmix: null,
+            SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+            PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
         );
 
     private static SubtitleOutput MakeSubtitleOutput() =>
         new(
-            SubtitlePolicy.Extract,
-            SubtitleCodecType.WebVtt,
-            ["eng"],
-            false,
-            null,
-            "subtitles/:filename:.:language:.:variant:"
+            Policy: SubtitlePolicy.Extract,
+            Codec: SubtitleCodecType.WebVtt,
+            AllowedLanguages: ["eng"],
+            IncludeForced: false,
+            OcrLanguage: null,
+            PlaylistNameTemplate: "subtitles/:filename:.:language:.:variant:"
         );
 }

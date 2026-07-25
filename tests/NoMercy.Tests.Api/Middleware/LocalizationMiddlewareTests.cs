@@ -52,9 +52,9 @@ public class LocalizationMiddlewareTests
     [Fact]
     public async Task MissingHeader_FallsBackToEnUs()
     {
-        HttpContext context = await InvokeAsync(null);
+        HttpContext context = await InvokeAsync(acceptLanguage: null);
 
-        context.Request.Headers.AcceptLanguage.Should().Equal(["en", "US"]);
+        context.Request.Headers.AcceptLanguage.Should().Equal("en", "US");
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class LocalizationMiddlewareTests
     {
         HttpContext context = await InvokeAsync("*");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal(["en", "US"]);
+        context.Request.Headers.AcceptLanguage.Should().Equal("en", "US");
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class LocalizationMiddlewareTests
     {
         HttpContext context = await InvokeAsync("   ");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal(["en", "US"]);
+        context.Request.Headers.AcceptLanguage.Should().Equal("en", "US");
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class LocalizationMiddlewareTests
     {
         HttpContext context = await InvokeAsync("nl");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal(["nl", "NL"]);
+        context.Request.Headers.AcceptLanguage.Should().Equal("nl", "NL");
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class LocalizationMiddlewareTests
     {
         HttpContext context = await InvokeAsync("fr-CA");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal(["fr", "CA"]);
+        context.Request.Headers.AcceptLanguage.Should().Equal("fr", "CA");
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public class LocalizationMiddlewareTests
     {
         HttpContext context = await InvokeAsync("fr;q=0.5, en;q=0.9");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal(["en", "EN"]);
+        context.Request.Headers.AcceptLanguage.Should().Equal("en", "EN");
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class LocalizationMiddlewareTests
     {
         HttpContext context = await InvokeAsync("de, es");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal(["de", "DE"]);
+        context.Request.Headers.AcceptLanguage.Should().Equal("de", "DE");
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class LocalizationMiddlewareTests
     {
         HttpContext context = await InvokeAsync("*;q=0.9, nl;q=0.1");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal(["nl", "NL"]);
+        context.Request.Headers.AcceptLanguage.Should().Equal("nl", "NL");
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class LocalizationMiddlewareTests
         HttpContext context = await InvokeAsync("nl;q=not-a-number, fr;q=0.1");
 
         // "nl"'s unparsable q defaults to weight 1.0 and must still outrank fr's 0.1.
-        context.Request.Headers.AcceptLanguage.Should().Equal(["nl", "NL"]);
+        context.Request.Headers.AcceptLanguage.Should().Equal("nl", "NL");
     }
 
     // =========================================================================

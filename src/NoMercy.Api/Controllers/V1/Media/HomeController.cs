@@ -388,7 +388,9 @@ public partial class HomeController : BaseController
                 catch (Exception ex)
                 {
                     _logger.LogError(
-                        "Trailer download failed for {TrailerId}: {Message}", [trailerId, ex.Message]
+                        "Trailer download failed for {TrailerId}: {Message}",
+                        trailerId,
+                        ex.Message
                     );
                 }
             },
@@ -457,13 +459,15 @@ public partial class HomeController : BaseController
 
         try
         {
-            await _transcodeStorage.DeleteDirectoryAsync(trailerId, true, ct);
+            await _transcodeStorage.DeleteDirectoryAsync(trailerId, recursive: true, ct: ct);
             _logger.LogInformation("Trailer folder deleted: {TrailerAbsPath}", trailerAbsPath);
         }
         catch (Exception ex)
         {
             _logger.LogError(
-                "Failed to delete trailer folder {TrailerAbsPath}: {Message}", [trailerAbsPath, ex.Message]
+                "Failed to delete trailer folder {TrailerAbsPath}: {Message}",
+                trailerAbsPath,
+                ex.Message
             );
             return InternalServerErrorResponse("Failed to remove trailer");
         }

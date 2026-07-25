@@ -82,12 +82,12 @@ public class TaskSerializerTests
     public void RoundTrip_DispatchResult_MatchesOriginal()
     {
         DispatchResult original = new(
-            "t0",
-            true,
-            "/out/t0.ts",
-            TimeSpan.FromSeconds(5),
-            null,
-            "beast"
+            TaskId: "t0",
+            Success: true,
+            OutputPath: "/out/t0.ts",
+            Duration: TimeSpan.FromSeconds(5),
+            Error: null,
+            WorkerId: "beast"
         );
 
         string wire = _serializer.SerializeResult(original, _signingKey);
@@ -112,9 +112,9 @@ public class TaskSerializerTests
 
     private static EncodeTask MakeTask(string id = "task-1") =>
         new(
-            id,
-            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
-            $"/out/{id}",
-            EncodeTaskType.QualityVariant
+            TaskId: id,
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            OutputPath: $"/out/{id}",
+            Type: EncodeTaskType.QualityVariant
         );
 }

@@ -14,6 +14,7 @@ using System.IO.Compression;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.NmSystem.SystemCalls;
 
@@ -40,7 +41,7 @@ public class ArchivingTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_workDir))
-            Directory.Delete(_workDir, true);
+            Directory.Delete(_workDir, recursive: true);
     }
 
     private static void WriteZipWithEntry(string zipPath, string entryName, string content)
@@ -129,13 +130,13 @@ public class ArchivingTests : IDisposable
         string tgzPath = Path.Combine(_workDir, "bundle.tgz");
         await using (FileStream fileStream = File.Create(tgzPath))
         await using (
-            GZipStream gzipStream = new(fileStream, CompressionMode.Compress, true)
+            GZipStream gzipStream = new(fileStream, CompressionMode.Compress, leaveOpen: true)
         )
         {
             await TarFile.CreateFromDirectoryAsync(
                 sourceDir,
                 gzipStream,
-                false
+                includeBaseDirectory: false
             );
         }
 
@@ -165,13 +166,13 @@ public class ArchivingTests : IDisposable
         string tgzPath = Path.Combine(_workDir, "bundle-nodest.tgz");
         await using (FileStream fileStream = File.Create(tgzPath))
         await using (
-            GZipStream gzipStream = new(fileStream, CompressionMode.Compress, true)
+            GZipStream gzipStream = new(fileStream, CompressionMode.Compress, leaveOpen: true)
         )
         {
             await TarFile.CreateFromDirectoryAsync(
                 sourceDir,
                 gzipStream,
-                false
+                includeBaseDirectory: false
             );
         }
 

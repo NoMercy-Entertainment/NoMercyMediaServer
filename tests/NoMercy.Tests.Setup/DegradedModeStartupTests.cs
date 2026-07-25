@@ -32,7 +32,7 @@ public class DegradedModeStartupTests
     public async Task NetworkProbe_ReturnsTrue_WhenAtLeastOneTargetReachable()
     {
         // In CI/dev environments, at least one target should be reachable
-        bool result = await NetworkProbe.CheckConnectivity(5000);
+        bool result = await NetworkProbe.CheckConnectivity(timeoutMs: 5000);
 
         // This test validates the probe doesn't throw — the actual result
         // depends on the environment. We verify the method completes without exception.
@@ -44,7 +44,7 @@ public class DegradedModeStartupTests
     {
         // Use an extremely short timeout to simulate "no connectivity" path
         DateTime start = DateTime.UtcNow;
-        bool result = await NetworkProbe.CheckConnectivity(1);
+        bool result = await NetworkProbe.CheckConnectivity(timeoutMs: 1);
         TimeSpan elapsed = DateTime.UtcNow - start;
 
         // Should complete without hanging — result may be true or false depending
@@ -406,7 +406,7 @@ public class CloudflareFallbackTests
             await new CertificateService(
                 NullLogger<CertificateService>.Instance,
                 null!
-            ).RenewSslCertificate(null, 1);
+            ).RenewSslCertificate(null, maxRetries: 1);
         }
         catch (SqliteException)
         {
@@ -533,7 +533,7 @@ public class DegradedModeBinaryProvisioningTests : IDisposable
         try
         {
             if (Directory.Exists(_tempAppPath))
-                Directory.Delete(_tempAppPath, true);
+                Directory.Delete(_tempAppPath, recursive: true);
         }
         catch (IOException)
         {

@@ -30,98 +30,101 @@ public class ValidateStageTests
 
     private static MediaInfo BuildMediaInfo() =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile BuildValidProfile() =>
         new(
-            Ulid.NewUlid(),
-            "Test",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-                ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            Id: Ulid.NewUlid(),
+            Name: "Test",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
             ),
+            Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    ["en"],
-                    null,
-                    null,
-                    null,
-                    ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                    ":type:_:language:_:codec:/:type:_:language:_:codec:"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["en"],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            []
+            Subtitles: []
         );
 
     private static EncodingProfile BuildInvalidProfile() =>
         new(
-            Ulid.NewUlid(),
-            "Invalid",
-            Container.HlsTs,
-            null,
+            Id: Ulid.NewUlid(),
+            Name: "Invalid",
+            Container: Container.HlsTs,
+            Video: null,
+            Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    0,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                    ":type:_:language:_:codec:/:type:_:language:_:codec:"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 0,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            []
+            Subtitles: []
         );
 
     // ------------------------------------------------------------------
@@ -171,12 +174,12 @@ public class ValidateStageTests
     public async Task ProfileWithNoOutputs_ReturnsSuccess()
     {
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
-            "Empty",
-            Container.HlsTs,
-            null,
-            [],
-            []
+            Id: Ulid.NewUlid(),
+            Name: "Empty",
+            Container: Container.HlsTs,
+            Video: null,
+            Audio: [],
+            Subtitles: []
         );
         MediaInfo media = BuildMediaInfo();
         ValidateInput input = new(media, profile);
@@ -194,32 +197,32 @@ public class ValidateStageTests
     public async Task ProfileWithIncompatibleCodec_ReturnsFailure()
     {
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
-            "Bad Codec",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H265,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.Main,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-                ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            Id: Ulid.NewUlid(),
+            Name: "Bad Codec",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H265,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.Main,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
             ),
-            [],
-            []
+            Audio: [],
+            Subtitles: []
         );
         MediaInfo media = BuildMediaInfo();
         ValidateInput input = new(media, profile);

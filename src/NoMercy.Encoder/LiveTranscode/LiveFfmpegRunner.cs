@@ -68,8 +68,8 @@ public class LiveFfmpegRunner(
         // and starve the video encoder.
         int cpuThreads = input.AudioRenditionOnly ? 1 : 2;
         ResourceRequirement requirement = requiresGpu
-            ? new(gpuName, 1, 2)
-            : new ResourceRequirement(null, 0, cpuThreads);
+            ? new(gpuName, GpuSlots: 1, CpuThreads: 2)
+            : new ResourceRequirement(null, GpuSlots: 0, CpuThreads: cpuThreads);
 
         // Declared outside the try so the outer finally can always see whether
         // a lease was actually granted. Acquisition now happens INSIDE the try
@@ -91,7 +91,9 @@ public class LiveFfmpegRunner(
             string[] arguments = BuildArguments(input);
 
             logger.LogInformation(
-                "Live FFmpeg starting for session {SessionId} → {Dir}", [session.SessionId, input.OutputDirectory]
+                "Live FFmpeg starting for session {SessionId} → {Dir}",
+                session.SessionId,
+                input.OutputDirectory
             );
 
             ProgressParser progressParser = new();
@@ -127,7 +129,10 @@ public class LiveFfmpegRunner(
                 if (!result.IsSuccess && !ct.IsCancellationRequested)
                 {
                     logger.LogWarning(
-                        "Live FFmpeg for session {SessionId} exited with code {Code}. stderr: {StdErr}", [session.SessionId, result.ExitCode, Truncate(result.StdErr, 1000)]
+                        "Live FFmpeg for session {SessionId} exited with code {Code}. stderr: {StdErr}",
+                        session.SessionId,
+                        result.ExitCode,
+                        Truncate(result.StdErr, 1000)
                     );
                     session.SetState(LiveSessionState.Error);
                     await PushTranscodeErrorAsync(
@@ -243,7 +248,9 @@ public class LiveFfmpegRunner(
         session.SetQuality(fallbackQuality);
 
         logger.LogWarning(
-            "GPU session cap exhausted for session {SessionId} — falling back to {Encoder}", [session.SessionId, fallbackQuality.Encoder]
+            "GPU session cap exhausted for session {SessionId} — falling back to {Encoder}",
+            session.SessionId,
+            fallbackQuality.Encoder
         );
 
         await PushQualityChangedAsync(
@@ -270,7 +277,7 @@ public class LiveFfmpegRunner(
         if (transport is null)
             return;
 
-        QualityChangedMessage message = new(quality, reason);
+        QualityChangedMessage message = new(NewQuality: quality, Reason: reason);
 
         try
         {
@@ -454,9 +461,9 @@ public class LiveFfmpegRunner(
             return;
 
         TranscodeErrorMessage errorMessage = new(
-            EncodingErrorKind.ProcessCrashed,
-            message,
-            false
+            Kind: EncodingErrorKind.ProcessCrashed,
+            Message: message,
+            Recoverable: false
         );
 
         try

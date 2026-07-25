@@ -28,13 +28,13 @@ public class NfsBroadRecoveryTests
 {
     private static NfsDriverConfig BuildConfig() =>
         new(
-            "test.local",
-            "/export",
-            4,
-            null,
-            null,
-            2049,
-            null
+            Server: "test.local",
+            Export: "/export",
+            Version: 4,
+            Uid: null,
+            Gid: null,
+            Port: 2049,
+            MountPort: null
         );
 
     private static (NfsStorageDriver driver, FaultyLibNfs lib) BuildDriver()
@@ -229,7 +229,7 @@ public class NfsBroadRecoveryTests
             lib.SeedDir("/subdir");
             lib.Faults["RmDir:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            driver.DeleteDirectory("/subdir", false);
+            driver.DeleteDirectory("/subdir", recursive: false);
 
             lib.CallCounts["RmDir"].Should().Be(2);
         }

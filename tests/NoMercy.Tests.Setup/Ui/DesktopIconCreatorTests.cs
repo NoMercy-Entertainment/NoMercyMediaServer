@@ -42,7 +42,7 @@ public sealed class DesktopIconCreatorTests : IDisposable
         try
         {
             if (Directory.Exists(_tempDesktop))
-                Directory.Delete(_tempDesktop, true);
+                Directory.Delete(_tempDesktop, recursive: true);
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }

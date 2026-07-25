@@ -76,7 +76,7 @@ public class ContentAnalysisController(
             CropResult result = await cropDetector.DetectAsync(
                 path,
                 sourceVideoFileId,
-                null,
+                sourceIsHdr: null,
                 ct
             );
             return Ok(
@@ -190,20 +190,20 @@ public class ContentAnalysisController(
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         WhisperOptions options = new(
-            string.Empty, // Transcriber reads from EncoderOptions.WhisperModelPath.
-            WhisperModelSize.LargeV3,
-            translateToEnglish
+            ModelPath: string.Empty, // Transcriber reads from EncoderOptions.WhisperModelPath.
+            ModelSize: WhisperModelSize.LargeV3,
+            TranslateToEnglish: translateToEnglish
         );
 
         try
         {
             SubtitleTrack track = await whisperTranscriber.TranscribeAsync(
                 path,
-                0,
-                language,
-                options,
-                null,
-                ct
+                audioStreamIndex: 0,
+                language: language,
+                options: options,
+                progress: null,
+                ct: ct
             );
             return Ok(
                 new

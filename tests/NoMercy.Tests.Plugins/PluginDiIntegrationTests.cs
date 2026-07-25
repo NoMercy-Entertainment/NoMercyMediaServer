@@ -38,7 +38,7 @@ public class PluginDiIntegrationTests : IDisposable
         {
             if (Directory.Exists(_tempPluginsDir))
             {
-                Directory.Delete(_tempPluginsDir, true);
+                Directory.Delete(_tempPluginsDir, recursive: true);
             }
         }
         catch (IOException) { }

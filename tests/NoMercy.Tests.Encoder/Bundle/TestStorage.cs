@@ -58,9 +58,9 @@ internal sealed class TestStorage : IStorage
     public Task<bool> ExistsAsync(string path, CancellationToken ct) =>
         Task.FromResult(
             Exists(path)
-                    || _files.Keys.Any(k =>
-                        k.StartsWith(path.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)
-                    )
+                || _files.Keys.Any(k =>
+                    k.StartsWith(path.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)
+                )
         );
 
     public Task<string> ReadAllTextAsync(string path, CancellationToken ct)
@@ -94,7 +94,7 @@ internal sealed class TestStorage : IStorage
             if (!recursive && rel.Contains('/'))
                 continue;
             entries.Add(
-                new(key, false, _files[key].Length, now)
+                new(key, IsDirectory: false, SizeBytes: _files[key].Length, LastModified: now)
             );
         }
         return entries;

@@ -116,9 +116,9 @@ public class LibrariesController(
                     "config.library_added",
                     userId,
                     Ulid.Empty,
-                    $"library.{library.Id}",
-                    null,
-                    new
+                    configKey: $"library.{library.Id}",
+                    oldValue: null,
+                    newValue: new
                     {
                         id = library.Id.ToString(),
                         name = library.Title,
@@ -225,9 +225,9 @@ public class LibrariesController(
                     "config.library_scan_schedule_changed",
                     userId,
                     Ulid.Empty,
-                    $"library.{library.Id}.scan_schedule",
-                    new { realtime = oldRealtime.Value },
-                    new { realtime = library.Realtime }
+                    configKey: $"library.{library.Id}.scan_schedule",
+                    oldValue: new { realtime = oldRealtime.Value },
+                    newValue: new { realtime = library.Realtime }
                 );
             }
             catch (Exception ex)
@@ -362,9 +362,9 @@ public class LibrariesController(
                     "config.library_removed",
                     userId,
                     Ulid.Empty,
-                    $"library.{library.Id}",
-                    new { id = library.Id.ToString(), name = library.Title },
-                    null
+                    configKey: $"library.{library.Id}",
+                    oldValue: new { id = library.Id.ToString(), name = library.Title },
+                    newValue: null
                 );
             }
             catch (Exception ex)
@@ -618,7 +618,11 @@ public class LibrariesController(
         catch (Exception ex)
         {
             logger.LogError(
-                "[AddFolder] failed for library={Id} driver={DriverId} path='{Path}': {Ex}", [id, request.DriverId, request.Path, ex]
+                "[AddFolder] failed for library={Id} driver={DriverId} path='{Path}': {Ex}",
+                id,
+                request.DriverId,
+                request.Path,
+                ex
             );
             return InternalServerErrorResponse("Something went wrong adding the folder");
         }
@@ -785,7 +789,10 @@ public class LibrariesController(
             // event-bus crash) so future delete-folder regressions don't
             // require Stoney to grep for a generic 500 in production logs.
             logger.LogError(
-                "[DeleteFolder] folder={FolderId} library={Id} failed: {Ex}", [folderId, id, ex]
+                "[DeleteFolder] folder={FolderId} library={Id} failed: {Ex}",
+                folderId,
+                id,
+                ex
             );
             return InternalServerErrorResponse("Something went wrong deleting the library folder");
         }

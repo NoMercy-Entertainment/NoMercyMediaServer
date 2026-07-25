@@ -302,7 +302,7 @@ public class HmacValidationMiddlewareTests
         // routes with 503 rather than passing through silently — a missing key
         // means distributed encoding is misconfigured, and passing through would
         // bypass HMAC authentication entirely.
-        HttpClient client = BuildClient(null);
+        HttpClient client = BuildClient(configuredSecret: null);
         HttpResponseMessage response = await client.GetAsync("/api/v1/distribution/workers");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
@@ -324,7 +324,7 @@ public class HmacValidationMiddlewareTests
         // token — proves the signature must be verified against the WORKER
         // TOKEN, not the static DistributedEncodingSigningKey.
         HttpClient client = BuildClientWithWorkerToken(
-            "static-secret-never-used-here",
+            configuredSecret: "static-secret-never-used-here",
             licenseTokenClient
         );
 

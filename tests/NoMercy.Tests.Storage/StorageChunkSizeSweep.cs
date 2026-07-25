@@ -137,7 +137,7 @@ public sealed class StorageChunkSizeSweep(StorageBackendsFixture fix, ITestOutpu
             payload,
             () =>
             {
-                using Stream w = driver.OpenWrite(path, true);
+                using Stream w = driver.OpenWrite(path, overwrite: true);
                 using GeneratedStream src = new(payload);
                 src.CopyTo(w, 1024 * 1024);
             }

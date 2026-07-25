@@ -27,13 +27,13 @@ public class CostEstimatorTests
     public void SubtitleGroup_EstimatesNearInstantDuration()
     {
         ExecutionGroup group = new(
-            "group_0",
-            [new("sub_0", OperationType.SubtitleExtract, [], new())],
-            null,
-            0,
-            1,
-            false,
-            0
+            GroupId: "group_0",
+            Nodes: [new("sub_0", OperationType.SubtitleExtract, [], new())],
+            DeviceId: null,
+            GpuSlotsRequired: 0,
+            CpuThreadsRequired: 1,
+            RequiresGpu: false,
+            Priority: 0
         );
 
         CostEstimate estimate = Estimator.EstimateGroup(group, TwoHours);
@@ -46,13 +46,13 @@ public class CostEstimatorTests
     public void ChapterGroup_EstimatesNearInstantDuration()
     {
         ExecutionGroup group = new(
-            "group_0",
-            [new("ch_0", OperationType.ChapterExtract, [], new())],
-            null,
-            0,
-            1,
-            false,
-            0
+            GroupId: "group_0",
+            Nodes: [new("ch_0", OperationType.ChapterExtract, [], new())],
+            DeviceId: null,
+            GpuSlotsRequired: 0,
+            CpuThreadsRequired: 1,
+            RequiresGpu: false,
+            Priority: 0
         );
 
         CostEstimate estimate = Estimator.EstimateGroup(group, TwoHours);
@@ -68,16 +68,17 @@ public class CostEstimatorTests
     public void GpuVideoEncodeGroup_EstimatesLessThanInputDuration()
     {
         ExecutionGroup group = new(
-            "group_0",
+            GroupId: "group_0",
+            Nodes:
             [
                 new("decode_0", OperationType.Decode, [], new()),
                 new("encode_0", OperationType.Encode, ["decode_0"], new()),
             ],
-            "RTX 4090",
-            1,
-            0,
-            true,
-            1
+            DeviceId: "RTX 4090",
+            GpuSlotsRequired: 1,
+            CpuThreadsRequired: 0,
+            RequiresGpu: true,
+            Priority: 1
         );
 
         CostEstimate estimate = Estimator.EstimateGroup(group, NinetyMinutes);
@@ -91,16 +92,17 @@ public class CostEstimatorTests
     public void SoftwareVideoEncodeGroup_ReturnsPositiveDuration()
     {
         ExecutionGroup group = new(
-            "group_0",
+            GroupId: "group_0",
+            Nodes:
             [
                 new("decode_0", OperationType.Decode, [], new()),
                 new("encode_0", OperationType.Encode, ["decode_0"], new()),
             ],
-            null,
-            0,
-            4,
-            false,
-            1
+            DeviceId: null,
+            GpuSlotsRequired: 0,
+            CpuThreadsRequired: 4,
+            RequiresGpu: false,
+            Priority: 1
         );
 
         CostEstimate estimate = Estimator.EstimateGroup(group, NinetyMinutes);
@@ -114,13 +116,13 @@ public class CostEstimatorTests
     public void GpuEncodeGroup_GpuUtilizationIsProportionalToSlots()
     {
         ExecutionGroup group1Slot = new(
-            "group_1",
-            [new("enc_0", OperationType.Encode, [], new())],
-            "RTX 4090",
-            1,
-            0,
-            true,
-            1
+            GroupId: "group_1",
+            Nodes: [new("enc_0", OperationType.Encode, [], new())],
+            DeviceId: "RTX 4090",
+            GpuSlotsRequired: 1,
+            CpuThreadsRequired: 0,
+            RequiresGpu: true,
+            Priority: 1
         );
 
         ExecutionGroup group6Slots = group1Slot with { GpuSlotsRequired = 6, GroupId = "group_6" };
@@ -141,25 +143,26 @@ public class CostEstimatorTests
         List<ExecutionGroup> groups =
         [
             new(
-                "sub",
-                [new("sub_0", OperationType.SubtitleExtract, [], new())],
-                null,
-                0,
-                1,
-                false,
-                0
+                GroupId: "sub",
+                Nodes: [new("sub_0", OperationType.SubtitleExtract, [], new())],
+                DeviceId: null,
+                GpuSlotsRequired: 0,
+                CpuThreadsRequired: 1,
+                RequiresGpu: false,
+                Priority: 0
             ),
             new(
-                "main",
+                GroupId: "main",
+                Nodes:
                 [
                     new("decode_0", OperationType.Decode, [], new()),
                     new("encode_0", OperationType.Encode, ["decode_0"], new()),
                 ],
-                "RTX 4090",
-                1,
-                0,
-                true,
-                1
+                DeviceId: "RTX 4090",
+                GpuSlotsRequired: 1,
+                CpuThreadsRequired: 0,
+                RequiresGpu: true,
+                Priority: 1
             ),
         ];
 

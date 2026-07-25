@@ -14,9 +14,11 @@ using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.NmSystem.Dto;
+using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.DiscRipping;
 
@@ -60,7 +62,7 @@ public class DiscRipperCdTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_outputDir))
-            Directory.Delete(_outputDir, true);
+            Directory.Delete(_outputDir, recursive: true);
         GC.SuppressFinalize(this);
     }
 
@@ -267,7 +269,7 @@ public class DiscRipperCdTests : IDisposable
 
     private static RipRequest CdRequest(string drivePath, int[] trackIndices) =>
         new(
-            drivePath,
+            DrivePath: drivePath,
             SelectedTitleIndices: trackIndices,
             MetadataId: null,
             Custom: null,

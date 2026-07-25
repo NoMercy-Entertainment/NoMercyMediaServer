@@ -199,7 +199,7 @@ public class OrphanJobRecoveryCheckpointTests
     public async Task StartAsync_NoLookupRegistered_EncoderOrphanWithAttempts_MovedToFailed()
     {
         (OrphanJobRecoveryHostedService service, TestQueueContextAdapter context) = BuildService(
-            null
+            lookup: null
         );
 
         QueueJobModel orphan = new()

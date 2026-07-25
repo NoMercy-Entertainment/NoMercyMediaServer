@@ -39,63 +39,67 @@ public class MetadataInjectorBuildStageIntegrationTests
     private static BuildStage CreateStageWithInjector(IMetadataInjector injector) =>
         new(
             new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
-            fontExtractor: new FontExtractor(TestStorageFactory.CreateLocal()),
-            subtitleExtractor: new SubtitleExtractor(),
-            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
-            drmProcessors: [],
-            logger: NullLogger<BuildStage>.Instance,
-            storage: TestStorageFactory.CreateLocal(),
+            new FontExtractor(TestStorageFactory.CreateLocal()),
+            new SubtitleExtractor(),
+            OutputStrategyFactoryTestHelper.Create(),
+            [],
+            NullLogger<BuildStage>.Instance,
+            TestStorageFactory.CreateLocal(),
             metadataInjector: injector
         );
 
     private static ExecutionPlan BuildMkvPlan() =>
         new(
+            Groups:
             [
                 new(
-                    "g0",
+                    GroupId: "g0",
+                    Nodes:
                     [
                         new("decode_0", OperationType.Decode, [], new()),
                         new("encode_0", OperationType.Encode, ["decode_0"], new()),
                     ],
-                    null,
-                    0,
-                    2,
-                    false,
-                    1
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 2,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            new(
-                OutputFormat.Mkv,
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: new(
+                Format: OutputFormat.Mkv,
+                VideoOutputs:
                 [
                     new(
-                        1920,
-                        1080,
-                        "libx264",
-                        23,
-                        0,
-                        "medium",
-                        "high",
-                        "4.1",
-                        false,
-                        "yuv420p",
-                        "0:v:0",
-                        new()
+                        Width: 1920,
+                        Height: 1080,
+                        EncoderName: "libx264",
+                        Crf: 23,
+                        BitrateKbps: 0,
+                        Preset: "medium",
+                        Profile: "high",
+                        Level: "4.1",
+                        TenBit: false,
+                        PixelFormat: "yuv420p",
+                        MapLabel: "0:v:0",
+                        ExtraFlags: new()
                     ),
                 ],
+                AudioOutputs:
                 [
                     new(
-                        "aac",
-                        192,
-                        2,
-                        48000,
-                        StreamAction.Transcode,
-                        "en",
-                        "0:a:0"
+                        EncoderName: "aac",
+                        BitrateKbps: 192,
+                        Channels: 2,
+                        SampleRate: 48000,
+                        Action: StreamAction.Transcode,
+                        Language: "en",
+                        MapLabel: "0:a:0"
                     ),
                 ],
-                [],
-                null
+                SubtitleOutputs: [],
+                Thumbnails: null
             )
         );
 
@@ -114,10 +118,10 @@ public class MetadataInjectorBuildStageIntegrationTests
         EncodingContext context = EncodingContext.Create() with
         {
             MediaItem = new MovieMediaRef(
-                MediaType.Movie,
-                550,
-                "Fight Club",
-                1999
+                Type: MediaType.Movie,
+                Id: 550,
+                Title: "Fight Club",
+                Year: 1999
             ),
             EnableMetadataInjection = true,
         };
@@ -154,13 +158,13 @@ public class MetadataInjectorBuildStageIntegrationTests
         EncodingContext context = EncodingContext.Create() with
         {
             MediaItem = new EpisodeMediaRef(
-                MediaType.Episode,
-                62085,
-                "Pilot",
-                2008,
-                "Breaking Bad",
-                1,
-                1
+                Type: MediaType.Episode,
+                Id: 62085,
+                Title: "Pilot",
+                Year: 2008,
+                ShowTitle: "Breaking Bad",
+                SeasonNumber: 1,
+                EpisodeNumber: 1
             ),
             EnableMetadataInjection = true,
         };
@@ -224,10 +228,10 @@ public class MetadataInjectorBuildStageIntegrationTests
         EncodingContext context = EncodingContext.Create() with
         {
             MediaItem = new MovieMediaRef(
-                MediaType.Movie,
-                550,
-                "Fight Club",
-                1999
+                Type: MediaType.Movie,
+                Id: 550,
+                Title: "Fight Club",
+                Year: 1999
             ),
             // EnableMetadataInjection intentionally left at its default (false).
         };

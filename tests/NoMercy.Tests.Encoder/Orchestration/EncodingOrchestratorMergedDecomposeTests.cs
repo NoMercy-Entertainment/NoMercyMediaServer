@@ -68,21 +68,21 @@ public class EncodingOrchestratorMergedDecomposeTests
 
     private static EncodingRequest BuildRequest(string presetName, Container container) =>
         new(
-            "/media/test.mkv",
-            "out",
-            new(
-                Ulid.NewUlid(),
-                presetName,
-                container,
-                null,
-                [],
-                []
+            InputPath: "/media/test.mkv",
+            OutputDirectory: "out",
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: presetName,
+                Container: container,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 
     private static VideoOutputPlan MakeVideo(int width, int height, bool isHdrOutput) =>
         new(
-            width,
+            Width: width,
             Height: height,
             EncoderName: "libx265",
             Crf: 23,
@@ -104,11 +104,11 @@ public class EncodingOrchestratorMergedDecomposeTests
         bool isHdrOutput
     ) =>
         new(
-            format,
-            [MakeVideo(width, height, isHdrOutput)],
-            [],
-            [],
-            null
+            Format: format,
+            VideoOutputs: [MakeVideo(width, height, isHdrOutput)],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
     // ------------------------------------------------------------------
@@ -119,7 +119,7 @@ public class EncodingOrchestratorMergedDecomposeTests
     public async Task DecomposeMergedAsync_SingleRequest_MatchesDecomposeAsync()
     {
         EncodingRequest request = BuildRequest("Solo", Container.HlsTs);
-        OutputPlan plan = MakePlan(OutputFormat.Hls, 1920, 1080, false);
+        OutputPlan plan = MakePlan(OutputFormat.Hls, 1920, 1080, isHdrOutput: false);
 
         _encoder
             .Setup(e => e.PlanAsync(It.IsAny<EncodingRequest>(), It.IsAny<CancellationToken>()))
@@ -134,7 +134,7 @@ public class EncodingOrchestratorMergedDecomposeTests
                 (OutputPlan p, string tag) =>
                     [
                         new DecomposedTask(
-                            $"{tag}-video-0",
+                            TaskId: $"{tag}-video-0",
                             ParentJobId: 0,
                             GroupTag: tag,
                             Kind: EncodeTaskKind.Video,
@@ -166,8 +166,8 @@ public class EncodingOrchestratorMergedDecomposeTests
         EncodingRequest fourKRequest = BuildRequest("4K HDR HEVC", Container.HlsTs);
         EncodingRequest sdrRequest = BuildRequest("1080p SDR HEVC", Container.HlsTs);
 
-        OutputPlan fourKPlan = MakePlan(OutputFormat.Hls, 3840, 2160, true);
-        OutputPlan sdrPlan = MakePlan(OutputFormat.Hls, 1920, 1080, false);
+        OutputPlan fourKPlan = MakePlan(OutputFormat.Hls, 3840, 2160, isHdrOutput: true);
+        OutputPlan sdrPlan = MakePlan(OutputFormat.Hls, 1920, 1080, isHdrOutput: false);
 
         _encoder
             .Setup(e =>
@@ -244,7 +244,7 @@ public class EncodingOrchestratorMergedDecomposeTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(MakePlan(OutputFormat.Hls, 1920, 1080, false));
+            .ReturnsAsync(MakePlan(OutputFormat.Hls, 1920, 1080, isHdrOutput: false));
         _encoder
             .Setup(e =>
                 e.PlanAsync(
@@ -252,7 +252,7 @@ public class EncodingOrchestratorMergedDecomposeTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(MakePlan(OutputFormat.Mkv, 1920, 1080, false));
+            .ReturnsAsync(MakePlan(OutputFormat.Mkv, 1920, 1080, isHdrOutput: false));
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
@@ -268,7 +268,7 @@ public class EncodingOrchestratorMergedDecomposeTests
         EncodingRequest singlePass = BuildRequest("Single", Container.HlsTs) with
         {
             Profile = new(
-                Ulid.NewUlid(),
+                Id: Ulid.NewUlid(),
                 Name: "Single",
                 Container: Container.HlsTs,
                 Video: null,
@@ -280,7 +280,7 @@ public class EncodingOrchestratorMergedDecomposeTests
         EncodingRequest twoPass = BuildRequest("TwoPass", Container.HlsTs) with
         {
             Profile = new(
-                Ulid.NewUlid(),
+                Id: Ulid.NewUlid(),
                 Name: "TwoPass",
                 Container: Container.HlsTs,
                 Video: null,
@@ -311,7 +311,7 @@ public class EncodingOrchestratorMergedDecomposeTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(MakePlan(OutputFormat.Hls, 1920, 1080, false));
+            .ReturnsAsync(MakePlan(OutputFormat.Hls, 1920, 1080, isHdrOutput: false));
         _encoder
             .Setup(e =>
                 e.PlanAsync(

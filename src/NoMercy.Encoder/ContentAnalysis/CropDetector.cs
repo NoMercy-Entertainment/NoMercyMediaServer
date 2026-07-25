@@ -66,13 +66,13 @@ public partial class CropDetector(
     private static readonly HashSet<string> HdrTransfers = ["smpte2084", "arib-std-b67"];
 
     public Task<CropResult> DetectAsync(string inputPath, CancellationToken ct) =>
-        DetectAsync(inputPath, null, false, ct);
+        DetectAsync(inputPath, sourceVideoFileId: null, sourceIsHdr: false, ct);
 
     public Task<CropResult> DetectAsync(
         string inputPath,
         Guid? sourceVideoFileId,
         CancellationToken ct
-    ) => DetectAsync(inputPath, sourceVideoFileId, false, ct);
+    ) => DetectAsync(inputPath, sourceVideoFileId, sourceIsHdr: false, ct);
 
     public async Task<CropResult> DetectAsync(
         string inputPath,
@@ -115,8 +115,8 @@ public partial class CropDetector(
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
             args,
-            null,
-            line =>
+            onStdOut: null,
+            onStdErr: line =>
             {
                 Match match = CropRegex().Match(line);
                 if (!match.Success)
@@ -125,8 +125,8 @@ public partial class CropDetector(
                 string crop = match.Groups["crop"].Value;
                 observations[crop] = observations.GetValueOrDefault(crop) + 1;
             },
-            null,
-            ct
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
         observer.Report(jobId, "crop", 100, "done");
@@ -144,10 +144,10 @@ public partial class CropDetector(
                 0,
                 0,
                 0,
-                false,
-                sourceVideoFileId,
-                totalObservations,
-                0
+                ShouldCrop: false,
+                SourceVideoFileId: sourceVideoFileId,
+                SampleFramesAnalyzed: totalObservations,
+                Confidence: 0
             );
         }
 
@@ -159,10 +159,10 @@ public partial class CropDetector(
                 0,
                 0,
                 0,
-                false,
-                sourceVideoFileId,
-                0,
-                0
+                ShouldCrop: false,
+                SourceVideoFileId: sourceVideoFileId,
+                SampleFramesAnalyzed: 0,
+                Confidence: 0
             );
         }
 
@@ -175,17 +175,19 @@ public partial class CropDetector(
         if (count < MinObservations)
         {
             logger.LogDebug(
-                "cropdetect top result {Crop} has only {Count} observations; not cropping", [bestCrop, count]
+                "cropdetect top result {Crop} has only {Count} observations; not cropping",
+                bestCrop,
+                count
             );
             return new(
                 0,
                 0,
                 0,
                 0,
-                false,
-                sourceVideoFileId,
-                count,
-                confidence
+                ShouldCrop: false,
+                SourceVideoFileId: sourceVideoFileId,
+                SampleFramesAnalyzed: count,
+                Confidence: confidence
             );
         }
 
@@ -197,10 +199,10 @@ public partial class CropDetector(
                 0,
                 0,
                 0,
-                false,
-                sourceVideoFileId,
-                count,
-                confidence
+                ShouldCrop: false,
+                SourceVideoFileId: sourceVideoFileId,
+                SampleFramesAnalyzed: count,
+                Confidence: confidence
             );
 
         if (
@@ -215,15 +217,21 @@ public partial class CropDetector(
                 0,
                 0,
                 0,
-                false,
-                sourceVideoFileId,
-                count,
-                confidence
+                ShouldCrop: false,
+                SourceVideoFileId: sourceVideoFileId,
+                SampleFramesAnalyzed: count,
+                Confidence: confidence
             );
         }
 
         logger.LogInformation(
-            "cropdetect → {Width}x{Height} at ({X},{Y}) ({Count} obs, confidence {Confidence:P0})", [width, height, x, y, count, confidence]
+            "cropdetect → {Width}x{Height} at ({X},{Y}) ({Count} obs, confidence {Confidence:P0})",
+            width,
+            height,
+            x,
+            y,
+            count,
+            confidence
         );
 
         // Do not crop when the detected rectangle matches the full frame.
@@ -234,10 +242,10 @@ public partial class CropDetector(
             height,
             x,
             y,
-            shouldCrop,
-            sourceVideoFileId,
-            count,
-            confidence
+            ShouldCrop: shouldCrop,
+            SourceVideoFileId: sourceVideoFileId,
+            SampleFramesAnalyzed: count,
+            Confidence: confidence
         );
     }
 
@@ -264,7 +272,7 @@ public partial class CropDetector(
             ];
 
             ProcessResult probe = await processRunner
-                .RunAsync(options.FfprobePath, args, null, ct)
+                .RunAsync(options.FfprobePath, args, workingDirectory: null, cancellationToken: ct)
                 .ConfigureAwait(false);
 
             if (!probe.IsSuccess)

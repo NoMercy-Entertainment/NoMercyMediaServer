@@ -38,7 +38,7 @@ public class ApiKeyLoader : IApiKeyLoader
         IApiKeyStore apiKeyStore,
         IStorageDriver storageDriver
     )
-        : this(authTokenStore, logger, apiKeyStore, storageDriver, null) { }
+        : this(authTokenStore, logger, apiKeyStore, storageDriver, delay: null) { }
 
     /// <summary>
     /// Internal (not exposed on the public constructor): lets NoMercy.Tests.Setup drive
@@ -176,9 +176,9 @@ public class ApiKeyLoader : IApiKeyLoader
             string json = JsonConvert.SerializeObject(data, Formatting.Indented);
             await using Stream stream = _storageDriver.OpenWrite(
                 AppFiles.ApiKeysFile,
-                true
+                overwrite: true
             );
-            await using StreamWriter writer = new(stream, encoding: Encoding.UTF8, leaveOpen: true);
+            await using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
             await writer.WriteAsync(json);
             await writer.FlushAsync();
         }
@@ -259,7 +259,9 @@ public class ApiKeyLoader : IApiKeyLoader
 
                     attempt++;
                     _logger.LogWarning(
-                        "API key refresh attempt {Attempt} failed, retrying in {Delay}s", [attempt, delaySeconds]
+                        "API key refresh attempt {Attempt} failed, retrying in {Delay}s",
+                        attempt,
+                        delaySeconds
                     );
                 }
             },

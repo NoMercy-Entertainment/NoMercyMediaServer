@@ -19,10 +19,10 @@ public class ProfileValidatorV2Tests
 {
     private static EncodingProfile MinimalHls() =>
         new(
-            Ulid.NewUlid(),
-            "test",
-            Container.HlsFmp4,
-            new(
+            Id: Ulid.NewUlid(),
+            Name: "test",
+            Container: Container.HlsFmp4,
+            Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H264,
                 1920,
@@ -43,6 +43,7 @@ public class ProfileValidatorV2Tests
                 "",
                 ""
             ),
+            Audio:
             [
                 new(
                     StreamPolicy.Transcode,
@@ -58,7 +59,7 @@ public class ProfileValidatorV2Tests
                     ""
                 ),
             ],
-            []
+            Subtitles: []
         );
 
     [Fact]

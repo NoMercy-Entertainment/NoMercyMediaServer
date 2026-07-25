@@ -154,7 +154,7 @@ public class ServerReadinessGateTests
 
         extraSignal.SetResult();
 
-        await Task.WhenAll([waiterA, waiterB]).WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.WhenAll(waiterA, waiterB).WaitAsync(TimeSpan.FromSeconds(5));
         waiterA.IsCompletedSuccessfully.Should().BeTrue();
         waiterB.IsCompletedSuccessfully.Should().BeTrue();
     }
@@ -166,7 +166,7 @@ public class ServerReadinessGateTests
         // already fired ApplicationStarted before the gate is built) — the
         // ctor's IsCancellationRequested branch must seal on the spot rather
         // than wait for an ApplicationStarted event that already happened.
-        FakeLifetime lifetime = new(true);
+        FakeLifetime lifetime = new(alreadyStarted: true);
         ServerReadinessGate gate = new(lifetime, NullLogger<ServerReadinessGate>.Instance);
 
         Task waiter = gate.WaitForReadyAsync(CancellationToken.None);

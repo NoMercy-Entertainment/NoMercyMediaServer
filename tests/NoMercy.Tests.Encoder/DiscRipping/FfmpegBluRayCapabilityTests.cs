@@ -20,6 +20,7 @@ using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.OpticalMedia.Sources.Bluray;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.DiscRipping;
 
@@ -286,15 +287,15 @@ public class FfmpegBluRayCapabilityTests
             );
 
             RipRequest request = new(
-                "bluray:/dev/sr0",
-                [0],
-                null,
-                null,
-                Ulid.NewUlid(),
-                Ulid.NewUlid(),
-                null,
-                [new(0, true)],
-                []
+                DrivePath: "bluray:/dev/sr0",
+                SelectedTitleIndices: [0],
+                MetadataId: null,
+                Custom: null,
+                LibraryId: Ulid.NewUlid(),
+                FolderId: Ulid.NewUlid(),
+                EncodingProfileId: null,
+                AudioTracks: [new(0, true)],
+                Subtitles: []
             );
 
             await ripper.RipAsync(request, outputDir, CancellationToken.None);
@@ -306,7 +307,7 @@ public class FfmpegBluRayCapabilityTests
         finally
         {
             if (Directory.Exists(outputDir))
-                Directory.Delete(outputDir, true);
+                Directory.Delete(outputDir, recursive: true);
         }
     }
 
@@ -368,15 +369,15 @@ public class FfmpegBluRayCapabilityTests
             );
 
             RipRequest request = new(
-                "bluray:/dev/sr0",
-                [0],
-                null,
-                null,
-                Ulid.NewUlid(),
-                Ulid.NewUlid(),
-                null,
-                [new(0, true)],
-                []
+                DrivePath: "bluray:/dev/sr0",
+                SelectedTitleIndices: [0],
+                MetadataId: null,
+                Custom: null,
+                LibraryId: Ulid.NewUlid(),
+                FolderId: Ulid.NewUlid(),
+                EncodingProfileId: null,
+                AudioTracks: [new(0, true)],
+                Subtitles: []
             );
 
             await ripper.RipAsync(request, outputDir, CancellationToken.None);
@@ -388,7 +389,7 @@ public class FfmpegBluRayCapabilityTests
         finally
         {
             if (Directory.Exists(outputDir))
-                Directory.Delete(outputDir, true);
+                Directory.Delete(outputDir, recursive: true);
         }
     }
 
@@ -434,15 +435,15 @@ public class FfmpegBluRayCapabilityTests
             );
 
             RipRequest request = new(
-                "bluray:/dev/sr0",
-                [0],
-                null,
-                null,
-                Ulid.NewUlid(),
-                Ulid.NewUlid(),
-                null,
-                [new(0, true)],
-                []
+                DrivePath: "bluray:/dev/sr0",
+                SelectedTitleIndices: [0],
+                MetadataId: null,
+                Custom: null,
+                LibraryId: Ulid.NewUlid(),
+                FolderId: Ulid.NewUlid(),
+                EncodingProfileId: null,
+                AudioTracks: [new(0, true)],
+                Subtitles: []
             );
 
             await ripper.RipAsync(request, outputDir, CancellationToken.None);
@@ -452,7 +453,7 @@ public class FfmpegBluRayCapabilityTests
         finally
         {
             if (Directory.Exists(outputDir))
-                Directory.Delete(outputDir, true);
+                Directory.Delete(outputDir, recursive: true);
         }
     }
 }

@@ -19,6 +19,7 @@ using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Encoder.Storage;
 using Container = NoMercy.Encoder.Profiles.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Strategies;
 
@@ -59,7 +60,7 @@ public class CancellationTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, true);
+            Directory.Delete(_tempRoot, recursive: true);
 
         GC.SuppressFinalize(this);
     }
@@ -116,7 +117,7 @@ public class CancellationTests : IDisposable
         EncodingRequest request = BuildRequest(outputDir);
 
         Func<Task> act = async () =>
-            await _strategy.EncodeAsync(request, null, cts.Token);
+            await _strategy.EncodeAsync(request, progress: null, cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
 
@@ -154,11 +155,11 @@ public class CancellationTests : IDisposable
 
         // Pass 1 succeeds.
         EncodingError crashError = new(
-            EncodingErrorKind.ProcessCrashed,
-            "FFmpeg exited with code 1",
-            "Killed",
-            "Execute",
-            true
+            Kind: EncodingErrorKind.ProcessCrashed,
+            Message: "FFmpeg exited with code 1",
+            FfmpegStderr: "Killed",
+            StageName: "Execute",
+            Recoverable: true
         );
 
         int callCount = 0;
@@ -195,7 +196,7 @@ public class CancellationTests : IDisposable
 
         EncodingResult result = await _strategy.EncodeAsync(
             request,
-            null,
+            progress: null,
             CancellationToken.None
         );
 
@@ -219,15 +220,15 @@ public class CancellationTests : IDisposable
 
     private static EncodingRequest BuildRequest(string outputDir) =>
         new(
-            "/media/source/movie.mkv",
-            outputDir,
-            new(
-                Ulid.NewUlid(),
-                "Test HLS",
-                Container.HlsTs,
-                null,
-                [],
-                []
+            InputPath: "/media/source/movie.mkv",
+            OutputDirectory: outputDir,
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "Test HLS",
+                Container: Container.HlsTs,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 }

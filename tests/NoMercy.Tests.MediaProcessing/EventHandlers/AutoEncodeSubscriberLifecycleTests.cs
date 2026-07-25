@@ -22,6 +22,7 @@ using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Tests.MediaProcessing.EventHandlers;
@@ -202,7 +203,7 @@ public class AutoEncodeSubscriberLifecycleTests
         Ulid libraryId = Ulid.NewUlid();
 
         IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
-        SeedGateOnlyLibrary(factory, libraryId, true, true);
+        SeedGateOnlyLibrary(factory, libraryId, autoEncodeOnScan: true, assignEncodePreset: true);
 
         Mock<IJobDispatcher> dispatcher = new();
         InMemoryEventBus bus = new();
@@ -238,7 +239,7 @@ public class AutoEncodeSubscriberLifecycleTests
             factory,
             libraryId,
             mediaId,
-            false
+            autoEncodeOnScan: false
         );
 
         Mock<IJobDispatcher> dispatcher = new();
@@ -277,8 +278,8 @@ public class AutoEncodeSubscriberLifecycleTests
             factory,
             libraryId,
             mediaId,
-            true,
-            false
+            autoEncodeOnScan: true,
+            assignEncodePreset: false
         );
 
         Mock<IJobDispatcher> dispatcher = new();

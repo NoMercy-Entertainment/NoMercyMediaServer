@@ -306,7 +306,10 @@ public class ServerController(
     {
         System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
         logger.LogInformation(
-            "[FileList] folder={Folder} type={Type} driver={DriverId}", [request.Folder, request.Type, request.DriverId]
+            "[FileList] folder={Folder} type={Type} driver={DriverId}",
+            request.Folder,
+            request.Type,
+            request.DriverId
         );
 
         IStorage? resolvedStorage = null;
@@ -316,9 +319,9 @@ public class ServerController(
                 return BadRequestResponse("driver_id is not a valid ULID.");
 
             resolvedStorage = storageFactory.For(
-                SyntheticFileListFolderId(driverId),
-                driverId,
-                string.Empty
+                folderId: SyntheticFileListFolderId(driverId),
+                driverId: driverId,
+                subPath: string.Empty
             );
         }
 
@@ -335,7 +338,9 @@ public class ServerController(
             );
 
             logger.LogInformation(
-                "[FileList] returned {Count} entries in {ElapsedMilliseconds}ms (music)", [fileList.Count, sw.ElapsedMilliseconds]
+                "[FileList] returned {Count} entries in {ElapsedMilliseconds}ms (music)",
+                fileList.Count,
+                sw.ElapsedMilliseconds
             );
 
             return Ok(
@@ -356,7 +361,9 @@ public class ServerController(
                 : await fileListService.GetFilesInDirectory(request.Folder, request.Type);
 
             logger.LogInformation(
-                "[FileList] returned {Count} entries in {ElapsedMilliseconds}ms", [fileList.Count, sw.ElapsedMilliseconds]
+                "[FileList] returned {Count} entries in {ElapsedMilliseconds}ms",
+                fileList.Count,
+                sw.ElapsedMilliseconds
             );
 
             return Ok(

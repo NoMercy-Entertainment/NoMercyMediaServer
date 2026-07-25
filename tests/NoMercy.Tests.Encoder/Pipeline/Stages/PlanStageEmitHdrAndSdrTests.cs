@@ -23,7 +23,9 @@ using NoMercy.Encoder.Profiles;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using LadderConfig = NoMercy.Encoder.Profiles.LadderConfig;
 using LadderMode = NoMercy.Encoder.Profiles.LadderMode;
+using LadderRung = NoMercy.Encoder.Profiles.LadderRung;
 using RateControlMode = NoMercy.Encoder.Codecs.RateControlMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
 using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
@@ -67,8 +69,8 @@ public class PlanStageEmitHdrAndSdrTests
             .Returns(
                 (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
                     codec == VideoCodecType.H265
-                        ? BuildResolved("libx265", true)
-                        : BuildResolved("libx264", false)
+                        ? BuildResolved("libx265", supports10Bit: true)
+                        : BuildResolved("libx264", supports10Bit: false)
             );
 
         _stage = new(
@@ -124,12 +126,12 @@ public class PlanStageEmitHdrAndSdrTests
 
     private static EncodingProfile EmitHdrAndSdrProfile() =>
         new(
-            Ulid.NewUlid(),
-            "EmitHdrAndSdr Test",
-            Container.HlsTs,
-            ReferenceVideo(),
-            [],
-            []
+            Id: Ulid.NewUlid(),
+            Name: "EmitHdrAndSdr Test",
+            Container: Container.HlsTs,
+            Video: ReferenceVideo(),
+            Audio: [],
+            Subtitles: []
         )
         {
             HdrPolicies = HdrPolicies.EmitHdrAndSdr,
@@ -139,7 +141,7 @@ public class PlanStageEmitHdrAndSdrTests
                 Rungs =
                 [
                     new(
-                        1920,
+                        Width: 1920,
                         Height: 1080,
                         Codec: VideoCodecType.H265,
                         BitrateKbps: 8000,
@@ -149,7 +151,7 @@ public class PlanStageEmitHdrAndSdrTests
                         BitDepth: 10
                     ),
                     new(
-                        1280,
+                        Width: 1280,
                         Height: 720,
                         Codec: VideoCodecType.H264,
                         BitrateKbps: 3000,
@@ -164,25 +166,25 @@ public class PlanStageEmitHdrAndSdrTests
 
     private static NoMercy.Encoder.Profiles.VideoOutput ReferenceVideo() =>
         new(
-            StreamPolicy.Transcode,
-            VideoCodecType.H265,
-            1920,
-            1080,
-            V2RateControlMode.Crf,
-            23,
-            8000,
-            null,
-            null,
-            "medium",
-            CodecProfile.Main10,
-            null,
-            null,
-            10,
-            null,
-            2,
-            false,
-            "video_:framesize:/:framesize:",
-            "video_:framesize:/playlist"
+            Policy: StreamPolicy.Transcode,
+            Codec: VideoCodecType.H265,
+            Width: 1920,
+            Height: 1080,
+            RateControl: V2RateControlMode.Crf,
+            Crf: 23,
+            BitrateKbps: 8000,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
+            Preset: "medium",
+            CodecProfile: CodecProfile.Main10,
+            Level: null,
+            Tune: null,
+            BitDepth: 10,
+            PixelFormat: null,
+            KeyframeIntervalSeconds: 2,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: "video_:framesize:/:framesize:",
+            PlaylistNameTemplate: "video_:framesize:/playlist"
         );
 
     private static MediaInfo BuildHdrMedia() =>
@@ -191,18 +193,18 @@ public class PlanStageEmitHdrAndSdrTests
             VideoStreams =
             [
                 new(
-                    0,
-                    "hevc",
-                    3840,
-                    2160,
-                    24.0,
-                    10,
-                    "yuv420p10le",
-                    "bt2020",
-                    "smpte2084",
-                    "bt2020nc",
-                    true,
-                    40000
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: 3840,
+                    Height: 2160,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: "smpte2084",
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 40000
                 ),
             ],
         };
@@ -213,53 +215,53 @@ public class PlanStageEmitHdrAndSdrTests
             VideoStreams =
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
         };
 
     private static MediaInfo BaseMedia() =>
         new(
-            "/media/source.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            40000,
-            20_000_000_000,
-            [],
-            [],
-            [],
-            []
+            FilePath: "/media/source.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 40000,
+            FileSizeBytes: 20_000_000_000,
+            VideoStreams: [],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static ResolvedCodec BuildResolved(string ffmpegName, bool supports10Bit) =>
         new(
-            ffmpegName,
-            new(
-                ffmpegName,
-                null,
-                ["medium"],
-                ["high", "main10"],
-                ["4.1", "5.1"],
-                new(0, 51, 23),
-                [RateControlMode.Crf],
-                supports10Bit,
-                supports10Bit,
-                int.MaxValue,
-                "yuv420p10le",
-                new()
+            FfmpegEncoderName: ffmpegName,
+            EncoderInfo: new(
+                FfmpegName: ffmpegName,
+                RequiredVendor: null,
+                Presets: ["medium"],
+                Profiles: ["high", "main10"],
+                Levels: ["4.1", "5.1"],
+                QualityRange: new(0, 51, 23),
+                SupportedRateControl: [RateControlMode.Crf],
+                Supports10Bit: supports10Bit,
+                SupportsHdr: supports10Bit,
+                MaxConcurrentSessions: int.MaxValue,
+                PixelFormat10Bit: "yuv420p10le",
+                VendorSpecificFlags: new()
             ),
-            null,
-            RateControlMode.Crf
+            Device: null,
+            DefaultRateControl: RateControlMode.Crf
         );
 }

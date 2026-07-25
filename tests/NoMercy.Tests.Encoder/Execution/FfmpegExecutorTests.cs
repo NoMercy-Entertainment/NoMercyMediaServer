@@ -123,7 +123,7 @@ public class FfmpegExecutorTests
         await _executor.ExecuteAsync(
             cmd,
             TimeSpan.FromMinutes(1),
-            p => progressEvents.Add(p)
+            onProgress: p => progressEvents.Add(p)
         );
 
         progressEvents.Should().NotBeEmpty();

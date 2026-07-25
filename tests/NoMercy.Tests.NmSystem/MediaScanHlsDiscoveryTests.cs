@@ -38,8 +38,11 @@ public class MediaScanHlsDiscoveryTests : IDisposable
     private const string CleanName = "One.Piece.(1999)";
 
     [Theory]
-    [InlineData([HensukiName, "Hensuki.Are.You.Willing.to.Fall.in.Love.With.a.Pervert,.As.Long.As.She's.a.Cutie"])]
-    [InlineData([CleanName, "One.Piece"])]
+    [InlineData(
+        HensukiName,
+        "Hensuki.Are.You.Willing.to.Fall.in.Love.With.a.Pervert,.As.Long.As.She's.a.Cutie"
+    )]
+    [InlineData(CleanName, "One.Piece")]
     public async Task Process_FindsHlsMasters_ForEachEpisodeFolder(
         string showFolderName,
         string episodeBase
@@ -97,7 +100,7 @@ public class MediaScanHlsDiscoveryTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_root))
-            Directory.Delete(_root, true);
+            Directory.Delete(_root, recursive: true);
         GC.SuppressFinalize(this);
     }
 }

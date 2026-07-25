@@ -11,6 +11,7 @@
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Startup;
 
@@ -33,10 +34,10 @@ public class HardwareBenchmarkRecalibrationServiceTests
             .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 new DriverChangeResult(
-                    "abc",
-                    "abc",
-                    false,
-                    false
+                    CurrentHash: "abc",
+                    PreviousHash: "abc",
+                    Changed: false,
+                    IsFirstBoot: false
                 )
             );
 
@@ -75,10 +76,10 @@ public class HardwareBenchmarkRecalibrationServiceTests
             .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 new DriverChangeResult(
-                    "abc",
-                    "abc",
-                    false,
-                    false
+                    CurrentHash: "abc",
+                    PreviousHash: "abc",
+                    Changed: false,
+                    IsFirstBoot: false
                 )
             );
 
@@ -93,7 +94,7 @@ public class HardwareBenchmarkRecalibrationServiceTests
             driverDetector.Object,
             store.Object,
             activityProbe.Object,
-            TimeSpan.Zero
+            maxDeferralWindow: TimeSpan.Zero
         );
 
         await sut.EvaluateAndRecalibrateAsync(CancellationToken.None);
@@ -116,10 +117,10 @@ public class HardwareBenchmarkRecalibrationServiceTests
             .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 new DriverChangeResult(
-                    "same",
-                    "same",
-                    false,
-                    false
+                    CurrentHash: "same",
+                    PreviousHash: "same",
+                    Changed: false,
+                    IsFirstBoot: false
                 )
             );
 
@@ -156,10 +157,10 @@ public class HardwareBenchmarkRecalibrationServiceTests
             .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 new DriverChangeResult(
-                    "new-hash",
-                    "old-hash",
-                    true,
-                    false
+                    CurrentHash: "new-hash",
+                    PreviousHash: "old-hash",
+                    Changed: true,
+                    IsFirstBoot: false
                 )
             );
 
@@ -201,9 +202,9 @@ public class HardwareBenchmarkRecalibrationServiceTests
             activityProbe,
             new() { AutoCalibrate = true },
             NullLogger<HardwareBenchmarkRecalibrationService>.Instance,
-            TimeSpan.FromMilliseconds(1),
-            TimeSpan.FromMilliseconds(1),
-            maxDeferralWindow
+            checkInterval: TimeSpan.FromMilliseconds(1),
+            busyRetryInterval: TimeSpan.FromMilliseconds(1),
+            maxDeferralWindow: maxDeferralWindow
                 ?? HardwareBenchmarkRecalibrationService.DefaultMaxDeferralWindow
         );
 }

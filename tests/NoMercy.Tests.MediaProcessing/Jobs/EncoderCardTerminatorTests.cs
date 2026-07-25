@@ -72,11 +72,11 @@ public class EncoderCardTerminatorTests
             EventBusProvider.Configure(bus.Object);
 
             await EncoderCardTerminator.PublishFailedAsync(
-                88061,
-                "Hensuki",
-                "/media/anime/hensuki.mkv",
-                "finalize-only pass failed with no details",
-                "FinalizeFailed"
+                jobId: 88061,
+                title: "Hensuki",
+                inputPath: "/media/anime/hensuki.mkv",
+                message: "finalize-only pass failed with no details",
+                exceptionType: "FinalizeFailed"
             );
 
             // The stage event is what the card list itself listens on; its status
@@ -110,11 +110,11 @@ public class EncoderCardTerminatorTests
 
             Func<Task> act = () =>
                 EncoderCardTerminator.PublishFailedAsync(
-                    1,
-                    "Untitled",
-                    "/media/x.mkv",
-                    "boom",
-                    "InvalidOperationException"
+                    jobId: 1,
+                    title: "Untitled",
+                    inputPath: "/media/x.mkv",
+                    message: "boom",
+                    exceptionType: "InvalidOperationException"
                 );
 
             await act.Should().NotThrowAsync();

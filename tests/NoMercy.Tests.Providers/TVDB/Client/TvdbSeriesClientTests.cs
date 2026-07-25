@@ -12,6 +12,7 @@
 using System.Net;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TVDB.Client;
+using NoMercy.Providers.TVDB.Models.Auth;
 using NoMercy.Providers.TVDB.Models.Series;
 using NoMercy.Providers.TVDB.Models.Shared;
 using NoMercy.Tests.Providers.Infrastructure;
@@ -29,7 +30,7 @@ namespace NoMercy.Tests.Providers.TVDB.Client;
 public sealed class TvdbSeriesClientTests : ProviderHttpHarness
 {
     public TvdbSeriesClientTests()
-        : base([HttpClientNames.Tvdb, HttpClientNames.TvdbLogin])
+        : base(HttpClientNames.Tvdb, HttpClientNames.TvdbLogin)
     {
         TvdbTokenAccess.Set(
             new()
@@ -124,7 +125,7 @@ public sealed class TvdbSeriesClientTests : ProviderHttpHarness
         );
 
         using TvdbSeriesClient client = new(seriesId);
-        TvdbSeriesEpisodesResponse? result = await client.Episodes("official", 2);
+        TvdbSeriesEpisodesResponse? result = await client.Episodes("official", page: 2);
 
         result.Should().NotBeNull();
 

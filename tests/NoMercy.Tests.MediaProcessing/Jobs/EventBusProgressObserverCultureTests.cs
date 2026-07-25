@@ -69,7 +69,7 @@ public class EventBusProgressObserverCultureTests
 
             EventBusProvider.Configure(mockBus.Object);
 
-            EventBusProgressObserver observer = new(7, "Culture Test Movie");
+            EventBusProgressObserver observer = new(jobId: 7, title: "Culture Test Movie");
             observer.OnStageCompleted("VideoEncode", TimeSpan.FromSeconds(3.2));
 
             Assert.NotNull(captured);

@@ -16,6 +16,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
@@ -34,22 +35,22 @@ public class FinalizeStageBlueprintTests
 {
     private static BundleLayout MakeHlsLayout(string presetSlug = "web-1080p") =>
         new(
-            "mfa",
-            presetSlug,
-            false,
-            $"encodes/{presetSlug}",
-            "mfa_master.m3u8",
-            $"encodes/{presetSlug}/manifest.json",
-            $"encodes/{presetSlug}/reconstruction.json",
-            string.Empty,
-            $"01HZ-{presetSlug}",
-            presetSlug,
-            "hls-fmp4"
+            MediaKey: "mfa",
+            PresetSlug: presetSlug,
+            IsSingleFile: false,
+            BundleDirectory: $"encodes/{presetSlug}",
+            MasterPlaylistName: "mfa_master.m3u8",
+            ManifestPath: $"encodes/{presetSlug}/manifest.json",
+            ReconstructionPath: $"encodes/{presetSlug}/reconstruction.json",
+            SingleFileName: string.Empty,
+            PresetId: $"01HZ-{presetSlug}",
+            PresetName: presetSlug,
+            ContainerString: "hls-fmp4"
         );
 
     private static OutputPlan MakeOutputPlan(BundleLayout layout) =>
         new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs: [],
             AudioOutputs: [],
             SubtitleOutputs: [],
@@ -59,32 +60,33 @@ public class FinalizeStageBlueprintTests
 
     private static FinalizeInput MakeFinalizeInput(OutputPlan plan, string outputDir) =>
         new(
+            Results:
             [
                 new(
-                    true,
-                    0,
-                    string.Empty,
-                    TimeSpan.Zero,
-                    null
+                    Success: true,
+                    ExitCode: 0,
+                    StdErr: string.Empty,
+                    Duration: TimeSpan.Zero,
+                    Error: null
                 ),
             ],
-            plan,
-            outputDir,
-            "Fight Club"
+            Plan: plan,
+            OutputDirectory: outputDir,
+            MediaTitle: "Fight Club"
         );
 
     private static MediaInfo MinimalMediaInfo() =>
         new(
-            "/media/fight-club.mkv",
-            "matroska",
-            TimeSpan.FromSeconds(7800),
-            25_000,
-            24_375_000_000L,
-            [],
-            [],
-            [],
-            [],
-            []
+            FilePath: "/media/fight-club.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromSeconds(7800),
+            OverallBitRateKbps: 25_000,
+            FileSizeBytes: 24_375_000_000L,
+            VideoStreams: [],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: [],
+            Attachments: []
         );
 
     private static FinalizeStage MakeStage(
@@ -180,7 +182,7 @@ public class FinalizeStageBlueprintTests
 
         storage.Seed($"{outputDir}/mfa_master.m3u8", [0x23]);
 
-        FinalizeStage stage = MakeStage(storage, null);
+        FinalizeStage stage = MakeStage(storage, blueprintWriter: null);
 
         EncodingContext context = EncodingContext.Create() with
         {
@@ -286,7 +288,7 @@ public class FinalizeStageBlueprintTests
         blueprint
             .Encodes.Select(e => e.PresetSlug)
             .Should()
-            .BeEquivalentTo(["web-1080p", "archive-mkv"]);
+            .BeEquivalentTo("web-1080p", "archive-mkv");
         // Identity + source stay shared, written once.
         blueprint.Identity.TmdbId.Should().Be(550);
     }

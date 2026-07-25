@@ -39,56 +39,57 @@ public class LiveEncoderGapFillTests
 
     private static LiveQuality MakeQuality() =>
         new(
-            "1080p",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     private static MediaInfo MakeMedia(TimeSpan duration) =>
         new(
-            "/media/test.mkv",
-            "matroska,webm",
-            duration,
-            8000,
-            5_000_000_000L,
+            FilePath: "/media/test.mkv",
+            Format: "matroska,webm",
+            Duration: duration,
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 5_000_000_000L,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    8000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 8000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static ClientCapabilities MakeClient() =>
         new(
-            [VideoCodecType.H264],
-            [AudioCodecType.Aac],
-            ["mp4", "mkv"],
-            1920,
-            1080,
-            false,
-            false,
-            0
+            SupportedVideoCodecs: [VideoCodecType.H264],
+            SupportedAudioCodecs: [AudioCodecType.Aac],
+            SupportedContainers: ["mp4", "mkv"],
+            MaxWidth: 1920,
+            MaxHeight: 1080,
+            SupportsHdr: false,
+            Supports10Bit: false,
+            MaxBitrateKbps: 0
         );
 
     private sealed class CapturingLiveFfmpegRunner : ILiveFfmpegRunner
@@ -148,7 +149,7 @@ public class LiveEncoderGapFillTests
         );
         CapturingLiveFfmpegRunner runner = new();
         SpeedIndex speedIndex = new(new());
-        IResourceBudget budget = new ResourceBudget([], 8);
+        IResourceBudget budget = new ResourceBudget(gpuDevices: [], cpuCores: 8);
 
         LiveEncoder encoder = new(
             selectorMock.Object,
@@ -223,11 +224,11 @@ public class LiveEncoderGapFillTests
         MediaInfo media = MakeMedia(TimeSpan.FromHours(1)); // lastIndex far beyond 260
 
         LiveEncodeRequest request = new(
-            "/media/test.mkv",
-            media,
-            MakeClient(),
-            TimeSpan.Zero,
-            null
+            InputPath: "/media/test.mkv",
+            CachedInfo: media,
+            Client: MakeClient(),
+            StartPosition: TimeSpan.Zero,
+            PreferredQuality: null
         );
 
         ILiveSession session = await fixture.Encoder.StartAsync(request, CancellationToken.None);
@@ -258,11 +259,11 @@ public class LiveEncoderGapFillTests
         MediaInfo media = MakeMedia(TimeSpan.FromHours(1));
 
         LiveEncodeRequest request = new(
-            "/media/test.mkv",
-            media,
-            MakeClient(),
-            TimeSpan.Zero,
-            null
+            InputPath: "/media/test.mkv",
+            CachedInfo: media,
+            Client: MakeClient(),
+            StartPosition: TimeSpan.Zero,
+            PreferredQuality: null
         );
 
         ILiveSession session = await fixture.Encoder.StartAsync(request, CancellationToken.None);
@@ -290,11 +291,11 @@ public class LiveEncoderGapFillTests
         MediaInfo media = MakeMedia(TimeSpan.FromSeconds(60)); // lastIndex = 9 at 6s segments
 
         LiveEncodeRequest request = new(
-            "/media/test.mkv",
-            media,
-            MakeClient(),
-            TimeSpan.Zero,
-            null
+            InputPath: "/media/test.mkv",
+            CachedInfo: media,
+            Client: MakeClient(),
+            StartPosition: TimeSpan.Zero,
+            PreferredQuality: null
         );
 
         ILiveSession session = await fixture.Encoder.StartAsync(request, CancellationToken.None);

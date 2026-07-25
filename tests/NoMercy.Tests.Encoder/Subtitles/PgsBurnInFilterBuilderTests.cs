@@ -27,7 +27,7 @@ public class PgsBurnInFilterBuilderTests
     [Fact]
     public void Build_FirstVideoFirstSubtitle_ProducesOverlayFilter()
     {
-        PgsBurnInFilterChain result = _builder.Build(0, 0);
+        PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 0);
 
         result.FilterComplex.Should().Be("[0:v:0][0:s:0]overlay=format=auto[burned]");
     }
@@ -35,7 +35,7 @@ public class PgsBurnInFilterBuilderTests
     [Fact]
     public void Build_FirstVideoSecondSubtitle_ProducesOverlayFilter()
     {
-        PgsBurnInFilterChain result = _builder.Build(0, 1);
+        PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 1);
 
         result.FilterComplex.Should().Be("[0:v:0][0:s:1]overlay=format=auto[burned]");
     }
@@ -43,7 +43,7 @@ public class PgsBurnInFilterBuilderTests
     [Fact]
     public void Build_SecondVideoFirstSubtitle_ProducesOverlayFilter()
     {
-        PgsBurnInFilterChain result = _builder.Build(1, 0);
+        PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 1, subtitleStreamIndex: 0);
 
         result.FilterComplex.Should().Be("[0:v:1][0:s:0]overlay=format=auto[burned]");
     }
@@ -56,14 +56,14 @@ public class PgsBurnInFilterBuilderTests
         // A filtergraph output pad can only feed one -map; two rungs mapping the
         // same [burned] pad aborts ffmpeg. The overlay must be split per rung.
         PgsBurnInFilterChain result = _builder.Build(
-            0,
-            0,
-            2,
-            false
+            videoStreamIndex: 0,
+            subtitleStreamIndex: 0,
+            videoOutputCount: 2,
+            includeThumbnails: false
         );
 
         result.FilterComplex.Should().Contain("overlay=format=auto,split=2");
-        result.VideoLabels.Should().Equal(["[burned0]", "[burned1]"]);
+        result.VideoLabels.Should().Equal("[burned0]", "[burned1]");
         result.FilterComplex.Should().Contain("[burned0][burned1]");
         result.VideoLabels.Should().OnlyHaveUniqueItems();
         result.ThumbnailLabel.Should().BeNull();
@@ -76,10 +76,10 @@ public class PgsBurnInFilterBuilderTests
         // thumbnail branch must get its own split pad or -map references a label
         // no filtergraph defines.
         PgsBurnInFilterChain result = _builder.Build(
-            0,
-            0,
-            1,
-            true
+            videoStreamIndex: 0,
+            subtitleStreamIndex: 0,
+            videoOutputCount: 1,
+            includeThumbnails: true
         );
 
         result.FilterComplex.Should().Contain("split=2");
@@ -93,10 +93,10 @@ public class PgsBurnInFilterBuilderTests
     public void Build_MultipleRungsAndThumbnails_SplitsForEveryConsumer()
     {
         PgsBurnInFilterChain result = _builder.Build(
-            0,
-            1,
-            3,
-            true
+            videoStreamIndex: 0,
+            subtitleStreamIndex: 1,
+            videoOutputCount: 3,
+            includeThumbnails: true
         );
 
         result.FilterComplex.Should().Contain("split=4");
@@ -109,10 +109,10 @@ public class PgsBurnInFilterBuilderTests
     public void Build_SingleVideoNoThumbnails_KeepsSinglePadNoSplit()
     {
         PgsBurnInFilterChain result = _builder.Build(
-            0,
-            0,
-            1,
-            false
+            videoStreamIndex: 0,
+            subtitleStreamIndex: 0,
+            videoOutputCount: 1,
+            includeThumbnails: false
         );
 
         result.FilterComplex.Should().NotContain("split");
@@ -123,10 +123,10 @@ public class PgsBurnInFilterBuilderTests
     // ── Multiple stream indices ────────────────────────────────────────────
 
     [Theory]
-    [InlineData([0, 0, "[0:v:0][0:s:0]overlay=format=auto[burned]"])]
-    [InlineData([0, 2, "[0:v:0][0:s:2]overlay=format=auto[burned]"])]
-    [InlineData([1, 0, "[0:v:1][0:s:0]overlay=format=auto[burned]"])]
-    [InlineData([2, 3, "[0:v:2][0:s:3]overlay=format=auto[burned]"])]
+    [InlineData(0, 0, "[0:v:0][0:s:0]overlay=format=auto[burned]")]
+    [InlineData(0, 2, "[0:v:0][0:s:2]overlay=format=auto[burned]")]
+    [InlineData(1, 0, "[0:v:1][0:s:0]overlay=format=auto[burned]")]
+    [InlineData(2, 3, "[0:v:2][0:s:3]overlay=format=auto[burned]")]
     public void Build_VaryingIndices_ProducesCorrectFilterComplex(
         int videoIdx,
         int subtitleIdx,
@@ -162,7 +162,7 @@ public class PgsBurnInFilterBuilderTests
     [Fact]
     public void Build_HigherIndices_StillUsesFormatAuto()
     {
-        PgsBurnInFilterChain result = _builder.Build(5, 10);
+        PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 5, subtitleStreamIndex: 10);
 
         result.FilterComplex.Should().Contain("overlay=format=auto");
     }
@@ -180,9 +180,9 @@ public class PgsBurnInFilterBuilderTests
     }
 
     [Theory]
-    [InlineData([0, 0])]
-    [InlineData([3, 5])]
-    [InlineData([10, 20])]
+    [InlineData(0, 0)]
+    [InlineData(3, 5)]
+    [InlineData(10, 20)]
     public void Build_Always_ReferencesInput0(int videoIdx, int subtitleIdx)
     {
         PgsBurnInFilterChain result = _builder.Build(videoIdx, subtitleIdx);
@@ -198,7 +198,7 @@ public class PgsBurnInFilterBuilderTests
     [Fact]
     public void Build_AllZeroIndices_Valid()
     {
-        PgsBurnInFilterChain result = _builder.Build(0, 0);
+        PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 0);
 
         result.FilterComplex.Should().NotBeNullOrEmpty();
         result.MapLabel.Should().NotBeNullOrEmpty();
@@ -232,7 +232,7 @@ public class PgsBurnInFilterBuilderTests
     [Fact]
     public void Build_ProducesValidFfmpegFilterAndMapChain()
     {
-        PgsBurnInFilterChain pgs = _builder.Build(0, 2);
+        PgsBurnInFilterChain pgs = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 2);
 
         // Simulate encoder building: -filter_complex + -map
         string filterArg = pgs.FilterComplex;

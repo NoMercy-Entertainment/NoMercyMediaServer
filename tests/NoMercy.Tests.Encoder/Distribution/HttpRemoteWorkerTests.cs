@@ -28,10 +28,10 @@ public class HttpRemoteWorkerTests
     public async Task ExecuteTaskAsync_SuccessResponse_ReturnsSignedResult()
     {
         DispatchResult workerResult = new(
-            "t1",
-            true,
-            "/remote/out/t1",
-            TimeSpan.FromSeconds(7)
+            TaskId: "t1",
+            Success: true,
+            OutputPath: "/remote/out/t1",
+            Duration: TimeSpan.FromSeconds(7)
         );
         string signedResponse = _serializer.SerializeResult(workerResult, _signingKey);
 
@@ -112,7 +112,7 @@ public class HttpRemoteWorkerTests
 
         sut.UpdateSnapshot(
             MakeCapabilities(),
-            new(2, 16, 0.1)
+            new(AvailableGpuSlots: 2, AvailableCpuThreads: 16, GpuUtilization: 0.1)
         );
 
         sut.GetAvailableBudget().AvailableCpuThreads.Should().Be(16);
@@ -125,23 +125,23 @@ public class HttpRemoteWorkerTests
 
     private HttpRemoteWorker MakeWorker(string id, HttpClient http) =>
         new(
-            id,
-            http,
-            _serializer,
-            _signingKey,
-            MakeCapabilities(),
-            new(0, 4, 0),
-            NullLogger<HttpRemoteWorker>.Instance
+            workerId: id,
+            http: http,
+            serializer: _serializer,
+            signingKey: _signingKey,
+            initialCapabilities: MakeCapabilities(),
+            initialBudget: new(0, 4, 0),
+            logger: NullLogger<HttpRemoteWorker>.Instance
         );
 
     private static IHardwareCapabilities MakeCapabilities() => new HardwareCapabilities([], 4);
 
     private static EncodeTask MakeTask(string id) =>
         new(
-            id,
-            new("ffmpeg", [], null),
-            $"/out/{id}",
-            EncodeTaskType.QualityVariant
+            TaskId: id,
+            Command: new("ffmpeg", [], null),
+            OutputPath: $"/out/{id}",
+            Type: EncodeTaskType.QualityVariant
         );
 
     private static HttpClient MakeClientReturning(HttpStatusCode status, string body) =>

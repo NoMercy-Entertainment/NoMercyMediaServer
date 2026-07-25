@@ -119,7 +119,7 @@ public partial class PhaseTransitionTests
 
         methodStart.Should().BeGreaterThan(0, "HandleWaitChildrenAsync must exist");
 
-        string window = ExtractMethodWindow(source, methodStart, 6000);
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 6000);
 
         window
             .Should()
@@ -163,7 +163,7 @@ public partial class PhaseTransitionTests
 
         methodStart.Should().BeGreaterThan(0, "DispatchDecomposedAsync must exist");
 
-        string window = ExtractMethodWindow(source, methodStart, 6000);
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 6000);
 
         window.Should().Contain("hasTwoPass", "DispatchDecomposedAsync must detect two-pass runs");
 
@@ -201,7 +201,7 @@ public partial class PhaseTransitionTests
 
         methodStart.Should().BeGreaterThan(0);
 
-        string window = ExtractMethodWindow(source, methodStart, 6000);
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 6000);
 
         window
             .Should()
@@ -230,7 +230,7 @@ public partial class PhaseTransitionTests
 
         waitPass1Start.Should().BeGreaterThan(0);
 
-        string window = ExtractMethodWindow(source, waitPass1Start, 6000);
+        string window = ExtractMethodWindow(source, waitPass1Start, maxChars: 6000);
 
         bool transitionsToWaitChildren = window.Contains(
             "CoordinatorPhase.WaitChildren",

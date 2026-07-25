@@ -62,22 +62,21 @@ public class ActivityLogRetentionCronJobTests : IDisposable
         Guid freshUser = Guid.NewGuid();
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
-            seed.ActivityLogs.AddRange([
-                    new ActivityLog
-                    {
-                        Category = ActivityCategory.Connection,
-                        Time = DateTime.UtcNow,
-                        DeviceId = Ulid.NewUlid(),
-                        UserId = staleUser,
-                    },
-                    new ActivityLog
-                    {
-                        Category = ActivityCategory.Connection,
-                        Time = DateTime.UtcNow,
-                        DeviceId = Ulid.NewUlid(),
-                        UserId = freshUser,
-                    }
-                ]
+            seed.ActivityLogs.AddRange(
+                new ActivityLog
+                {
+                    Category = ActivityCategory.Connection,
+                    Time = DateTime.UtcNow,
+                    DeviceId = Ulid.NewUlid(),
+                    UserId = staleUser,
+                },
+                new ActivityLog
+                {
+                    Category = ActivityCategory.Connection,
+                    Time = DateTime.UtcNow,
+                    DeviceId = Ulid.NewUlid(),
+                    UserId = freshUser,
+                }
             );
             await seed.SaveChangesAsync();
 
@@ -98,9 +97,9 @@ public class ActivityLogRetentionCronJobTests : IDisposable
         ActivityLogRetentionCronJob job = new(
             factory,
             NullLogger<ActivityLogRetentionCronJob>.Instance,
-            30
+            retentionDays: 30
         );
-        await job.ExecuteAsync(string.Empty);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ctx.ActivityLogs.Should().HaveCount(1);
@@ -137,9 +136,9 @@ public class ActivityLogRetentionCronJobTests : IDisposable
         ActivityLogRetentionCronJob job = new(
             factory,
             NullLogger<ActivityLogRetentionCronJob>.Instance,
-            7
+            retentionDays: 7
         );
-        await job.ExecuteAsync(string.Empty);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ctx.ActivityLogs.Should().BeEmpty();

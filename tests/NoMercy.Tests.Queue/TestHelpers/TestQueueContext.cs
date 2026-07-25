@@ -36,7 +36,7 @@ public static class TestQueueContextFactory
     public static QueueContext CreateInMemoryContext(string databaseName = "TestDatabase")
     {
         DbContextOptions<QueueContext> options = new DbContextOptionsBuilder<QueueContext>()
-            .UseInMemoryDatabase($"{databaseName}_{Guid.NewGuid()}")
+            .UseInMemoryDatabase(databaseName: $"{databaseName}_{Guid.NewGuid()}")
             .Options;
 
         TestQueueContext context = new(options);

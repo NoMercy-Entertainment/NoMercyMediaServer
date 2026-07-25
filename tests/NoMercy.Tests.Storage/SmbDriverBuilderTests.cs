@@ -47,7 +47,7 @@ public sealed class SmbDriverBuilderTests
     {
         SmbDriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(FolderId, "smb", json, "");
+        Action act = () => builder.Build(FolderId, "smb", json, subPath: "");
 
         act.Should()
             .Throw<ArgumentException>("SMB cannot connect without at least host + share")
@@ -57,13 +57,13 @@ public sealed class SmbDriverBuilderTests
     [Fact]
     public void Build_without_credential_resolver_connects_with_null_credentials()
     {
-        SmbDriverBuilder builder = new(NullLogger.Instance, null);
+        SmbDriverBuilder builder = new(NullLogger.Instance, credentialResolver: null);
 
         IStorage storage = builder.Build(
             FolderId,
             "smb",
             """{"host":"nas.local","share":"media"}""",
-            ""
+            subPath: ""
         );
 
         storage.Should().BeOfType<RemoteStorage>();
@@ -87,7 +87,7 @@ public sealed class SmbDriverBuilderTests
             FolderId,
             "smb",
             """{"host":"nas.local","share":"media"}""",
-            ""
+            subPath: ""
         );
 
         storage.Should().NotBeNull();
@@ -107,7 +107,7 @@ public sealed class SmbDriverBuilderTests
             FolderId,
             "smb",
             """{"host":"nas.local","share":"media"}""",
-            ""
+            subPath: ""
         );
 
         storage
@@ -144,7 +144,7 @@ public sealed class SmbDriverBuilderTests
             FolderId,
             "smb",
             """{"host":"nas.local","share":"media","path":"existing"}""",
-            "sub/dir"
+            subPath: "sub/dir"
         );
 
         storage
@@ -163,7 +163,7 @@ public sealed class SmbDriverBuilderTests
             FolderId,
             "smb",
             """{"host":"nas.local","share":"media","path":"configured"}""",
-            ""
+            subPath: ""
         );
 
         storage.Should().NotBeNull();

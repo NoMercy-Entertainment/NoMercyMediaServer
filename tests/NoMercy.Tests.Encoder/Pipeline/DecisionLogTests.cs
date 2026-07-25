@@ -63,7 +63,7 @@ public class ScopedDecisionLogTests
     [Fact]
     public void EncodingContext_DecisionsOrNoOp_falls_back_when_null()
     {
-        EncodingContext ctx = new("x");
+        EncodingContext ctx = new(CorrelationId: "x");
 
         ctx.DecisionsOrNoOp.Should().NotBeNull();
         // No-op sink swallows entries silently.

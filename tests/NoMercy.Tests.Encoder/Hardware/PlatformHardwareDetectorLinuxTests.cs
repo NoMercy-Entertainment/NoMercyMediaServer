@@ -103,7 +103,7 @@ public class PlatformHardwareDetectorLinuxTests
     [Fact]
     public async Task DetectLinuxGpus_NoGpuSignalsAtAll_ReturnsEmpty()
     {
-        SetupNvidiaSmi("", 1);
+        SetupNvidiaSmi("", exitCode: 1);
         _storage.Setup(s => s.Exists("/dev/dri")).Returns(false);
         _storage.Setup(s => s.Exists("/dev/nvidia0")).Returns(false);
         _storage.Setup(s => s.Exists("/dev/nvidiactl")).Returns(false);
@@ -140,7 +140,7 @@ public class PlatformHardwareDetectorLinuxTests
     [Fact]
     public async Task DetectLinuxGpus_IntelAmdViaLspci_WithDevDri_Unchanged()
     {
-        SetupNvidiaSmi("", 1);
+        SetupNvidiaSmi("", exitCode: 1);
         _storage.Setup(s => s.Exists("/dev/dri")).Returns(true);
 
         string lspciOutput =
@@ -184,7 +184,7 @@ public class PlatformHardwareDetectorLinuxTests
     [Fact]
     public async Task DetectLinuxGpus_NvidiaSmiFails_DeviceNodesPresent_LogsWarningReturnsEmpty()
     {
-        SetupNvidiaSmi("", 1);
+        SetupNvidiaSmi("", exitCode: 1);
         _storage.Setup(s => s.Exists("/dev/dri")).Returns(false);
         _storage.Setup(s => s.Exists("/dev/nvidia0")).Returns(true);
         _storage.Setup(s => s.Exists("/dev/nvidiactl")).Returns(false);

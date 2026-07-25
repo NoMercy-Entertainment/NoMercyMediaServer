@@ -102,8 +102,8 @@ public class WhisperTranscriber(
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
             args,
-            outputDirectory,
-            ct
+            workingDirectory: outputDirectory,
+            cancellationToken: ct
         );
 
         if (!result.IsSuccess)
@@ -125,7 +125,10 @@ public class WhisperTranscriber(
         progress?.OnStageCompleted($"Whisper transcription ({language})", result.Duration);
 
         logger.LogInformation(
-            "Whisper transcription complete: {Cues} cues for {Language} → {Path}", [cueCount, language, outputPath]
+            "Whisper transcription complete: {Cues} cues for {Language} → {Path}",
+            cueCount,
+            language,
+            outputPath
         );
 
         return new(outputPath, language, SubtitleCodecType.Srt, cueCount);

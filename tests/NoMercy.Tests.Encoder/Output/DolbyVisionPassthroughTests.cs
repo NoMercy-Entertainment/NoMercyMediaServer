@@ -32,7 +32,7 @@ public class DolbyVisionPassthroughTests
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
-        strategy.ConfigureOutput(builder, Plan(true), "/output");
+        strategy.ConfigureOutput(builder, Plan(preserveDv: true), "/output");
 
         string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
         args.Should().Contain("-tag:v dvh1");
@@ -45,7 +45,7 @@ public class DolbyVisionPassthroughTests
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
-        strategy.ConfigureOutput(builder, Plan(false), "/output");
+        strategy.ConfigureOutput(builder, Plan(preserveDv: false), "/output");
 
         string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
         args.Should().NotContain("dvh1");
@@ -60,7 +60,7 @@ public class DolbyVisionPassthroughTests
 
         strategy.ConfigureOutput(
             builder,
-            HlsPlan("libx265", true),
+            HlsPlan(encoderName: "libx265", preserveDv: true),
             "/output"
         );
 
@@ -82,7 +82,7 @@ public class DolbyVisionPassthroughTests
         // inherit the dvh1 tag or the MP4 header becomes invalid.
         strategy.ConfigureOutput(
             builder,
-            HlsPlan("libx264", true),
+            HlsPlan(encoderName: "libx264", preserveDv: true),
             "/output"
         );
 
@@ -92,34 +92,34 @@ public class DolbyVisionPassthroughTests
 
     private static OutputPlan Plan(bool preserveDv) =>
         new(
-            OutputFormat.Mp4,
+            Format: OutputFormat.Mp4,
             VideoOutputs:
             [
                 new(
-                    3840,
-                    2160,
-                    "libx265",
-                    22,
-                    0,
-                    "medium",
-                    "main10",
-                    "5.1",
-                    true,
-                    "yuv420p10le",
-                    "[v0]",
-                    new()
+                    Width: 3840,
+                    Height: 2160,
+                    EncoderName: "libx265",
+                    Crf: 22,
+                    BitrateKbps: 0,
+                    Preset: "medium",
+                    Profile: "main10",
+                    Level: "5.1",
+                    TenBit: true,
+                    PixelFormat: "yuv420p10le",
+                    MapLabel: "[v0]",
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs:
             [
                 new(
-                    "libfdk_aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    "eng",
-                    "0:a:0"
+                    EncoderName: "libfdk_aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: "eng",
+                    MapLabel: "0:a:0"
                 ),
             ],
             SubtitleOutputs: [],
@@ -129,22 +129,22 @@ public class DolbyVisionPassthroughTests
 
     private static OutputPlan HlsPlan(string encoderName, bool preserveDv) =>
         new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    3840,
-                    2160,
-                    encoderName,
-                    22,
-                    0,
-                    "medium",
-                    "main10",
-                    "5.1",
-                    true,
-                    "yuv420p10le",
-                    "[v0]",
-                    new()
+                    Width: 3840,
+                    Height: 2160,
+                    EncoderName: encoderName,
+                    Crf: 22,
+                    BitrateKbps: 0,
+                    Preset: "medium",
+                    Profile: "main10",
+                    Level: "5.1",
+                    TenBit: true,
+                    PixelFormat: "yuv420p10le",
+                    MapLabel: "[v0]",
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs: [],

@@ -61,7 +61,7 @@ public class JobQueueRetryExhaustionTests
             .Throws(NonRelational());
         JobQueue queue = new(context.Object);
 
-        QueueJobModel? result = queue.ReserveJob("extras", null, 5);
+        QueueJobModel? result = queue.ReserveJob("extras", null, attempt: 5);
 
         result.Should().BeNull();
         context.Verify(c => c.UpdateJob(It.IsAny<QueueJobModel>()), Times.Never);
@@ -74,7 +74,7 @@ public class JobQueueRetryExhaustionTests
         context.Setup(c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(NonRelational());
         JobQueue queue = new(context.Object);
 
-        Action act = () => queue.FailJob(Job(), new Exception("boom"), 5);
+        Action act = () => queue.FailJob(Job(), new Exception("boom"), attempt: 5);
 
         act.Should().NotThrow();
         context.Verify(c => c.SaveChanges(), Times.Never);
@@ -91,7 +91,7 @@ public class JobQueueRetryExhaustionTests
         context.Setup(c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(NonRelational());
         JobQueue queue = new(context.Object);
 
-        Action act = () => queue.ReleaseReservation(Job(), TimeSpan.FromSeconds(1), 5);
+        Action act = () => queue.ReleaseReservation(Job(), TimeSpan.FromSeconds(1), attempt: 5);
 
         act.Should().NotThrow();
         context.Verify(c => c.SaveChanges(), Times.Never);
@@ -108,7 +108,7 @@ public class JobQueueRetryExhaustionTests
             .Throws(NonRelational());
         JobQueue queue = new(context.Object);
 
-        Action act = () => queue.UpdateJobPayload(1, "{}", TimeSpan.FromSeconds(1), 5);
+        Action act = () => queue.UpdateJobPayload(1, "{}", TimeSpan.FromSeconds(1), attempt: 5);
 
         act.Should().NotThrow();
     }
@@ -120,7 +120,7 @@ public class JobQueueRetryExhaustionTests
         context.Setup(c => c.UpdateJob(It.IsAny<QueueJobModel>())).Throws(NonRelational());
         JobQueue queue = new(context.Object);
 
-        Action act = () => queue.Requeue(Job(), "encoder-cpu", "{}", 5);
+        Action act = () => queue.Requeue(Job(), "encoder-cpu", "{}", attempt: 5);
 
         act.Should().NotThrow();
         context.Verify(c => c.SaveChanges(), Times.Never);
@@ -133,7 +133,7 @@ public class JobQueueRetryExhaustionTests
         context.Setup(c => c.RemoveJob(It.IsAny<QueueJobModel>())).Throws(NonRelational());
         JobQueue queue = new(context.Object);
 
-        Action act = () => queue.DeleteJob(Job(), 5);
+        Action act = () => queue.DeleteJob(Job(), attempt: 5);
 
         act.Should().NotThrow();
     }
@@ -145,7 +145,7 @@ public class JobQueueRetryExhaustionTests
         context.Setup(c => c.FindFailedJob(It.IsAny<int>())).Throws(NonRelational());
         JobQueue queue = new(context.Object);
 
-        Action act = () => queue.RequeueFailedJob(99, 5);
+        Action act = () => queue.RequeueFailedJob(99, attempt: 5);
 
         act.Should().NotThrow();
         context.Verify(c => c.RemoveFailedJob(It.IsAny<FailedJobModel>()), Times.Never);

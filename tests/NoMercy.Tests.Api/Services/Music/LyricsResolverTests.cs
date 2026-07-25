@@ -111,7 +111,7 @@ public class LyricsResolverTests
         Track track = MakeUncachedTrack();
         (LyricsResolver resolver, _, Mock<ILyricsAggregator> aggregator) = MakeResolver(
             track,
-            TimeSpan.FromMinutes(2)
+            transientBackoff: TimeSpan.FromMinutes(2)
         );
         aggregator
             .Setup(a => a.SearchLyrics(track))
@@ -132,7 +132,7 @@ public class LyricsResolverTests
         Track track = MakeUncachedTrack();
         (LyricsResolver resolver, _, Mock<ILyricsAggregator> aggregator) = MakeResolver(
             track,
-            TimeSpan.FromMilliseconds(20)
+            transientBackoff: TimeSpan.FromMilliseconds(20)
         );
         aggregator
             .Setup(a => a.SearchLyrics(track))

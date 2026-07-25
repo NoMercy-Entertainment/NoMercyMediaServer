@@ -43,7 +43,7 @@ public class DbDriverFingerprintStoreTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+            Directory.Delete(_tempDir, recursive: true);
     }
 
     private static IDbContextFactory<AppDbContext> InMemoryFactory(string dbName)

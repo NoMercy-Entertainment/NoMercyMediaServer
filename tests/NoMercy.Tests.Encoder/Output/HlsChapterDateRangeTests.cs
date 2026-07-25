@@ -146,7 +146,7 @@ public class HlsChapterDateRangeTests
 
     private static OutputPlan CreatePlan(IReadOnlyList<ChapterInfo>? chapters) =>
         new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(

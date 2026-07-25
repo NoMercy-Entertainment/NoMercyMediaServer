@@ -13,6 +13,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Logging;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.NmSystem;
 
@@ -143,7 +144,7 @@ public class LogReaderTests
                 "app",
                 "Information",
                 "bridged message",
-                "2026-01-01T10:00:00.1234567Z"
+                timestamp: "2026-01-01T10:00:00.1234567Z"
             );
 
             List<LogEntry> logs = await LogReader.GetLogsAsync(BuildStorage(dir), dir);
@@ -168,7 +169,7 @@ public class LogReaderTests
 
             List<LogEntry> logs = await LogReader.GetLogsAsync(BuildStorage(dir), dir);
 
-            logs.Select(e => e.Message).Should().BeEquivalentTo(["first message", "second message"]);
+            logs.Select(e => e.Message).Should().BeEquivalentTo("first message", "second message");
         }
         finally
         {

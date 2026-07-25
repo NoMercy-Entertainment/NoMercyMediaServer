@@ -72,7 +72,7 @@ public class PluginLoaderDisposalTests : IDisposable
         try
         {
             if (Directory.Exists(_tempPluginsDir))
-                Directory.Delete(_tempPluginsDir, true);
+                Directory.Delete(_tempPluginsDir, recursive: true);
         }
         catch (Exception) { }
     }
@@ -82,12 +82,18 @@ public class PluginLoaderDisposalTests : IDisposable
         string testBinDir = Path.GetDirectoryName(
             typeof(PluginLoaderDisposalTests).Assembly.Location
         )!;
-        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
+        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
         // Mirror the test's own build configuration + TFM so this works under
         // both Debug (local) and Release (CI coverage).
         string tfm = Path.GetFileName(testBinDir);
         string configuration = Path.GetFileName(Path.GetDirectoryName(testBinDir)!);
-        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", configuration, tfm]
+        return Path.Combine(
+            repoRoot,
+            "tests",
+            "NoMercy.Plugin.Samples.Echo",
+            "bin",
+            configuration,
+            tfm
         );
     }
 
@@ -102,10 +108,10 @@ public class PluginLoaderDisposalTests : IDisposable
             );
 
         foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
-            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), overwrite: true);
 
         foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
-            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), overwrite: true);
 
         // A custom manifest (not the repo's committed plugin.json) so this
         // test controls autoEnabled independently of every other Echo-staging
@@ -127,7 +133,7 @@ public class PluginLoaderDisposalTests : IDisposable
     public async Task LoadPluginsFromDirectoryAsync_NonAutoEnabledPlugin_DisposesConstructedInstance()
     {
         Environment.SetEnvironmentVariable(DisposalMarkerEnvVar, _markerPath);
-        StageEchoPlugin(false);
+        StageEchoPlugin(autoEnabled: false);
 
         await _manager.LoadPluginsFromDirectoryAsync();
 
@@ -145,7 +151,7 @@ public class PluginLoaderDisposalTests : IDisposable
     public async Task LoadPluginsFromDirectoryAsync_AutoEnabledPlugin_DoesNotDisposeActiveInstance()
     {
         Environment.SetEnvironmentVariable(DisposalMarkerEnvVar, _markerPath);
-        StageEchoPlugin(true);
+        StageEchoPlugin(autoEnabled: true);
 
         await _manager.LoadPluginsFromDirectoryAsync();
 

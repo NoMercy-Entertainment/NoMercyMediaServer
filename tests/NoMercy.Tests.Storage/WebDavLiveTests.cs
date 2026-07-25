@@ -55,7 +55,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
     {
         using WebDavStorageDriver driver = Driver();
         string marker = $"{ScratchName()}.bin";
-        await using (Stream w = driver.OpenWrite(marker, true))
+        await using (Stream w = driver.OpenWrite(marker, overwrite: true))
             await w.WriteAsync(new byte[4]);
 
         try
@@ -86,7 +86,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
         }
         finally
         {
-            driver.DeleteDirectory(dir, true);
+            driver.DeleteDirectory(dir, recursive: true);
         }
     }
 
@@ -95,7 +95,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
     {
         using WebDavStorageDriver driver = Driver();
         string file = $"{ScratchName()}.bin";
-        await using (Stream w = driver.OpenWrite(file, true))
+        await using (Stream w = driver.OpenWrite(file, overwrite: true))
             await w.WriteAsync(new byte[8]);
 
         try
@@ -123,7 +123,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
         {
             try
             {
-                driver.DeleteDirectory(scratch, true);
+                driver.DeleteDirectory(scratch, recursive: true);
             }
             catch (Exception ex)
             {
@@ -144,7 +144,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(scratch, true))
+            await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
                 await w.WriteAsync(expected);
 
             await using Stream r = driver.OpenRead(scratch);
@@ -175,7 +175,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(scratch, true))
+            await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
                 await w.WriteAsync(data);
 
             driver.GetFileSize(scratch).Should().Be(256);
@@ -202,7 +202,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(scratch, true))
+            await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
                 await w.WriteAsync(data);
 
             DateTime mtime = driver.GetLastWriteTimeUtc(scratch);
@@ -232,7 +232,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(src, true))
+            await using (Stream w = driver.OpenWrite(src, overwrite: true))
                 await w.WriteAsync(data);
 
             driver.MoveFile(src, dst);
@@ -269,10 +269,10 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(src, true))
+            await using (Stream w = driver.OpenWrite(src, overwrite: true))
                 await w.WriteAsync(data);
 
-            driver.CopyFile(src, dst, true);
+            driver.CopyFile(src, dst, overwrite: true);
 
             driver.FileExists(src).Should().BeTrue();
             driver.FileExists(dst).Should().BeTrue();
@@ -308,14 +308,14 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(scratch, true))
+            await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
                 await w.WriteAsync(data);
 
             // WebDAV enforces the no-overwrite guard at PUT time (If-None-Match: *
             // → HTTP 412), which the upload stream surfaces on flush/dispose.
             Func<Task> act = async () =>
             {
-                await using Stream w = driver.OpenWrite(scratch, false);
+                await using Stream w = driver.OpenWrite(scratch, overwrite: false);
                 await w.WriteAsync(data);
             };
             await act.Should().ThrowAsync<IOException>();
@@ -346,11 +346,11 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(fileA, true))
+            await using (Stream w = driver.OpenWrite(fileA, overwrite: true))
                 await w.WriteAsync(bytes);
-            await using (Stream w = driver.OpenWrite(fileB, true))
+            await using (Stream w = driver.OpenWrite(fileB, overwrite: true))
                 await w.WriteAsync(bytes);
-            await using (Stream w = driver.OpenWrite(fileC, true))
+            await using (Stream w = driver.OpenWrite(fileC, overwrite: true))
                 await w.WriteAsync(bytes);
 
             List<string> txtEntries = driver
@@ -364,7 +364,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
         {
             try
             {
-                driver.DeleteDirectory(dir, true);
+                driver.DeleteDirectory(dir, recursive: true);
             }
             catch (Exception ex)
             {
@@ -394,7 +394,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
         try
         {
             driver.CreateDirectory(src);
-            await using (Stream w = driver.OpenWrite(file, true))
+            await using (Stream w = driver.OpenWrite(file, overwrite: true))
                 await w.WriteAsync(data);
 
             driver.MoveDirectory(src, dst);
@@ -406,7 +406,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
         {
             try
             {
-                driver.DeleteDirectory(src, true);
+                driver.DeleteDirectory(src, recursive: true);
             }
             catch
             {
@@ -415,7 +415,7 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
             try
             {
-                driver.DeleteDirectory(dst, true);
+                driver.DeleteDirectory(dst, recursive: true);
             }
             catch (Exception ex)
             {

@@ -189,7 +189,7 @@ public class JobQueueTests : IDisposable
     public void ReserveJob_JobExceedsMaxAttempts_DoesNotReserve()
     {
         // Arrange
-        JobQueue jobQueue = new(_adapter, 2);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
         QueueJob job = new()
         {
             Queue = "test-queue",
@@ -228,7 +228,7 @@ public class JobQueueTests : IDisposable
             Attempts = 0,
         };
 
-        _context.QueueJobs.AddRange([lowPriorityJob, highPriorityJob]);
+        _context.QueueJobs.AddRange(lowPriorityJob, highPriorityJob);
         _context.SaveChanges();
 
         // Act
@@ -284,7 +284,7 @@ public class JobQueueTests : IDisposable
     public void FailJob_ExceedsMaxAttempts_MovesToFailedJobs()
     {
         // Arrange
-        JobQueue jobQueue = new(_adapter, 2);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
         QueueJob job = new()
         {
             Queue = "test-queue",
@@ -421,7 +421,7 @@ public class JobQueueTests : IDisposable
             FailedAt = DateTime.UtcNow,
         };
 
-        _context.FailedJobs.AddRange([failedJob1, failedJob2]);
+        _context.FailedJobs.AddRange(failedJob1, failedJob2);
         _context.SaveChanges();
 
         // Act
@@ -462,7 +462,7 @@ public class JobQueueTests : IDisposable
             FailedAt = DateTime.UtcNow,
         };
 
-        _context.FailedJobs.AddRange([failedJob1, failedJob2]);
+        _context.FailedJobs.AddRange(failedJob1, failedJob2);
         _context.SaveChanges();
 
         // Act

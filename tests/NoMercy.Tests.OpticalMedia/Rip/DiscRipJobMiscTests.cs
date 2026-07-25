@@ -24,6 +24,7 @@ using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.Storage;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Tests.OpticalMedia.Rip;
 
@@ -106,10 +107,10 @@ public class DiscRipJobMiscTests
     public async Task Handle_TargetsNoLongerExist_PublishesErrorAndReturns()
     {
         RipRequest request = new(
-            "D:\\",
+            DrivePath: "D:\\",
             SelectedTitleIndices: [1],
             MetadataId: null,
-            Custom: new("Movie", 2024, MediaType.Movie, null),
+            Custom: new(Title: "Movie", Year: 2024, Type: MediaType.Movie, PosterUrl: null),
             LibraryId: Ulid.NewUlid(),
             FolderId: Ulid.NewUlid(),
             EncodingProfileId: null,
@@ -142,7 +143,7 @@ public class DiscRipJobMiscTests
             .Returns(Task.CompletedTask);
         EventBusProvider.Configure(busMock.Object);
 
-        ConfigurableTargetsDiscRipJob job = new(null, null)
+        ConfigurableTargetsDiscRipJob job = new(folder: null, library: null)
         {
             Request = request,
             OutputDir = Path.GetTempPath(),
@@ -174,15 +175,15 @@ public class DiscRipJobMiscTests
         // "rip_progress"` default arm is otherwise unreachable from the
         // public API, so it's exercised directly via reflection.
         RipRequest request = new(
-            "D:\\",
-            [1],
-            null,
-            null,
-            Ulid.NewUlid(),
-            Ulid.NewUlid(),
-            null,
-            [],
-            []
+            DrivePath: "D:\\",
+            SelectedTitleIndices: [1],
+            MetadataId: null,
+            Custom: null,
+            LibraryId: Ulid.NewUlid(),
+            FolderId: Ulid.NewUlid(),
+            EncodingProfileId: null,
+            AudioTracks: [],
+            Subtitles: []
         );
         DiscRipJob job = new(request, Path.GetTempPath(), null, null, null)
         {

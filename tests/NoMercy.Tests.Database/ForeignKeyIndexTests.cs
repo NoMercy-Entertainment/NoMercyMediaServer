@@ -38,7 +38,7 @@ public class ForeignKeyIndexTests
     [Fact]
     public void Metadata_HasIndex_OnAudioTrackId()
     {
-        bool hasIndex = HasIndex(typeof(Metadata), nameof(Metadata.AudioTrackId), true);
+        bool hasIndex = HasIndex(typeof(Metadata), nameof(Metadata.AudioTrackId), isUnique: true);
         Assert.True(hasIndex, "Metadata should have a unique [Index] on AudioTrackId");
     }
 

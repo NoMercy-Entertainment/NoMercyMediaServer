@@ -37,12 +37,12 @@ public class FontExtractorTests : IDisposable
     private static readonly IReadOnlyList<AttachmentInfo> TwoFonts =
     [
         new(
-            5,
-            "ttf",
-            "ChalkDust_0.ttf",
-            "application/x-truetype-font"
+            Index: 5,
+            Codec: "ttf",
+            Filename: "ChalkDust_0.ttf",
+            MimeType: "application/x-truetype-font"
         ),
-        new(6, "ttf", "Arial.ttf", "application/x-truetype-font"),
+        new(Index: 6, Codec: "ttf", Filename: "Arial.ttf", MimeType: "application/x-truetype-font"),
     ];
 
     // ------------------------------------------------------------------
@@ -73,7 +73,7 @@ public class FontExtractorTests : IDisposable
     {
         IReadOnlyList<AttachmentInfo> attachments =
         [
-            new(6, "ttf", "CM Big Fat Paintbrush_0.ttf", null),
+            new(Index: 6, Codec: "ttf", Filename: "CM Big Fat Paintbrush_0.ttf", MimeType: null),
         ];
 
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
@@ -96,8 +96,8 @@ public class FontExtractorTests : IDisposable
     {
         IReadOnlyList<AttachmentInfo> attachments =
         [
-            new(5, "ttf", "My Font.ttf", null),
-            new(6, "ttf", "My@Font.ttf", null),
+            new(Index: 5, Codec: "ttf", Filename: "My Font.ttf", MimeType: null),
+            new(Index: 6, Codec: "ttf", Filename: "My@Font.ttf", MimeType: null),
         ];
 
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
@@ -175,11 +175,11 @@ public class FontExtractorTests : IDisposable
     {
         IReadOnlyList<AttachmentInfo> attachments =
         [
-            new(5, "ttf", "A.ttf", null),
-            new(6, "otf", "B.otf", null),
-            new(7, "ttf", "C.ttc", null),
-            new(8, "bin", "grade.cube", null),
-            new(9, "bin", null, null),
+            new(Index: 5, Codec: "ttf", Filename: "A.ttf", MimeType: null),
+            new(Index: 6, Codec: "otf", Filename: "B.otf", MimeType: null),
+            new(Index: 7, Codec: "ttf", Filename: "C.ttc", MimeType: null),
+            new(Index: 8, Codec: "bin", Filename: "grade.cube", MimeType: null),
+            new(Index: 9, Codec: "bin", Filename: null, MimeType: null),
         ];
 
         _extractor.CountFontAttachments(attachments).Should().Be(3);

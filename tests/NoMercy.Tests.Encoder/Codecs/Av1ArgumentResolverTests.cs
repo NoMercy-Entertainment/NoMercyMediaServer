@@ -59,7 +59,7 @@ public class Av1ArgumentResolverTests
         // libaom-av1's "preset" is actually cpu-used (0=slowest, 8=fastest).
         // ResolvePreset must pass "6" through unmodified.
         EncoderInfo aom = Get("libaom-av1");
-        aom.Presets.Should().BeEquivalentTo(["0", "1", "2", "3", "4", "5", "6", "7", "8"]);
+        aom.Presets.Should().BeEquivalentTo("0", "1", "2", "3", "4", "5", "6", "7", "8");
         EncoderArgumentResolver.ResolvePreset("6", aom).Should().Be("6");
     }
 
@@ -190,11 +190,11 @@ public class Av1ArgumentResolverTests
         GpuDevice? device = vendor is null
             ? null
             : new GpuDevice(
-                vendor.Value,
-                $"Test {vendor.Value}",
-                16_384,
-                12,
-                [VideoCodecType.Av1]
+                Vendor: vendor.Value,
+                Name: $"Test {vendor.Value}",
+                VramMb: 16_384,
+                MaxEncoderSessions: 12,
+                SupportedCodecs: [VideoCodecType.Av1]
             );
         return new(ffmpegName, encoder, device, defaultRateControl);
     }

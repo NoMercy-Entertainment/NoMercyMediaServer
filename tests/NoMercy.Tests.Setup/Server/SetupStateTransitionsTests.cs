@@ -201,7 +201,7 @@ public class SetupStateTransitionsTests
     {
         SetupState state = new();
 
-        SetupPhase result = state.DetermineInitialPhase(true, true);
+        SetupPhase result = state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
 
         Assert.Equal(SetupPhase.Complete, result);
         Assert.Equal(SetupPhase.Complete, state.CurrentPhase);
@@ -213,7 +213,7 @@ public class SetupStateTransitionsTests
     {
         SetupState state = new();
 
-        SetupPhase result = state.DetermineInitialPhase(true, false);
+        SetupPhase result = state.DetermineInitialPhase(hasValidToken: true, isRegistered: false);
 
         Assert.Equal(SetupPhase.Authenticated, result);
         Assert.Equal(SetupPhase.Authenticated, state.CurrentPhase);
@@ -226,7 +226,7 @@ public class SetupStateTransitionsTests
     {
         SetupState state = new();
 
-        SetupPhase result = state.DetermineInitialPhase(false, true);
+        SetupPhase result = state.DetermineInitialPhase(hasValidToken: false, isRegistered: true);
 
         Assert.Equal(SetupPhase.Unauthenticated, result);
         Assert.Equal(SetupPhase.Unauthenticated, state.CurrentPhase);

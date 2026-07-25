@@ -66,7 +66,7 @@ public class BuildingBlockReplacementTests
     // ------------------------------------------------------------------ //
 
     private static FfmpegCommand StubCommand() =>
-        new("ffmpeg", [], null);
+        new(Executable: "ffmpeg", Arguments: [], WorkingDirectory: null);
 
     private sealed class ProductionFontExtractor : IFontExtractor
     {

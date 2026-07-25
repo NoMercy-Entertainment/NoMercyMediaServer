@@ -37,9 +37,9 @@ public class ClusterTokenHolderTests
     {
         ClusterTokenHolder holder = new();
         ClusterToken token = new(
-            "future-secret",
-            DateTime.UtcNow.AddHours(1),
-            ["encode"]
+            Secret: "future-secret",
+            ExpiresAt: DateTime.UtcNow.AddHours(1),
+            Scopes: ["encode"]
         );
 
         holder.Update(token);
@@ -54,9 +54,9 @@ public class ClusterTokenHolderTests
     {
         ClusterTokenHolder holder = new();
         ClusterToken expired = new(
-            "stale-secret",
-            DateTime.UtcNow.AddHours(-1),
-            []
+            Secret: "stale-secret",
+            ExpiresAt: DateTime.UtcNow.AddHours(-1),
+            Scopes: []
         );
 
         holder.Update(expired);

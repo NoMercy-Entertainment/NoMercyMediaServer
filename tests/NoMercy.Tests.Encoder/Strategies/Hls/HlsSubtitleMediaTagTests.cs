@@ -94,27 +94,27 @@ public class HlsSubtitleMediaTagTests
     {
         // PGS with Drop action should NOT appear; SRT and ASS (Extract) should.
         SubtitleOutputPlan srt = new(
-            SubtitleCodecType.WebVtt,
-            StreamAction.Extract,
-            "eng",
-            0,
-            "0:s:0"
+            OutputCodec: SubtitleCodecType.WebVtt,
+            Action: StreamAction.Extract,
+            Language: "eng",
+            SourceIndex: 0,
+            MapLabel: "0:s:0"
         );
 
         SubtitleOutputPlan pgs = new(
-            SubtitleCodecType.Pgs,
-            StreamAction.Drop,
-            "eng",
-            1,
-            "0:s:1"
+            OutputCodec: SubtitleCodecType.Pgs,
+            Action: StreamAction.Drop,
+            Language: "eng",
+            SourceIndex: 1,
+            MapLabel: "0:s:1"
         );
 
         SubtitleOutputPlan ass = new(
-            SubtitleCodecType.Ass,
-            StreamAction.Extract,
-            "fra",
-            2,
-            "0:s:2"
+            OutputCodec: SubtitleCodecType.Ass,
+            Action: StreamAction.Extract,
+            Language: "fra",
+            SourceIndex: 2,
+            MapLabel: "0:s:2"
         );
 
         OutputPlan plan = BuildPlan([srt, pgs, ass]);
@@ -140,11 +140,11 @@ public class HlsSubtitleMediaTagTests
         // copying font files to the output dir; the playlist itself doesn't
         // list fonts. This test validates the ASS playlist format.
         SubtitleOutputPlan sub = new(
-            SubtitleCodecType.Ass,
-            StreamAction.Extract,
-            "eng",
-            0,
-            "0:s:0"
+            OutputCodec: SubtitleCodecType.Ass,
+            Action: StreamAction.Extract,
+            Language: "eng",
+            SourceIndex: 0,
+            MapLabel: "0:s:0"
         );
 
         string playlist = PlaylistGenerator.GenerateAssMediaPlaylist(sub, "subs_eng.ass", 6);
@@ -173,11 +173,11 @@ public class HlsSubtitleMediaTagTests
         );
 
         SubtitleOutputPlan sub = new(
-            SubtitleCodecType.WebVtt,
-            StreamAction.Extract,
-            "eng",
-            0,
-            "0:s:0"
+            OutputCodec: SubtitleCodecType.WebVtt,
+            Action: StreamAction.Extract,
+            Language: "eng",
+            SourceIndex: 0,
+            MapLabel: "0:s:0"
         );
 
         string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(sub, segments, 6);
@@ -195,47 +195,47 @@ public class HlsSubtitleMediaTagTests
 
     private static OutputPlan BuildPlan(SubtitleOutputPlan[] subs) =>
         new(
-            OutputFormat.Hls,
-            [BuildVideo()],
-            [BuildAudio()],
-            subs,
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildVideo()],
+            AudioOutputs: [BuildAudio()],
+            SubtitleOutputs: subs,
+            Thumbnails: null
         );
 
     private static SubtitleOutputPlan Sub(SubtitleCodecType codec, string lang) =>
         new(
-            codec,
-            StreamAction.Extract,
-            lang,
-            0,
-            "0:s:0"
+            OutputCodec: codec,
+            Action: StreamAction.Extract,
+            Language: lang,
+            SourceIndex: 0,
+            MapLabel: "0:s:0"
         );
 
     private static VideoOutputPlan BuildVideo() =>
         new(
-            1920,
-            1080,
-            "libx264",
-            23,
-            4000,
-            "medium",
-            "high",
-            "4.1",
-            false,
-            "yuv420p",
-            "[v0]",
-            new()
+            Width: 1920,
+            Height: 1080,
+            EncoderName: "libx264",
+            Crf: 23,
+            BitrateKbps: 4000,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.1",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "[v0]",
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudio() =>
         new(
-            "aac",
-            192,
-            2,
-            48000,
-            StreamAction.Transcode,
-            "eng",
-            "0:a:0"
+            EncoderName: "aac",
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: "eng",
+            MapLabel: "0:a:0"
         );
 
     private static int CountOccurrences(string haystack, string needle)

@@ -68,7 +68,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
         try
         {
             if (!string.IsNullOrEmpty(_root) && Directory.Exists(_root))
-                Directory.Delete(_root, true);
+                Directory.Delete(_root, recursive: true);
         }
         catch
         {
@@ -153,7 +153,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
                 StorageEntry e in storage.ListAsync(
                     "movies/avatar",
                     "*",
-                    true,
+                    recursive: true,
                     CancellationToken.None
                 )
             )
@@ -203,7 +203,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
             IReadOnlyList<StorageEntry> entries = storage.List(
                 "shows/breaking-bad",
                 "*",
-                false
+                recursive: false
             );
 
             entries.Should().NotBeEmpty();
@@ -263,7 +263,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
         {
             _storage = null;
             if (!string.IsNullOrEmpty(_root) && Directory.Exists(_root))
-                Directory.Delete(_root, true);
+                Directory.Delete(_root, recursive: true);
         }
     }
 
@@ -284,7 +284,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
         {
             _storage = null;
             if (!string.IsNullOrEmpty(_root) && Directory.Exists(_root))
-                Directory.Delete(_root, true);
+                Directory.Delete(_root, recursive: true);
         }
     }
 }

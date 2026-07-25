@@ -47,7 +47,7 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
         Handler.WhenGet($"movie/{movieId}", MockResponse.Json(HttpStatusCode.OK, body));
 
         using TmdbMovieClient client = new(movieId, language: "nl-NL");
-        TmdbMovieDetails? result = await client.Details(true);
+        TmdbMovieDetails? result = await client.Details(priority: true);
 
         result.Should().NotBeNull();
         result!.Title.Should().Be("The Dark Knight");
@@ -79,8 +79,8 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
     }
 
     [Theory]
-    [InlineData([true, "true"])]
-    [InlineData([false, "false"])]
+    [InlineData(true, "true")]
+    [InlineData(false, "false")]
     public async Task Details_ReflectsAdultContentSetting_InIncludeAdultQuery(
         bool allowAdultContent,
         string expectedQueryValue
@@ -134,7 +134,7 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
             .WhoseValue.Should()
             .Be(
                 "alternative_titles,release_dates,changes,credits,keywords,recommendations,"
-                          + "similar,translations,external_ids,videos,images,watch/providers"
+                    + "similar,translations,external_ids,videos,images,watch/providers"
             );
     }
 
@@ -160,7 +160,9 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
         const int movieId = 900_006;
         TmdbMovieDetails body = TmdbMovieMockData.GenerateMovieWithId(movieId);
         Handler.WhenGet(
-            $"movie/{movieId}", [MockResponse.Status(HttpStatusCode.ServiceUnavailable), MockResponse.Json(HttpStatusCode.OK, body)]
+            $"movie/{movieId}",
+            MockResponse.Status(HttpStatusCode.ServiceUnavailable),
+            MockResponse.Json(HttpStatusCode.OK, body)
         );
 
         using TmdbMovieClient client = new(movieId);

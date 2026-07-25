@@ -144,14 +144,18 @@ public class BufferAdaptiveService(
         {
             case BufferAction.Suspend:
                 logger.LogDebug(
-                    "BufferAdaptive: plan=encoder-suspend session={SessionId} buffer={Buf:F1}s", [session.SessionId, session.BufferAhead.TotalSeconds]
+                    "BufferAdaptive: plan=encoder-suspend session={SessionId} buffer={Buf:F1}s",
+                    session.SessionId,
+                    session.BufferAhead.TotalSeconds
                 );
                 session.Suspend();
                 break;
 
             case BufferAction.Resume:
                 logger.LogDebug(
-                    "BufferAdaptive: plan=encoder-resume session={SessionId} buffer={Buf:F1}s", [session.SessionId, session.BufferAhead.TotalSeconds]
+                    "BufferAdaptive: plan=encoder-resume session={SessionId} buffer={Buf:F1}s",
+                    session.SessionId,
+                    session.BufferAhead.TotalSeconds
                 );
                 session.Resume();
                 break;
@@ -167,7 +171,7 @@ public class BufferAdaptiveService(
                         session,
                         QualityChangeReason.AutoAdaptive,
                         ct,
-                        true
+                        emergency: true
                     )
                     .ConfigureAwait(false);
                 break;
@@ -231,7 +235,11 @@ public class BufferAdaptiveService(
                 return false;
 
             logger.LogInformation(
-                "BufferAdaptive: plan=network-emergency-drop session={SessionId} {From}→{To} clientBuffer={Buf:F1}s", [session.SessionId, current.Label, lowest.Label, clientBuffer.TotalSeconds]
+                "BufferAdaptive: plan=network-emergency-drop session={SessionId} {From}→{To} clientBuffer={Buf:F1}s",
+                session.SessionId,
+                current.Label,
+                lowest.Label,
+                clientBuffer.TotalSeconds
             );
             await ChangeQualityAndPushAsync(session, lowest, QualityChangeReason.AutoAdaptive, ct)
                 .ConfigureAwait(false);
@@ -257,7 +265,11 @@ public class BufferAdaptiveService(
             ResetRaiseSweepCount(session.SessionId);
 
             logger.LogInformation(
-                "BufferAdaptive: plan=network-drop session={SessionId} {From}→{To} bandwidth={Kbps}kbps", [session.SessionId, current.Label, fit.Label, observedBandwidthKbps]
+                "BufferAdaptive: plan=network-drop session={SessionId} {From}→{To} bandwidth={Kbps}kbps",
+                session.SessionId,
+                current.Label,
+                fit.Label,
+                observedBandwidthKbps
             );
             await ChangeQualityAndPushAsync(session, fit, QualityChangeReason.AutoAdaptive, ct)
                 .ConfigureAwait(false);
@@ -282,7 +294,10 @@ public class BufferAdaptiveService(
         if (sweepCount < thresholds.RaiseSustainSweeps)
         {
             logger.LogDebug(
-                "BufferAdaptive: plan=network-raise-pending session={SessionId} sweep={Count}/{Sustain}", [session.SessionId, sweepCount, thresholds.RaiseSustainSweeps]
+                "BufferAdaptive: plan=network-raise-pending session={SessionId} sweep={Count}/{Sustain}",
+                session.SessionId,
+                sweepCount,
+                thresholds.RaiseSustainSweeps
             );
             return false;
         }
@@ -295,7 +310,12 @@ public class BufferAdaptiveService(
 
         LiveQuality raiseTarget = available[raiseIndex];
         logger.LogInformation(
-            "BufferAdaptive: plan=network-raise session={SessionId} {From}→{To} bandwidth={Kbps}kbps clientBuffer={Buf:F1}s", [session.SessionId, current.Label, raiseTarget.Label, observedBandwidthKbps, clientBuffer.TotalSeconds]
+            "BufferAdaptive: plan=network-raise session={SessionId} {From}→{To} bandwidth={Kbps}kbps clientBuffer={Buf:F1}s",
+            session.SessionId,
+            current.Label,
+            raiseTarget.Label,
+            observedBandwidthKbps,
+            clientBuffer.TotalSeconds
         );
         await ChangeQualityAndPushAsync(session, raiseTarget, QualityChangeReason.AutoAdaptive, ct)
             .ConfigureAwait(false);
@@ -356,7 +376,12 @@ public class BufferAdaptiveService(
             return;
 
         logger.LogInformation(
-            "BufferAdaptive: plan=encoder-drop-quality session={SessionId} {From}→{To} (reason={Reason}, buffer={Buf:F1}s)", [session.SessionId, current.Label, target.Label, reason, session.BufferAhead.TotalSeconds]
+            "BufferAdaptive: plan=encoder-drop-quality session={SessionId} {From}→{To} (reason={Reason}, buffer={Buf:F1}s)",
+            session.SessionId,
+            current.Label,
+            target.Label,
+            reason,
+            session.BufferAhead.TotalSeconds
         );
 
         await ChangeQualityAndPushAsync(session, target, reason, ct).ConfigureAwait(false);
@@ -392,7 +417,7 @@ public class BufferAdaptiveService(
         if (transport is null)
             return;
 
-        QualityChangedMessage message = new(newQuality, reason);
+        QualityChangedMessage message = new(NewQuality: newQuality, Reason: reason);
 
         try
         {
@@ -414,9 +439,9 @@ public class BufferAdaptiveService(
             return;
 
         TranscodeStateMessage message = new(
-            session.CurrentSpeed,
-            session.BufferAhead.TotalSeconds,
-            session.State
+            Speed: session.CurrentSpeed,
+            BufferAheadSeconds: session.BufferAhead.TotalSeconds,
+            State: session.State
         );
 
         try

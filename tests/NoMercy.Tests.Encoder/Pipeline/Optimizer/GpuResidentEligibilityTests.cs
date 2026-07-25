@@ -44,7 +44,7 @@ public class GpuResidentEligibilityTests
     public void Ineligible_SubtitleBurnIn_False()
     {
         SubtitleOutputPlan burnIn = new(
-            SubtitleCodecType.Ass,
+            OutputCodec: SubtitleCodecType.Ass,
             Action: StreamAction.Extract,
             Language: "en",
             SourceIndex: 0,
@@ -62,17 +62,17 @@ public class GpuResidentEligibilityTests
 
     private static VideoOutputPlan Video() =>
         new(
-            1920,
-            1080,
-            "h264_nvenc",
-            23,
-            5000,
-            "p4",
-            "high",
-            "4.1",
-            false,
-            "yuv420p",
-            "[v0]",
-            new()
+            Width: 1920,
+            Height: 1080,
+            EncoderName: "h264_nvenc",
+            Crf: 23,
+            BitrateKbps: 5000,
+            Preset: "p4",
+            Profile: "high",
+            Level: "4.1",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "[v0]",
+            ExtraFlags: new()
         );
 }

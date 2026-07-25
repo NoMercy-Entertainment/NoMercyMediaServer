@@ -37,19 +37,20 @@ public class SubtitleEdgeCaseTests
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
+            Groups:
             [
                 new(
-                    "group_0",
-                    [new("decode_0", OperationType.Decode, [], new())],
-                    null,
-                    0,
-                    4,
-                    false,
-                    1
+                    GroupId: "group_0",
+                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 4,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            outputPlan
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: outputPlan
         );
 
     private static VideoOutputPlan BuildVideoOutput(
@@ -59,64 +60,65 @@ public class SubtitleEdgeCaseTests
         string encoder = "libx264"
     ) =>
         new(
-            width,
-            height,
-            encoder,
-            23,
-            4000,
-            "medium",
-            "high",
-            "4.1",
-            false,
-            "yuv420p",
-            mapLabel,
-            new()
+            Width: width,
+            Height: height,
+            EncoderName: encoder,
+            Crf: 23,
+            BitrateKbps: 4000,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.1",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: mapLabel,
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>
         new(
-            "aac",
-            192,
-            2,
-            48000,
-            StreamAction.Transcode,
-            "en",
-            "0:a:0"
+            EncoderName: "aac",
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: "en",
+            MapLabel: "0:a:0"
         );
 
     private static MediaInfo BuildMediaInfoWithSubtitles(params SubtitleStreamInfo[] subtitles) =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            subtitles,
-            []
+            AudioStreams: [],
+            SubtitleStreams: subtitles,
+            Chapters: []
         );
 
     [Fact]
     public async Task FilterGraphAssembler_GenericTextSubtitleBurnIn_GeneratesSubtitlesFilter()
     {
         SubtitleOutputPlan burnInSub = new(
-            SubtitleCodecType.Srt,
+            OutputCodec: SubtitleCodecType.Srt,
             Action: StreamAction.Extract,
             Language: "en",
             SourceIndex: 0,
@@ -125,19 +127,19 @@ public class SubtitleEdgeCaseTests
         );
         VideoOutputPlan videoOutput = BuildVideoOutput(1920, 1080, "[v0]");
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [videoOutput],
-            [BuildAudioOutput()],
-            [burnInSub],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [videoOutput],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [burnInSub],
+            Thumbnails: null
         );
         ExecutionPlan plan = BuildPlan(outputPlan);
         SubtitleStreamInfo srtStream = new(
-            0,
-            "srt",
-            "en",
-            true,
-            false
+            Index: 0,
+            Codec: "srt",
+            Language: "en",
+            IsDefault: true,
+            IsForced: false
         );
         BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
@@ -164,7 +166,7 @@ public class SubtitleEdgeCaseTests
     public async Task FilterGraphAssembler_BitmapSubtitleBurnIn_DoesNotUseBurnInFilter()
     {
         SubtitleOutputPlan burnInSub = new(
-            SubtitleCodecType.Pgs,
+            OutputCodec: SubtitleCodecType.Pgs,
             Action: StreamAction.Extract,
             Language: "en",
             SourceIndex: 0,
@@ -173,19 +175,19 @@ public class SubtitleEdgeCaseTests
         );
         VideoOutputPlan videoOutput = BuildVideoOutput(1920, 1080, "[v0]");
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [videoOutput],
-            [BuildAudioOutput()],
-            [burnInSub],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [videoOutput],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [burnInSub],
+            Thumbnails: null
         );
         ExecutionPlan plan = BuildPlan(outputPlan);
         SubtitleStreamInfo pgsStream = new(
-            0,
-            "hdmv_pgs_subtitle",
-            "en",
-            true,
-            false
+            Index: 0,
+            Codec: "hdmv_pgs_subtitle",
+            Language: "en",
+            IsDefault: true,
+            IsForced: false
         );
         BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
@@ -210,7 +212,7 @@ public class SubtitleEdgeCaseTests
     public async Task FilterGraphAssembler_SubtitleBurnIn_ForcesVideoReencode()
     {
         SubtitleOutputPlan burnInSub = new(
-            SubtitleCodecType.Ass,
+            OutputCodec: SubtitleCodecType.Ass,
             Action: StreamAction.Extract,
             Language: "en",
             SourceIndex: 0,
@@ -222,19 +224,19 @@ public class SubtitleEdgeCaseTests
             EncoderName = "libx264",
         };
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [videoOutput],
-            [BuildAudioOutput()],
-            [burnInSub],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [videoOutput],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [burnInSub],
+            Thumbnails: null
         );
         ExecutionPlan plan = BuildPlan(outputPlan);
         SubtitleStreamInfo assStream = new(
-            0,
-            "ass",
-            "en",
-            true,
-            false
+            Index: 0,
+            Codec: "ass",
+            Language: "en",
+            IsDefault: true,
+            IsForced: false
         );
         BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
@@ -256,19 +258,19 @@ public class SubtitleEdgeCaseTests
     {
         VideoOutputPlan videoOutput = BuildVideoOutput(1920, 1080, "[v0]");
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [videoOutput],
-            [BuildAudioOutput()],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [videoOutput],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
         ExecutionPlan plan = BuildPlan(outputPlan);
         SubtitleStreamInfo srtStream = new(
-            0,
-            "srt",
-            "en",
-            true,
-            false
+            Index: 0,
+            Codec: "srt",
+            Language: "en",
+            IsDefault: true,
+            IsForced: false
         );
         BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(

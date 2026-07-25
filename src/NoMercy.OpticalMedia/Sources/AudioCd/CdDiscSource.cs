@@ -47,24 +47,24 @@ public sealed class CdDiscSource(
         {
             DiscTitle[] titles = audioTracks
                 .Select(t => new DiscTitle(
-                    t.Index,
-                    $"Track {t.Index:D2}",
-                    t.Duration,
-                    [],
-                    [],
-                    [],
-                    [],
-                    0,
-                    false
+                    Index: t.Index,
+                    Name: $"Track {t.Index:D2}",
+                    Duration: t.Duration,
+                    VideoStreams: [],
+                    AudioStreams: [],
+                    Subtitles: [],
+                    Chapters: [],
+                    EstimatedSizeBytes: 0,
+                    IsMainFeature: false
                 ))
                 .ToArray();
 
             return new(
-                OpticalDiscType.Cd,
-                drive.Label,
-                titles,
-                audioTracks,
-                audioTracks.Sum(t => t.Duration.Ticks) is long ticks
+                Type: OpticalDiscType.Cd,
+                DiscLabel: drive.Label,
+                Titles: titles,
+                AudioTracks: audioTracks,
+                TotalDuration: audioTracks.Sum(t => t.Duration.Ticks) is long ticks
                     ? TimeSpan.FromTicks(ticks)
                     : TimeSpan.Zero
             );
@@ -74,11 +74,11 @@ public sealed class CdDiscSource(
         // low-level driver (disc roots aren't in the library allowlist).
         DiscTrack[] files = EnumerateDataCd(drive);
         return new(
-            OpticalDiscType.Cd,
-            drive.Label,
-            [],
-            files,
-            TimeSpan.Zero
+            Type: OpticalDiscType.Cd,
+            DiscLabel: drive.Label,
+            Titles: [],
+            AudioTracks: files,
+            TotalDuration: TimeSpan.Zero
         );
     }
 
@@ -88,15 +88,15 @@ public sealed class CdDiscSource(
         // we know is in the initial probe.
         return Task.FromResult(
             new DiscTitle(
-                titleIndex,
-                $"Track {titleIndex:D2}",
-                TimeSpan.Zero,
-                [],
-                [],
-                [],
-                [],
-                0,
-                false
+                Index: titleIndex,
+                Name: $"Track {titleIndex:D2}",
+                Duration: TimeSpan.Zero,
+                VideoStreams: [],
+                AudioStreams: [],
+                Subtitles: [],
+                Chapters: [],
+                EstimatedSizeBytes: 0,
+                IsMainFeature: false
             )
         );
     }
@@ -118,8 +118,8 @@ public sealed class CdDiscSource(
                 "-i",
                 drive.Path,
             ],
-            null,
-            ct
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
         if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
@@ -133,7 +133,9 @@ public sealed class CdDiscSource(
         {
             logger.LogInformation(
                 ex,
-                "Audio CD probe parse failed for {Drive}: {Message}", [drive.Path, ex.Message]
+                "Audio CD probe parse failed for {Drive}: {Message}",
+                drive.Path,
+                ex.Message
             );
             return [];
         }
@@ -146,7 +148,7 @@ public sealed class CdDiscSource(
             // Derive separator from the drive path itself so the path is
             // valid on both Windows and Linux regardless of the host.
             char sep = drive.Path.Contains('\\') ? '\\' : '/';
-            string root = drive.Path.TrimEnd(['\\', '/']) + sep;
+            string root = drive.Path.TrimEnd('\\', '/') + sep;
             int idx = 1;
             List<DiscTrack> tracks = new();
             foreach (
@@ -161,15 +163,15 @@ public sealed class CdDiscSource(
                     continue;
                 tracks.Add(
                     new(
-                        idx++,
+                        Index: idx++,
                         // Separator-agnostic leaf: Path.GetFileName treats '\' as
                         // a literal on Linux, so a Windows-style entry would keep
                         // its whole path on the CI runner. Split on both separators.
-                        entry[(entry.LastIndexOfAny(['\\', '/']) + 1)..],
-                        null,
-                        TimeSpan.Zero,
-                        0,
-                        0
+                        Title: entry[(entry.LastIndexOfAny(['\\', '/']) + 1)..],
+                        Artist: null,
+                        Duration: TimeSpan.Zero,
+                        SampleRate: 0,
+                        Channels: 0
                     )
                 );
             }
@@ -179,7 +181,9 @@ public sealed class CdDiscSource(
         {
             logger.LogInformation(
                 ex,
-                "Data CD enumeration failed for {Drive}: {Message}", [drive.Path, ex.Message]
+                "Data CD enumeration failed for {Drive}: {Message}",
+                drive.Path,
+                ex.Message
             );
             return [];
         }
@@ -231,12 +235,12 @@ public sealed class CdDiscSource(
 
             result.Add(
                 new(
-                    rawIndex + 1,
-                    null,
-                    null,
-                    duration,
-                    sampleRate,
-                    channels
+                    Index: rawIndex + 1,
+                    Title: null,
+                    Artist: null,
+                    Duration: duration,
+                    SampleRate: sampleRate,
+                    Channels: channels
                 )
             );
         }

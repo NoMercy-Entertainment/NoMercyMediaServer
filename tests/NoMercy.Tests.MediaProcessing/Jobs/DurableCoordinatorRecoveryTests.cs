@@ -58,14 +58,14 @@ public class DurableCoordinatorRecoveryTests
         DateTime now = DateTime.UtcNow;
 
         CoordinatorState original = new(
-            groupTag,
-            taskIds,
-            CoordinatorPhase.WaitPass1,
-            now,
-            null,
-            null,
-            presetId,
-            3
+            GroupTag: groupTag,
+            TaskIds: taskIds,
+            Phase: CoordinatorPhase.WaitPass1,
+            Pass1DispatchedAt: now,
+            Pass2DispatchedAt: null,
+            Pass1StatsPath: null,
+            PresetId: presetId,
+            ExpectedFinalCount: 3
         );
 
         string json = JsonConvert.SerializeObject(original, SerializerSettings);
@@ -89,14 +89,14 @@ public class DurableCoordinatorRecoveryTests
     public void CoordinatorState_WaitChildrenPhase_RoundTrip_PhasePreserved()
     {
         CoordinatorState state = new(
-            "grp-abc",
-            ["task-pass2-0", "task-audio-0"],
-            CoordinatorPhase.WaitChildren,
-            DateTime.UtcNow.AddSeconds(-30),
-            DateTime.UtcNow.AddSeconds(-5),
-            "/tmp/stats/x264",
-            Ulid.NewUlid(),
-            2
+            GroupTag: "grp-abc",
+            TaskIds: ["task-pass2-0", "task-audio-0"],
+            Phase: CoordinatorPhase.WaitChildren,
+            Pass1DispatchedAt: DateTime.UtcNow.AddSeconds(-30),
+            Pass2DispatchedAt: DateTime.UtcNow.AddSeconds(-5),
+            Pass1StatsPath: "/tmp/stats/x264",
+            PresetId: Ulid.NewUlid(),
+            ExpectedFinalCount: 2
         );
 
         string json = JsonConvert.SerializeObject(state, SerializerSettings);
@@ -113,14 +113,14 @@ public class DurableCoordinatorRecoveryTests
     public void CoordinatorState_FinalizePhase_RoundTrip_PhasePreserved()
     {
         CoordinatorState state = new(
-            "grp-xyz",
-            ["task-video-0"],
-            CoordinatorPhase.Finalize,
-            null,
-            null,
-            null,
-            Ulid.NewUlid(),
-            1
+            GroupTag: "grp-xyz",
+            TaskIds: ["task-video-0"],
+            Phase: CoordinatorPhase.Finalize,
+            Pass1DispatchedAt: null,
+            Pass2DispatchedAt: null,
+            Pass1StatsPath: null,
+            PresetId: Ulid.NewUlid(),
+            ExpectedFinalCount: 1
         );
 
         string json = JsonConvert.SerializeObject(state, SerializerSettings);
@@ -151,14 +151,14 @@ public class DurableCoordinatorRecoveryTests
     public void VideoEncodeJob_WithCoordinatorState_IsWakeUp()
     {
         CoordinatorState state = new(
-            "grp-123",
-            ["task-0"],
-            CoordinatorPhase.WaitChildren,
-            null,
-            null,
-            null,
-            Ulid.NewUlid(),
-            1
+            GroupTag: "grp-123",
+            TaskIds: ["task-0"],
+            Phase: CoordinatorPhase.WaitChildren,
+            Pass1DispatchedAt: null,
+            Pass2DispatchedAt: null,
+            Pass1StatsPath: null,
+            PresetId: Ulid.NewUlid(),
+            ExpectedFinalCount: 1
         );
 
         VideoEncodeJob job = new()
@@ -180,14 +180,14 @@ public class DurableCoordinatorRecoveryTests
     public void VideoEncodeJob_CoordinatorState_SerializesInsideJobPayload()
     {
         CoordinatorState state = new(
-            "grp-roundtrip",
-            ["t1", "t2"],
-            CoordinatorPhase.WaitPass1,
-            DateTime.UtcNow,
-            null,
-            null,
-            Ulid.NewUlid(),
-            2
+            GroupTag: "grp-roundtrip",
+            TaskIds: ["t1", "t2"],
+            Phase: CoordinatorPhase.WaitPass1,
+            Pass1DispatchedAt: DateTime.UtcNow,
+            Pass2DispatchedAt: null,
+            Pass1StatsPath: null,
+            PresetId: Ulid.NewUlid(),
+            ExpectedFinalCount: 2
         );
 
         VideoEncodeJob original = new()

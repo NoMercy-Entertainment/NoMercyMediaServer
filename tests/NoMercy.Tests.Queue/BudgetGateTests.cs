@@ -63,7 +63,7 @@ public class BudgetGateTests : IDisposable
         ResourceRequirementJob resourceJob = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new("test-gpu", 1, 2),
+            ResourceRequirement = new("test-gpu", GpuSlots: 1, CpuThreads: 2),
         };
 
         QueueJob queueJob = new()
@@ -82,7 +82,7 @@ public class BudgetGateTests : IDisposable
         Assert.NotNull(reserved);
 
         // Simulate the gate check: try to acquire with the requirement from the job payload
-        ResourceRequirement? requirement = new("test-gpu", 1, 2);
+        ResourceRequirement? requirement = new("test-gpu", GpuSlots: 1, CpuThreads: 2);
         ResourceLease? lease = budget.Object.TryAcquire(requirement, TimeSpan.Zero);
 
         Assert.Null(lease);
@@ -112,7 +112,7 @@ public class BudgetGateTests : IDisposable
     [Fact]
     public async Task BudgetGate_WhenBudgetAvailable_JobExecutedAndLeaseReleased()
     {
-        ResourceLease grantedLease = new("lease-1", "test-gpu", 1, 2);
+        ResourceLease grantedLease = new("lease-1", "test-gpu", GpuSlots: 1, CpuThreads: 2);
 
         Mock<IResourceBudget> budget = new(MockBehavior.Strict);
 
@@ -125,7 +125,7 @@ public class BudgetGateTests : IDisposable
         ResourceRequirementJob resourceJob = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new("test-gpu", 1, 2),
+            ResourceRequirement = new("test-gpu", GpuSlots: 1, CpuThreads: 2),
         };
 
         QueueJob queueJob = new()
@@ -141,7 +141,7 @@ public class BudgetGateTests : IDisposable
 
         QueueWorker worker = new(
             _jobQueue,
-            name: "encoder-gpu",
+            "encoder-gpu",
             resourceBudget: budget.Object,
             resourceAwareQueues: new HashSet<string> { "encoder-gpu", "encoder-cpu" }
         );
@@ -175,7 +175,7 @@ public class BudgetGateTests : IDisposable
         ResourceRequirementJob gpuJob = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new("NVIDIA GeForce RTX 4090", 1, 2),
+            ResourceRequirement = new("NVIDIA GeForce RTX 4090", GpuSlots: 1, CpuThreads: 2),
         };
 
         Assert.Equal("encoder-gpu", gpuJob.QueueName);
@@ -189,7 +189,7 @@ public class BudgetGateTests : IDisposable
         ResourceRequirementJob cpuJob = new()
         {
             QueueName = "encoder-cpu",
-            ResourceRequirement = new(null, 0, 4),
+            ResourceRequirement = new(null, GpuSlots: 0, CpuThreads: 4),
         };
 
         Assert.Equal("encoder-cpu", cpuJob.QueueName);
@@ -220,7 +220,7 @@ public class BudgetGateTests : IDisposable
 
         // Worker on "library" queue — budget is injected but must NOT be consulted.
         // Job is already in the DB; worker picks it up on the first ReserveJob call.
-        QueueWorker worker = new(_jobQueue, name: "library", resourceBudget: budget.Object);
+        QueueWorker worker = new(_jobQueue, "library", resourceBudget: budget.Object);
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
 

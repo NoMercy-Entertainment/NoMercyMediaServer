@@ -29,7 +29,7 @@ public class HardwareEncoderProbeTests
         new(processRunner.Object, NullLogger<HardwareEncoderProbe>.Instance);
 
     private static Mock<IProcessRunner> BuildRunnerReturning(int exitCode) =>
-        BuildRunnerReturning(exitCode, null);
+        BuildRunnerReturning(exitCode, capturedArgs: null);
 
     private static Mock<IProcessRunner> BuildRunnerReturning(
         int exitCode,
@@ -62,7 +62,7 @@ public class HardwareEncoderProbeTests
     [Fact]
     public async Task ProbeAsync_MarksEncoderUsable_WhenInitExitsZero()
     {
-        Mock<IProcessRunner> runner = BuildRunnerReturning(0);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0);
         HardwareEncoderProbe probe = BuildProbe(runner);
 
         IReadOnlySet<string> usable = await probe.ProbeAsync(["h264_nvenc"]);
@@ -73,7 +73,7 @@ public class HardwareEncoderProbeTests
     [Fact]
     public async Task ProbeAsync_MarksEncoderUnusable_WhenInitExitsNonzero()
     {
-        Mock<IProcessRunner> runner = BuildRunnerReturning(1);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 1);
         HardwareEncoderProbe probe = BuildProbe(runner);
 
         // This is exactly Fillz's field shape: h264_amf is in ffmpeg's
@@ -142,7 +142,7 @@ public class HardwareEncoderProbeTests
     [Fact]
     public async Task ProbeAsync_UnknownEncoderFamily_TreatsAsUnusableRatherThanGuessing()
     {
-        Mock<IProcessRunner> runner = BuildRunnerReturning(0);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0);
         HardwareEncoderProbe probe = BuildProbe(runner);
 
         // A name outside every known hardware family (NVENC/AMF/QSV/VAAPI/
@@ -190,7 +190,7 @@ public class HardwareEncoderProbeTests
     [Fact]
     public async Task ProbeAsync_EmptyCandidates_ReturnsEmptySet()
     {
-        Mock<IProcessRunner> runner = BuildRunnerReturning(0);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0);
         HardwareEncoderProbe probe = BuildProbe(runner);
 
         IReadOnlySet<string> usable = await probe.ProbeAsync([]);
@@ -201,7 +201,7 @@ public class HardwareEncoderProbeTests
     [Fact]
     public async Task ProbeAsync_DeduplicatesCaseInsensitiveCandidates()
     {
-        Mock<IProcessRunner> runner = BuildRunnerReturning(0);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0);
         HardwareEncoderProbe probe = BuildProbe(runner);
 
         IReadOnlySet<string> usable = await probe.ProbeAsync(["h264_nvenc", "H264_NVENC"]);
@@ -229,7 +229,7 @@ public class HardwareEncoderProbeTests
     )
     {
         List<string[]> captured = [];
-        Mock<IProcessRunner> runner = BuildRunnerReturning(0, captured);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0, captured);
         HardwareEncoderProbe probe = BuildProbe(runner);
 
         await probe.ProbeAsync([encoderName]);
@@ -250,7 +250,7 @@ public class HardwareEncoderProbeTests
     public async Task ProbeAsync_Qsv_UsesHwDeviceAndUploadFilterChain(string encoderName)
     {
         List<string[]> captured = [];
-        Mock<IProcessRunner> runner = BuildRunnerReturning(0, captured);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0, captured);
         HardwareEncoderProbe probe = BuildProbe(runner);
 
         await probe.ProbeAsync([encoderName]);
@@ -268,7 +268,7 @@ public class HardwareEncoderProbeTests
     public async Task ProbeAsync_Vaapi_UsesRenderDeviceAndUploadFilterChain(string encoderName)
     {
         List<string[]> captured = [];
-        Mock<IProcessRunner> runner = BuildRunnerReturning(0, captured);
+        Mock<IProcessRunner> runner = BuildRunnerReturning(exitCode: 0, captured);
         HardwareEncoderProbe probe = BuildProbe(runner);
 
         await probe.ProbeAsync([encoderName]);

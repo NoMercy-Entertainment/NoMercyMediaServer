@@ -63,21 +63,23 @@ public class TasksController(
         // Cap the load: the queue table retains history and grows unbounded, so
         // materializing every row here was seconds of work for a monitor view that
         // only shows the highest-priority pending tasks.
-        List<QueueJob> jobs = await queueContext.QueueJobs
-            .OrderByDescending(j => j.Priority)
+        List<QueueJob> jobs = await queueContext
+            .QueueJobs.OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
             .ThenBy(j => j.Id)
             .Take(UiLimits.MaximumTasksInList)
             .ToListAsync();
 
-        IEnumerable<TaskDto> list = jobs.Select(job => new TaskDto
-        {
-            Id = job.Id.ToString(),
-            Title = ResolveJobTitle(job),
-            Value = 0,
-            Type = job.Queue,
-            CreatedAt = job.CreatedAt,
-            UpdatedAt = job.ReservedAt ?? job.CreatedAt,
-        });
+        List<TaskDto> list = jobs.Select(job => new TaskDto
+            {
+                Id = job.Id.ToString(),
+                Title = ResolveJobTitle(job),
+                Value = 0,
+                Type = job.Queue,
+                CreatedAt = job.CreatedAt,
+                UpdatedAt = job.ReservedAt ?? job.CreatedAt,
+            })
+            .ToList();
 
         return Ok(list);
     }
@@ -344,7 +346,7 @@ public class TasksController(
                 try
                 {
                     using Process ffmpegProcess = Process.GetProcessById(pid);
-                    ffmpegProcess.Kill(true);
+                    ffmpegProcess.Kill(entireProcessTree: true);
                 }
                 catch (Exception)
                 {
@@ -449,8 +451,8 @@ public class TasksController(
     public async Task<IActionResult> EncoderQueueEta()
     {
         List<EncodingHistory> recent = await historyRepository.GetRecentAsync(
-            50,
-            0
+            pageSize: 50,
+            pageIndex: 0
         );
 
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();

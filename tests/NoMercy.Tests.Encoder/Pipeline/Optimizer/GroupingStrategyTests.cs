@@ -34,10 +34,10 @@ public class GroupingStrategyTests
                     [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
                 ),
             ],
-            16
+            CpuCores: 16
         );
 
-    private static IHardwareCapabilities NoCpuOnly => new HardwareCapabilities([], 8);
+    private static IHardwareCapabilities NoCpuOnly => new HardwareCapabilities([], CpuCores: 8);
 
     // ------------------------------------------------------------------
     // Node factory helpers

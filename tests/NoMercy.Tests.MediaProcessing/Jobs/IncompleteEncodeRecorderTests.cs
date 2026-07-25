@@ -54,13 +54,13 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
 
         await _recorder.RecordAsync(
             _context,
-            42L,
-            "folder-abc",
-            "Test Movie",
-            keys,
-            null,
-            1,
-            CancellationToken.None
+            mediaId: 42L,
+            folderId: "folder-abc",
+            title: "Test Movie",
+            missingKeys: keys,
+            lastError: null,
+            attemptsMade: 1,
+            ct: CancellationToken.None
         );
 
         IncompleteEncode? row = await _context
@@ -78,20 +78,20 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
     {
         await _recorder.RecordAsync(
             _context,
-            7L,
-            "folder-xyz",
-            "Some Show S01E01",
-            ["video-480p"],
-            "timeout",
-            2,
-            CancellationToken.None
+            mediaId: 7L,
+            folderId: "folder-xyz",
+            title: "Some Show S01E01",
+            missingKeys: ["video-480p"],
+            lastError: "timeout",
+            attemptsMade: 2,
+            ct: CancellationToken.None
         );
 
         await _recorder.ClearAsync(
             _context,
-            7L,
-            "folder-xyz",
-            CancellationToken.None
+            mediaId: 7L,
+            folderId: "folder-xyz",
+            ct: CancellationToken.None
         );
 
         IncompleteEncode? row = await _context
@@ -109,24 +109,24 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
 
         await _recorder.RecordAsync(
             _context,
-            99L,
-            "folder-dup",
-            "Dup Movie",
-            firstKeys,
-            "error-1",
-            1,
-            CancellationToken.None
+            mediaId: 99L,
+            folderId: "folder-dup",
+            title: "Dup Movie",
+            missingKeys: firstKeys,
+            lastError: "error-1",
+            attemptsMade: 1,
+            ct: CancellationToken.None
         );
 
         await _recorder.RecordAsync(
             _context,
-            99L,
-            "folder-dup",
-            "Dup Movie",
-            secondKeys,
-            "error-2",
-            2,
-            CancellationToken.None
+            mediaId: 99L,
+            folderId: "folder-dup",
+            title: "Dup Movie",
+            missingKeys: secondKeys,
+            lastError: "error-2",
+            attemptsMade: 2,
+            ct: CancellationToken.None
         );
 
         int count = await _context.IncompleteEncodes.CountAsync(r =>

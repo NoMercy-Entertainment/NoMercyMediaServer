@@ -40,7 +40,7 @@ public class ContentSegmentManualEditTests
         )
         {
             HttpMethodAttribute? attr = method
-                .GetCustomAttributes(httpVerbAttribute, false)
+                .GetCustomAttributes(httpVerbAttribute, inherit: false)
                 .Cast<HttpMethodAttribute>()
                 .FirstOrDefault();
 

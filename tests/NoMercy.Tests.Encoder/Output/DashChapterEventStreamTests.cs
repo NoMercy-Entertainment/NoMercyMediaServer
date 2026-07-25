@@ -134,7 +134,7 @@ public class DashChapterEventStreamTests : IDisposable
     public async Task FinalizeAsync_WithoutChapters_DoesNotAddEventStream()
     {
         string mpdPath = WriteMpd("movie7");
-        OutputPlan plan = CreatePlan(null);
+        OutputPlan plan = CreatePlan(chapters: null);
 
         DashOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         await strategy.FinalizeAsync(_tempDir, plan, "movie7", default);
@@ -167,7 +167,7 @@ public class DashChapterEventStreamTests : IDisposable
 
     private static OutputPlan CreatePlan(IReadOnlyList<ChapterInfo>? chapters) =>
         new(
-            OutputFormat.Dash,
+            Format: OutputFormat.Dash,
             VideoOutputs:
             [
                 new(

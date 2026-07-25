@@ -113,8 +113,8 @@ public partial class SubtitleOcrEngine(
                 options.FfmpegPath,
                 args,
                 new Dictionary<string, string> { ["TESSDATA_PREFIX"] = modelDirectory },
-                tempDirectory,
-                ct
+                workingDirectory: tempDirectory,
+                cancellationToken: ct
             );
 
             if (!result.IsSuccess)
@@ -140,7 +140,10 @@ public partial class SubtitleOcrEngine(
                 await WriteWebVttAsync(sidecarStorage, outputPath, cues, ct);
 
             logger.LogInformation(
-                "OCR produced {CueCount} cues for {Language} → {Path}", [cues.Count, language, outputPath]
+                "OCR produced {CueCount} cues for {Language} → {Path}",
+                cues.Count,
+                language,
+                outputPath
             );
 
             observer.Report(jobId, "ocr", 100, "done");
@@ -179,7 +182,7 @@ public partial class SubtitleOcrEngine(
 
         foreach (string rawLine in content.Split('\n'))
         {
-            string line = rawLine.TrimEnd(['\r', ' ', '\t']);
+            string line = rawLine.TrimEnd('\r', ' ', '\t');
             if (string.IsNullOrEmpty(line))
                 continue;
 
@@ -327,7 +330,11 @@ public partial class SubtitleOcrEngine(
         TimeSpan ts = TimeSpan.FromSeconds(seconds);
         return string.Format(
             CultureInfo.InvariantCulture,
-            "{0:00}:{1:00}:{2:00}.{3:000}", [(int)ts.TotalHours, ts.Minutes, ts.Seconds, ts.Milliseconds]
+            "{0:00}:{1:00}:{2:00}.{3:000}",
+            (int)ts.TotalHours,
+            ts.Minutes,
+            ts.Seconds,
+            ts.Milliseconds
         );
     }
 
@@ -336,7 +343,11 @@ public partial class SubtitleOcrEngine(
         TimeSpan ts = TimeSpan.FromSeconds(seconds);
         return string.Format(
             CultureInfo.InvariantCulture,
-            "{0:00}:{1:00}:{2:00},{3:000}", [(int)ts.TotalHours, ts.Minutes, ts.Seconds, ts.Milliseconds]
+            "{0:00}:{1:00}:{2:00},{3:000}",
+            (int)ts.TotalHours,
+            ts.Minutes,
+            ts.Seconds,
+            ts.Milliseconds
         );
     }
 

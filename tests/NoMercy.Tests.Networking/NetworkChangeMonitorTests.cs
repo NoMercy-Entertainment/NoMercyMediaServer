@@ -167,9 +167,9 @@ public sealed class NetworkChangeMonitorTests
             Activator.CreateInstance(
                 typeof(NetworkAvailabilityEventArgs),
                 BindingFlags.NonPublic | BindingFlags.Instance,
-                null,
-                [isAvailable],
-                null
+                binder: null,
+                args: [isAvailable],
+                culture: null
             )!;
     }
 
@@ -180,7 +180,7 @@ public sealed class NetworkChangeMonitorTests
         RecordingConnectivityManager manager = new();
         NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
 
-        monitor.OnNetworkAvailabilityChanged(null, BuildAvailabilityArgs(true));
+        monitor.OnNetworkAvailabilityChanged(null, BuildAvailabilityArgs(isAvailable: true));
 
         await WaitUntil(() => manager.EvaluateCallCount > 0);
 
@@ -195,7 +195,7 @@ public sealed class NetworkChangeMonitorTests
         RecordingConnectivityManager manager = new();
         NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
 
-        monitor.OnNetworkAvailabilityChanged(null, BuildAvailabilityArgs(false));
+        monitor.OnNetworkAvailabilityChanged(null, BuildAvailabilityArgs(isAvailable: false));
         await Task.Delay(200);
 
         Assert.Equal(0, manager.EvaluateCallCount);

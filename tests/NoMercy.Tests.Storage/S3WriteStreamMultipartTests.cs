@@ -80,7 +80,7 @@ public class S3WriteStreamMultipartTests
                 "AK",
                 "SK",
                 http,
-                10 * 1024 * 1024
+                partSize: 10 * 1024 * 1024
             )
         )
         {

@@ -14,6 +14,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
@@ -51,129 +52,132 @@ public class BuildStageThumbnailCopyTests
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
+            Groups:
             [
                 new(
-                    "group_0",
-                    [new("decode_0", OperationType.Decode, [], new())],
-                    null,
-                    0,
-                    4,
-                    false,
-                    1
+                    GroupId: "group_0",
+                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 4,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            outputPlan
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: outputPlan
         );
 
     private static MediaInfo BuildMediaInfo(int width = 1920, int height = 1080) =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    width,
-                    height,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static MediaInfo BuildHdrMediaInfo(int width = 3840, int height = 2160) =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            20000,
-            18_000_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 20000,
+            FileSizeBytes: 18_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "hevc",
-                    width,
-                    height,
-                    24.0,
-                    10,
-                    "yuv420p10le",
-                    "bt2020",
-                    "smpte2084",
-                    "bt2020nc",
-                    true,
-                    18000
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: "smpte2084",
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 18000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static VideoOutputPlan BuildCopyVideoOutput() =>
         new(
-            1920,
-            1080,
-            "copy",
-            0,
-            0,
-            null,
-            null,
-            null,
-            false,
-            "yuv420p",
-            "0:v:0",
-            new()
+            Width: 1920,
+            Height: 1080,
+            EncoderName: "copy",
+            Crf: 0,
+            BitrateKbps: 0,
+            Preset: null,
+            Profile: null,
+            Level: null,
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "0:v:0",
+            ExtraFlags: new()
         );
 
     private static VideoOutputPlan BuildTranscodeVideoOutput() =>
         new(
-            1920,
-            1080,
-            "libx264",
-            23,
-            4000,
-            "medium",
-            "high",
-            "4.1",
-            false,
-            "yuv420p",
-            "[v0]",
-            new()
+            Width: 1920,
+            Height: 1080,
+            EncoderName: "libx264",
+            Crf: 23,
+            BitrateKbps: 4000,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.1",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "[v0]",
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>
         new(
-            "aac",
-            192,
-            2,
-            48000,
-            StreamAction.Transcode,
-            "en",
-            "0:a:0"
+            EncoderName: "aac",
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: "en",
+            MapLabel: "0:a:0"
         );
 
     [Fact]
     public async Task CopyVideoPlan_MainCommandHasNoInlineThumbsMap()
     {
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [BuildCopyVideoOutput()],
-            [BuildAudioOutput()],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildCopyVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -196,11 +200,11 @@ public class BuildStageThumbnailCopyTests
     public async Task CopyVideoPlan_EmitsSeparateSpriteCommandReadingSource()
     {
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [BuildCopyVideoOutput()],
-            [BuildAudioOutput()],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildCopyVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -237,18 +241,18 @@ public class BuildStageThumbnailCopyTests
         ThumbnailOutputPlan thumbs = new(160, 90, 10);
 
         OutputPlan copyPlan = new(
-            OutputFormat.Hls,
-            [BuildCopyVideoOutput()],
-            [BuildAudioOutput()],
-            [],
-            thumbs
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildCopyVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: thumbs
         );
         OutputPlan transcodePlan = new(
-            OutputFormat.Hls,
-            [BuildTranscodeVideoOutput()],
-            [BuildAudioOutput()],
-            [],
-            thumbs
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildTranscodeVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: thumbs
         );
 
         EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
@@ -284,11 +288,11 @@ public class BuildStageThumbnailCopyTests
     public async Task TranscodeVideoPlan_StillEmitsInlineThumbsMap()
     {
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [BuildTranscodeVideoOutput()],
-            [BuildAudioOutput()],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildTranscodeVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -322,11 +326,11 @@ public class BuildStageThumbnailCopyTests
     public async Task NoVideoOutputs_MainCommandHasNoInlineThumbsMap()
     {
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [],
-            [BuildAudioOutput()],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -350,11 +354,11 @@ public class BuildStageThumbnailCopyTests
     public async Task NoVideoOutputs_EmitsSeparateSpriteCommandReadingSource()
     {
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [],
-            [BuildAudioOutput()],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -381,11 +385,11 @@ public class BuildStageThumbnailCopyTests
         // exit 1 ("At least one output file must be specified"), which fails the
         // task and costs the job its whole post-encode phase.
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [],
-            [],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -415,11 +419,11 @@ public class BuildStageThumbnailCopyTests
     public async Task CopyVideoPlan_HdrSource_SpriteCommandIncludesTonemapChain()
     {
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [BuildCopyVideoOutput()],
-            [BuildAudioOutput()],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildCopyVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -449,11 +453,11 @@ public class BuildStageThumbnailCopyTests
     public async Task CopyVideoPlan_SdrSource_SpriteCommandHasBareFilter_NoTonemap()
     {
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [BuildCopyVideoOutput()],
-            [BuildAudioOutput()],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildCopyVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -480,11 +484,11 @@ public class BuildStageThumbnailCopyTests
         // (an audio/subtitle-only decomposed task) — it must resolve the same
         // HDR-aware filter as the copy-video case above.
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [],
-            [BuildAudioOutput()],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);

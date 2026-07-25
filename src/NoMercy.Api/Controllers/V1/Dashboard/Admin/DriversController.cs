@@ -128,13 +128,17 @@ public class DriversController(
         {
             string credRef = $"driver:{newId}";
             CredentialManager.SetCredentials(
-                credRef,
-                request.Credentials.AccessKey,
-                request.Credentials.SecretKey,
-                string.Empty
+                target: credRef,
+                username: request.Credentials.AccessKey,
+                password: request.Credentials.SecretKey,
+                apiKey: string.Empty
             );
             logger.LogInformation(
-                "[DriversController] Stored credentials for new {NormalizedType} driver (id={NewId}, accessKey len={Length}, secret len={Length2})", [normalizedType, newId, request.Credentials.AccessKey.Length, request.Credentials.SecretKey.Length]
+                "[DriversController] Stored credentials for new {NormalizedType} driver (id={NewId}, accessKey len={Length}, secret len={Length2})",
+                normalizedType,
+                newId,
+                request.Credentials.AccessKey.Length,
+                request.Credentials.SecretKey.Length
             );
 
             // Inject credentialsRef into Config so the StorageFactory can resolve it.
@@ -144,7 +148,9 @@ public class DriversController(
         else if (request.Credentials is not null)
         {
             logger.LogWarning(
-                "[DriversController] Ignoring blank credentials block on create for {NormalizedType} (id={NewId}); driver will be created without stored credentials.", [normalizedType, newId]
+                "[DriversController] Ignoring blank credentials block on create for {NormalizedType} (id={NewId}); driver will be created without stored credentials.",
+                normalizedType,
+                newId
             );
         }
 
@@ -191,7 +197,7 @@ public class DriversController(
             if (string.IsNullOrEmpty(trimmedName))
                 return BadRequestResponse("name cannot be empty.");
 
-            bool nameExists = await driverRepository.NameExistsAsync(trimmedName, id);
+            bool nameExists = await driverRepository.NameExistsAsync(trimmedName, excludeId: id);
             if (nameExists)
                 return ConflictResponse($"A driver named '{trimmedName}' already exists.");
 
@@ -218,26 +224,32 @@ public class DriversController(
         // secret_key:""}} vs flat top-level fields all looked identical from
         // the operator's seat.
         logger.LogInformation(
-            "[DriversController] Update {Id} ({Type}) — credentials block: {Length}", [id, driver.Type, (
-                    request.Credentials is null
-                        ? "absent"
-                        : $"present (access_key len={request.Credentials.AccessKey.Length}, "
-                          + $"secret_key len={request.Credentials.SecretKey.Length})"
-                )
-            ]
+            "[DriversController] Update {Id} ({Type}) — credentials block: {Length}",
+            id,
+            driver.Type,
+            (
+                request.Credentials is null
+                    ? "absent"
+                    : $"present (access_key len={request.Credentials.AccessKey.Length}, "
+                        + $"secret_key len={request.Credentials.SecretKey.Length})"
+            )
         );
 
         if (request.Credentials is not null && HasMeaningfulCredentials(request.Credentials))
         {
             string credRef = $"driver:{id}";
             CredentialManager.SetCredentials(
-                credRef,
-                request.Credentials.AccessKey,
-                request.Credentials.SecretKey,
-                string.Empty
+                target: credRef,
+                username: request.Credentials.AccessKey,
+                password: request.Credentials.SecretKey,
+                apiKey: string.Empty
             );
             logger.LogInformation(
-                "[DriversController] Updated credentials for driver {Id} ({Type}) (accessKey len={Length}, secret len={Length2})", [id, driver.Type, request.Credentials.AccessKey.Length, request.Credentials.SecretKey.Length]
+                "[DriversController] Updated credentials for driver {Id} ({Type}) (accessKey len={Length}, secret len={Length2})",
+                id,
+                driver.Type,
+                request.Credentials.AccessKey.Length,
+                request.Credentials.SecretKey.Length
             );
 
             // Ensure credentialsRef is present in Config.
@@ -253,7 +265,9 @@ public class DriversController(
             // wiped out the previously-stored access key + secret. Preserve
             // existing credentials when the incoming block is blank.
             logger.LogInformation(
-                "[DriversController] Ignoring blank credentials block on update for driver {Id} ({Type}); preserving previously-stored credentials.", [id, driver.Type]
+                "[DriversController] Ignoring blank credentials block on update for driver {Id} ({Type}); preserving previously-stored credentials.",
+                id,
+                driver.Type
             );
         }
 
@@ -304,10 +318,10 @@ public class DriversController(
 
         string credRef = $"driver:{id}";
         CredentialManager.SetCredentials(
-            credRef,
-            request.AccessKey,
-            request.SecretKey,
-            string.Empty
+            target: credRef,
+            username: request.AccessKey,
+            password: request.SecretKey,
+            apiKey: string.Empty
         );
 
         // Ensure credentialsRef is present in Config so the StorageFactory resolves it.
@@ -323,7 +337,12 @@ public class DriversController(
             storageFactory.Invalidate(folderId);
 
         logger.LogInformation(
-            "[DriversController] Direct credential write for driver {Id} ({Type}) (accessKey len={Length}, secret len={Length2}); invalidated {Count} cached folder(s).", [id, driver.Type, request.AccessKey.Length, request.SecretKey.Length, folderIds.Count]
+            "[DriversController] Direct credential write for driver {Id} ({Type}) (accessKey len={Length}, secret len={Length2}); invalidated {Count} cached folder(s).",
+            id,
+            driver.Type,
+            request.AccessKey.Length,
+            request.SecretKey.Length,
+            folderIds.Count
         );
 
         return Ok(MapToDto(driver));

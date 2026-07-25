@@ -35,10 +35,10 @@ public class ContentAnalysisTests
         TimeSpan end = TimeSpan.FromSeconds(95);
 
         ContentSegment segment = new(
-            start,
-            end,
-            ContentSegmentType.Intro,
-            0.92
+            Start: start,
+            End: end,
+            Type: ContentSegmentType.Intro,
+            Confidence: 0.92
         );
 
         segment.Start.Should().Be(start);
@@ -51,10 +51,10 @@ public class ContentAnalysisTests
     public void ContentSegment_Content_HasHighConfidence()
     {
         ContentSegment segment = new(
-            TimeSpan.FromSeconds(90),
-            TimeSpan.FromSeconds(3600),
-            ContentSegmentType.Content,
-            0.99
+            Start: TimeSpan.FromSeconds(90),
+            End: TimeSpan.FromSeconds(3600),
+            Type: ContentSegmentType.Content,
+            Confidence: 0.99
         );
 
         segment.Type.Should().Be(ContentSegmentType.Content);
@@ -65,10 +65,10 @@ public class ContentAnalysisTests
     public void ContentSegment_Recap_AtEndOfFile()
     {
         ContentSegment segment = new(
-            TimeSpan.FromSeconds(3500),
-            TimeSpan.FromSeconds(3700),
-            ContentSegmentType.Recap,
-            0.88
+            Start: TimeSpan.FromSeconds(3500),
+            End: TimeSpan.FromSeconds(3700),
+            Type: ContentSegmentType.Recap,
+            Confidence: 0.88
         );
 
         segment.Type.Should().Be(ContentSegmentType.Recap);
@@ -78,7 +78,7 @@ public class ContentAnalysisTests
     [Fact]
     public void CropResult_NoCrop_HasShouldCropFalse()
     {
-        CropResult result = new(1920, 1080, 0, 0, false);
+        CropResult result = new(Width: 1920, Height: 1080, X: 0, Y: 0, ShouldCrop: false);
 
         result.Width.Should().Be(1920);
         result.Height.Should().Be(1080);
@@ -90,7 +90,7 @@ public class ContentAnalysisTests
     [Fact]
     public void CropResult_WithLetterbox_HasShouldCropTrue()
     {
-        CropResult result = new(1920, 800, 0, 140, true);
+        CropResult result = new(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true);
 
         result.ShouldCrop.Should().BeTrue();
         result.Y.Should().Be(140);
@@ -100,7 +100,7 @@ public class ContentAnalysisTests
     [Fact]
     public void CropResult_WithPillarbox_HasShouldCropTrue()
     {
-        CropResult result = new(1440, 1080, 240, 0, true);
+        CropResult result = new(Width: 1440, Height: 1080, X: 240, Y: 0, ShouldCrop: true);
 
         result.ShouldCrop.Should().BeTrue();
         result.X.Should().Be(240);
@@ -110,7 +110,7 @@ public class ContentAnalysisTests
     [Fact]
     public void CropResult_ZeroOffset_IsValid()
     {
-        CropResult result = new(0, 0, 0, 0, false);
+        CropResult result = new(Width: 0, Height: 0, X: 0, Y: 0, ShouldCrop: false);
 
         result.Width.Should().Be(0);
         result.Height.Should().Be(0);

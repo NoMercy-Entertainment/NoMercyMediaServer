@@ -125,7 +125,7 @@ public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
     [Fact]
     public void ReserveJob_JobAtMaxAttempts_IsNotReservedAgain_NoZombieExecution()
     {
-        JobQueue jobQueue = new(_adapter, 3);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 3);
         QueueJob job = new()
         {
             Queue = "boundary",
@@ -148,7 +148,7 @@ public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
     [Fact]
     public void ReserveJob_JobOneUnderMaxAttempts_IsReservedForFinalAttempt()
     {
-        JobQueue jobQueue = new(_adapter, 3);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 3);
         QueueJob job = new()
         {
             Queue = "boundary",
@@ -169,7 +169,7 @@ public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
     [Fact]
     public void ReserveJob_JobAtMaxAttemptsThenFailed_NeverExecutesBeyondBudget()
     {
-        JobQueue jobQueue = new(_adapter, 2);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
         QueueJob job = new()
         {
             Queue = "budget",

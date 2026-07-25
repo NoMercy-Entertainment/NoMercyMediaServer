@@ -60,11 +60,11 @@ public class AudioHlsStrategyTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out/audio.m3u8",
-                    TimeSpan.FromSeconds(3),
-                    null,
-                    new(128, 1.0, 0.0, "aac", null)
+                    Success: true,
+                    OutputPath: "/out/audio.m3u8",
+                    Duration: TimeSpan.FromSeconds(3),
+                    Error: null,
+                    Metrics: new(128, 1.0, 0.0, "aac", null)
                 )
             );
 
@@ -75,22 +75,22 @@ public class AudioHlsStrategyTests
         );
 
         EncodingRequest request = new(
-            "/media/track.aac",
-            "/out",
-            new(
-                Ulid.NewUlid(),
-                "Audio HLS",
-                Container.AudioHlsFmp4,
-                null,
-                [],
-                []
+            InputPath: "/media/track.aac",
+            OutputDirectory: "/out",
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "Audio HLS",
+                Container: Container.AudioHlsFmp4,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 
         EncodingResult result = await strategy.EncodeAsync(
             request,
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         Assert.True(result.Success);
@@ -122,11 +122,11 @@ public class AudioHlsStrategyTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out/audio.m3u8",
-                    TimeSpan.FromSeconds(5),
-                    null,
-                    new(128, 1.0, 0.0, "aac", null)
+                    Success: true,
+                    OutputPath: "/out/audio.m3u8",
+                    Duration: TimeSpan.FromSeconds(5),
+                    Error: null,
+                    Metrics: new(128, 1.0, 0.0, "aac", null)
                 )
             );
 
@@ -137,22 +137,22 @@ public class AudioHlsStrategyTests
         );
 
         EncodingRequest request = new(
-            "/media/track.flac",
-            "/out",
-            new(
-                Ulid.NewUlid(),
-                "Audio HLS from FLAC",
-                Container.AudioHlsFmp4,
-                null,
-                [],
-                []
+            InputPath: "/media/track.flac",
+            OutputDirectory: "/out",
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "Audio HLS from FLAC",
+                Container: Container.AudioHlsFmp4,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 
         EncodingResult result = await strategy.EncodeAsync(
             request,
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         Assert.True(result.Success);

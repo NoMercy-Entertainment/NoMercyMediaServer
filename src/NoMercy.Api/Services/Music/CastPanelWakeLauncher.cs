@@ -78,13 +78,15 @@ public class CastPanelWakeLauncher(
             await chromeCast.LaunchAndroidReceiver(
                 receiverName,
                 launchData,
-                useAndroidReceiver
+                useAndroidReceiver: useAndroidReceiver
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                "Server-side Cast launch failed for {TargetIp}: {Message}", [targetIp, ex.Message]
+                "Server-side Cast launch failed for {TargetIp}: {Message}",
+                targetIp,
+                ex.Message
             );
         }
     }

@@ -78,9 +78,9 @@ public class HdrFeaturesTests
     public void TonemapStrategy_ConstructsCorrectly()
     {
         TonemapStrategy strategy = new(
-            TonemapMethod.CustomLut,
-            "lut3d=file=custom.cube",
-            false
+            Method: TonemapMethod.CustomLut,
+            FfmpegFilterChain: "lut3d=file=custom.cube",
+            IsGpuAccelerated: false
         );
 
         strategy.Method.Should().Be(TonemapMethod.CustomLut);
@@ -117,12 +117,12 @@ public class HdrFeaturesTests
     public void HdrOptions_ConstructsWithCustomValues()
     {
         HdrOptions options = new(
-            TonemapAlgorithm.Reinhard,
-            "/luts/custom.cube",
-            LutApplication.BeforeTonemap,
-            0.5,
-            1000.0,
-            true
+            Algorithm: TonemapAlgorithm.Reinhard,
+            CustomLutPath: "/luts/custom.cube",
+            LutApply: LutApplication.BeforeTonemap,
+            Desat: 0.5,
+            Peak: 1000.0,
+            PreserveMetadata: true
         );
 
         options.Algorithm.Should().Be(TonemapAlgorithm.Reinhard);

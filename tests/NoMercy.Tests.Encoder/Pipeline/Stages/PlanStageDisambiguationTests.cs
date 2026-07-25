@@ -31,13 +31,13 @@ public class PlanStageDisambiguationTests
         string playlistTemplate = "audio_:lang:_:codec:/playlist"
     ) =>
         new(
-            encoder,
-            128,
-            2,
-            48000,
-            StreamAction.Transcode,
-            lang,
-            $"0:a:{sourceIdx}"
+            EncoderName: encoder,
+            BitrateKbps: 128,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: lang,
+            MapLabel: $"0:a:{sourceIdx}"
         )
         {
             SegmentNameTemplate = segTemplate,
@@ -53,18 +53,18 @@ public class PlanStageDisambiguationTests
         string playlistTemplate = "video_:framesize:/playlist"
     ) =>
         new(
-            width,
-            height,
-            encoder,
-            23,
-            0,
-            "medium",
-            "main",
-            "4.0",
-            false,
-            "yuv420p",
-            "[v]",
-            []
+            Width: width,
+            Height: height,
+            EncoderName: encoder,
+            Crf: 23,
+            BitrateKbps: 0,
+            Preset: "medium",
+            Profile: "main",
+            Level: "4.0",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "[v]",
+            ExtraFlags: []
         )
         {
             SegmentNameTemplate = segTemplate,
@@ -163,8 +163,8 @@ public class PlanStageDisambiguationTests
         // Different IsHdrOutput → different group keys → no collision.
         VideoOutputPlan[] plans =
         [
-            Video(1920, 1080, "libx265", true),
-            Video(1920, 1080, "libx265", false),
+            Video(1920, 1080, "libx265", hdr: true),
+            Video(1920, 1080, "libx265", hdr: false),
         ];
 
         VideoOutputPlan[] result = PlanStageDisambiguation.DisambiguateVideo(plans);

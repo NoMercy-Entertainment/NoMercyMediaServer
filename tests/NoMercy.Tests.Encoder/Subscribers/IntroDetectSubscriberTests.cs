@@ -14,12 +14,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.Subscribers;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Storage;
+using Xunit;
 
 namespace NoMercy.Tests.Encoder.Subscribers;
 
@@ -130,9 +132,9 @@ public class IntroDetectSubscriberTests
 
     private static AudioFingerprint FakeFingerprint(int frameCount = 100) =>
         new(
-            Enumerable.Range(0, frameCount).Select(i => (uint)(i * 17)).ToArray(),
-            TimeSpan.FromMilliseconds(125),
-            TimeSpan.Zero
+            Hashes: Enumerable.Range(0, frameCount).Select(i => (uint)(i * 17)).ToArray(),
+            FrameDuration: TimeSpan.FromMilliseconds(125),
+            StartTime: TimeSpan.Zero
         );
 
     [Fact]
@@ -148,13 +150,13 @@ public class IntroDetectSubscriberTests
             factory,
             fingerprinter.Object,
             detector.Object,
-            false
+            enabled: false
         );
 
         Ulid libraryId = Ulid.NewUlid();
         int tvId = 1;
         int seasonId = 10;
-        await SeedTvSeasonAsync(factory, libraryId, tvId, seasonId, [100, 101, 102]);
+        await SeedTvSeasonAsync(factory, libraryId, tvId, seasonId, episodeIds: [100, 101, 102]);
 
         await bus.PublishAsync(
             new LibraryScanCompletedEvent
@@ -289,7 +291,7 @@ public class IntroDetectSubscriberTests
         );
 
         Ulid libraryId = Ulid.NewUlid();
-        await SeedTvSeasonAsync(factory, libraryId, 2, 20, [200]);
+        await SeedTvSeasonAsync(factory, libraryId, tvId: 2, seasonId: 20, episodeIds: [200]);
 
         await bus.PublishAsync(
             new LibraryScanCompletedEvent
@@ -328,9 +330,9 @@ public class IntroDetectSubscriberTests
             .ReturnsAsync(fp);
 
         IntroMarker introMarker = new(
-            TimeSpan.FromSeconds(10),
-            TimeSpan.FromSeconds(95),
-            0.91
+            Start: TimeSpan.FromSeconds(10),
+            End: TimeSpan.FromSeconds(95),
+            Confidence: 0.91
         );
         detector
             .Setup(d => d.DetectIntro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
@@ -351,7 +353,7 @@ public class IntroDetectSubscriberTests
         );
 
         Ulid libraryId = Ulid.NewUlid();
-        await SeedTvSeasonAsync(factory, libraryId, 3, 30, [300, 301]);
+        await SeedTvSeasonAsync(factory, libraryId, tvId: 3, seasonId: 30, episodeIds: [300, 301]);
 
         await bus.PublishAsync(
             new LibraryScanCompletedEvent
@@ -406,9 +408,9 @@ public class IntroDetectSubscriberTests
             .Returns((IntroMarker?)null);
 
         IntroMarker outroMarker = new(
-            TimeSpan.FromSeconds(1200),
-            TimeSpan.FromSeconds(1380),
-            0.85
+            Start: TimeSpan.FromSeconds(1200),
+            End: TimeSpan.FromSeconds(1380),
+            Confidence: 0.85
         );
         detector
             .Setup(d => d.DetectOutro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
@@ -426,7 +428,7 @@ public class IntroDetectSubscriberTests
         );
 
         Ulid libraryId = Ulid.NewUlid();
-        await SeedTvSeasonAsync(factory, libraryId, 4, 40, [400, 401]);
+        await SeedTvSeasonAsync(factory, libraryId, tvId: 4, seasonId: 40, episodeIds: [400, 401]);
 
         await bus.PublishAsync(
             new LibraryScanCompletedEvent
@@ -475,9 +477,9 @@ public class IntroDetectSubscriberTests
             .ReturnsAsync(fp);
 
         IntroMarker introMarker = new(
-            TimeSpan.FromSeconds(5),
-            TimeSpan.FromSeconds(90),
-            0.95
+            Start: TimeSpan.FromSeconds(5),
+            End: TimeSpan.FromSeconds(90),
+            Confidence: 0.95
         );
         detector
             .Setup(d => d.DetectIntro(It.IsAny<IReadOnlyList<AudioFingerprint>>()))
@@ -503,9 +505,9 @@ public class IntroDetectSubscriberTests
         await SeedTvSeasonAsync(
             factory,
             libraryId,
-            5,
-            50,
-            [episodeWithManual, episodeWithoutManual]
+            tvId: 5,
+            seasonId: 50,
+            episodeIds: [episodeWithManual, episodeWithoutManual]
         );
 
         await using (MediaContext seedCtx = await factory.CreateDbContextAsync())
@@ -584,7 +586,7 @@ public class IntroDetectSubscriberTests
         );
 
         Ulid libraryId = Ulid.NewUlid();
-        await SeedTvSeasonAsync(factory, libraryId, 6, 60, [600, 601]);
+        await SeedTvSeasonAsync(factory, libraryId, tvId: 6, seasonId: 60, episodeIds: [600, 601]);
 
         Func<Task> act = () =>
             bus.PublishAsync(

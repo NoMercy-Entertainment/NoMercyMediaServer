@@ -62,13 +62,15 @@ public sealed class AudioCdIdentifier(
 
         string discId = MusicBrainzDiscId.Compute(toc);
         logger.LogInformation(
-            "AudioCdIdentifier: computed disc id {DiscId} for drive '{Drive}'", [discId, drivePath]
+            "AudioCdIdentifier: computed disc id {DiscId} for drive '{Drive}'",
+            discId,
+            drivePath
         );
 
         DiscIdLookupResponse? exactResult = null;
         try
         {
-            exactResult = await discClient.LookupByDiscId(discId, false, ct);
+            exactResult = await discClient.LookupByDiscId(discId, priority: false, ct);
         }
         catch (Exception ex)
         {
@@ -85,7 +87,7 @@ public sealed class AudioCdIdentifier(
                 "AudioCdIdentifier: exact match — {Count} release(s)",
                 exactResult.Releases.Length
             );
-            return await BuildIdentification(exactResult.Releases, toc, true, ct);
+            return await BuildIdentification(exactResult.Releases, toc, isExactMatch: true, ct);
         }
 
         // Fuzzy TOC lookup fallback.
@@ -98,7 +100,7 @@ public sealed class AudioCdIdentifier(
         try
         {
             string tocString = BuildTocString(toc);
-            fuzzyResult = await discClient.LookupByTocString(tocString, false, ct);
+            fuzzyResult = await discClient.LookupByTocString(tocString, priority: false, ct);
         }
         catch (Exception ex)
         {
@@ -115,7 +117,7 @@ public sealed class AudioCdIdentifier(
                 "AudioCdIdentifier: fuzzy match — {Count} release(s)",
                 fuzzyResult.Releases.Length
             );
-            return await BuildIdentification(fuzzyResult.Releases, toc, false, ct);
+            return await BuildIdentification(fuzzyResult.Releases, toc, isExactMatch: false, ct);
         }
 
         // TODO follow-up: AcoustID per-track fingerprint fallback (wire
@@ -159,7 +161,7 @@ public sealed class AudioCdIdentifier(
 
             candidates.Add(
                 new(
-                    "musicbrainz",
+                    Source: "musicbrainz",
                     StableId: release.Id.ToString(),
                     Title: fullTitle,
                     Year: release.DateTime?.Year,
@@ -177,11 +179,11 @@ public sealed class AudioCdIdentifier(
         bool autoApply = topConfidence >= AutoApplyThreshold && releaseCount == 1;
 
         return new(
-            MediaKind.Music,
-            ranked,
-            topConfidence,
-            autoApply,
-            false
+            Kind: MediaKind.Music,
+            Candidates: ranked,
+            TopConfidence: topConfidence,
+            AutoApply: autoApply,
+            NeedsManualAssignment: false
         );
     }
 
@@ -207,11 +209,11 @@ public sealed class AudioCdIdentifier(
             string artistCredit = FormatArtistCredit(track.ArtistCredit);
             mappings.Add(
                 new(
-                    track.Position,
-                    track.Recording.Id,
-                    track.Title,
-                    artistCredit,
-                    track.Length
+                    TrackIndex: track.Position,
+                    RecordingMbid: track.Recording.Id,
+                    Title: track.Title,
+                    ArtistCredit: artistCredit,
+                    DurationMs: track.Length
                 )
             );
         }
@@ -266,10 +268,10 @@ public sealed class AudioCdIdentifier(
 
     private static DiscIdentification NeedsManual() =>
         new(
-            MediaKind.Music,
-            [],
-            0,
-            false,
-            true
+            Kind: MediaKind.Music,
+            Candidates: [],
+            TopConfidence: 0,
+            AutoApply: false,
+            NeedsManualAssignment: true
         );
 }

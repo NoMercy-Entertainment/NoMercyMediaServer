@@ -29,12 +29,12 @@ public class BitmapSubtitleSelectorTests
         string? language = "eng"
     ) =>
         new(
-            absoluteIndex,
-            codec,
-            language,
-            false,
-            false,
-            null
+            Index: absoluteIndex,
+            Codec: codec,
+            Language: language,
+            IsDefault: false,
+            IsForced: false,
+            Title: null
         );
 
     [Fact]
@@ -52,8 +52,8 @@ public class BitmapSubtitleSelectorTests
 
         IReadOnlyList<BitmapSubtitleRef> selected = BitmapSubtitleSelector.Select(streams);
 
-        selected.Select(entry => entry.SubtitleIndex).Should().Equal([0, 1]);
-        selected.Select(entry => entry.Stream.Index).Should().Equal([3, 4]);
+        selected.Select(entry => entry.SubtitleIndex).Should().Equal(0, 1);
+        selected.Select(entry => entry.Stream.Index).Should().Equal(3, 4);
     }
 
     [Fact]

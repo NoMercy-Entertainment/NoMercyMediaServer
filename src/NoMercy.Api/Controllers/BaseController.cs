@@ -51,7 +51,12 @@ public class BaseController : Controller
                 ?.RequestServices?.GetService<ILoggerFactory>()
                 ?.CreateLogger("NoMercy.Api.ServerError");
             log?.LogError(
-                "[{TraceId}] {Status} returned from {Caller} for {Path}: {Detail}", [HttpContext?.TraceIdentifier, statusCode, caller, HttpContext?.Request.Path.Value, detail]
+                "[{TraceId}] {Status} returned from {Caller} for {Path}: {Detail}",
+                HttpContext?.TraceIdentifier,
+                statusCode,
+                caller,
+                HttpContext?.Request.Path.Value,
+                detail
             );
         }
 
@@ -71,220 +76,220 @@ public class BaseController : Controller
     protected IActionResult UnauthenticatedResponse(string detail)
     {
         return ProblemWithTrace(
-            "Unauthenticated.",
-            detail,
-            StatusCodes.Status401Unauthorized,
-            "/docs/errors/unauthenticated"
+            title: "Unauthenticated.",
+            detail: detail,
+            statusCode: StatusCodes.Status401Unauthorized,
+            type: "/docs/errors/unauthenticated"
         );
     }
 
     protected IActionResult UnauthorizedResponse(string detail)
     {
         return ProblemWithTrace(
-            "Unauthorized.",
-            detail,
-            StatusCodes.Status403Forbidden,
-            "/docs/errors/forbidden"
+            title: "Unauthorized.",
+            detail: detail,
+            statusCode: StatusCodes.Status403Forbidden,
+            type: "/docs/errors/forbidden"
         );
     }
 
     protected IActionResult NotFoundResponse(string detail)
     {
         return ProblemWithTrace(
-            "Not Found.",
-            detail,
-            StatusCodes.Status404NotFound,
-            "/docs/errors/not-found"
+            title: "Not Found.",
+            detail: detail,
+            statusCode: StatusCodes.Status404NotFound,
+            type: "/docs/errors/not-found"
         );
     }
 
     protected IActionResult BadRequestResponse(string detail)
     {
         return ProblemWithTrace(
-            "Bad Request.",
-            detail,
-            StatusCodes.Status400BadRequest,
-            "/docs/errors/bad-request"
+            title: "Bad Request.",
+            detail: detail,
+            statusCode: StatusCodes.Status400BadRequest,
+            type: "/docs/errors/bad-request"
         );
     }
 
     protected IActionResult InternalServerErrorResponse(string detail)
     {
         return ProblemWithTrace(
-            "Internal Server Error.",
-            detail,
-            StatusCodes.Status500InternalServerError,
-            "/docs/errors/internal-server-error"
+            title: "Internal Server Error.",
+            detail: detail,
+            statusCode: StatusCodes.Status500InternalServerError,
+            type: "/docs/errors/internal-server-error"
         );
     }
 
     protected IActionResult ConflictResponse(string detail)
     {
         return ProblemWithTrace(
-            "Conflict.",
-            detail,
-            StatusCodes.Status409Conflict,
-            "/docs/errors/conflict"
+            title: "Conflict.",
+            detail: detail,
+            statusCode: StatusCodes.Status409Conflict,
+            type: "/docs/errors/conflict"
         );
     }
 
     protected IActionResult NotImplementedResponse(string detail)
     {
         return ProblemWithTrace(
-            "Not Implemented.",
-            detail,
-            StatusCodes.Status501NotImplemented,
-            "/docs/errors/not-implemented"
+            title: "Not Implemented.",
+            detail: detail,
+            statusCode: StatusCodes.Status501NotImplemented,
+            type: "/docs/errors/not-implemented"
         );
     }
 
     protected IActionResult ServiceUnavailableResponse(string detail)
     {
         return ProblemWithTrace(
-            "Service Unavailable.",
-            detail,
-            StatusCodes.Status503ServiceUnavailable,
-            "/docs/errors/service-unavailable"
+            title: "Service Unavailable.",
+            detail: detail,
+            statusCode: StatusCodes.Status503ServiceUnavailable,
+            type: "/docs/errors/service-unavailable"
         );
     }
 
     protected IActionResult GatewayTimeoutResponse(string detail)
     {
         return ProblemWithTrace(
-            "Gateway Timeout.",
-            detail,
-            StatusCodes.Status504GatewayTimeout,
-            "/docs/errors/gateway-timeout"
+            title: "Gateway Timeout.",
+            detail: detail,
+            statusCode: StatusCodes.Status504GatewayTimeout,
+            type: "/docs/errors/gateway-timeout"
         );
     }
 
     protected IActionResult UnprocessableEntityResponse(string detail)
     {
         return ProblemWithTrace(
-            "Unprocessable Entity.",
-            detail,
-            StatusCodes.Status422UnprocessableEntity,
-            "/docs/errors/unprocessable-entity"
+            title: "Unprocessable Entity.",
+            detail: detail,
+            statusCode: StatusCodes.Status422UnprocessableEntity,
+            type: "/docs/errors/unprocessable-entity"
         );
     }
 
     protected IActionResult TooManyRequestsResponse(string detail)
     {
         return ProblemWithTrace(
-            "Too Many Requests.",
-            detail,
-            StatusCodes.Status429TooManyRequests,
-            "/docs/errors/too-many-requests"
+            title: "Too Many Requests.",
+            detail: detail,
+            statusCode: StatusCodes.Status429TooManyRequests,
+            type: "/docs/errors/too-many-requests"
         );
     }
 
     protected IActionResult GoneResponse(string detail)
     {
         return ProblemWithTrace(
-            "Gone.",
-            detail,
-            StatusCodes.Status410Gone,
-            "/docs/errors/gone"
+            title: "Gone.",
+            detail: detail,
+            statusCode: StatusCodes.Status410Gone,
+            type: "/docs/errors/gone"
         );
     }
 
     protected IActionResult PaymentRequiredResponse(string detail)
     {
         return ProblemWithTrace(
-            "Payment Required.",
-            detail,
-            StatusCodes.Status402PaymentRequired,
-            "/docs/errors/payment-required"
+            title: "Payment Required.",
+            detail: detail,
+            statusCode: StatusCodes.Status402PaymentRequired,
+            type: "/docs/errors/payment-required"
         );
     }
 
     protected IActionResult LengthRequiredResponse(string detail)
     {
         return ProblemWithTrace(
-            "Length Required.",
-            detail,
-            StatusCodes.Status411LengthRequired,
-            "/docs/errors/length-required"
+            title: "Length Required.",
+            detail: detail,
+            statusCode: StatusCodes.Status411LengthRequired,
+            type: "/docs/errors/length-required"
         );
     }
 
     protected IActionResult PreconditionFailedResponse(string detail)
     {
         return ProblemWithTrace(
-            "Precondition Failed.",
-            detail,
-            StatusCodes.Status412PreconditionFailed,
-            "/docs/errors/precondition-failed"
+            title: "Precondition Failed.",
+            detail: detail,
+            statusCode: StatusCodes.Status412PreconditionFailed,
+            type: "/docs/errors/precondition-failed"
         );
     }
 
     protected IActionResult RequestEntityTooLargeResponse(string detail)
     {
         return ProblemWithTrace(
-            "Request Entity Too Large.",
-            detail,
-            StatusCodes.Status413RequestEntityTooLarge,
-            "/docs/errors/request-entity-too-large"
+            title: "Request Entity Too Large.",
+            detail: detail,
+            statusCode: StatusCodes.Status413RequestEntityTooLarge,
+            type: "/docs/errors/request-entity-too-large"
         );
     }
 
     protected IActionResult RequestUriTooLongResponse(string detail)
     {
         return ProblemWithTrace(
-            "Request-URI Too Long.",
-            detail,
-            StatusCodes.Status414RequestUriTooLong,
-            "/docs/errors/request-uri-too-long"
+            title: "Request-URI Too Long.",
+            detail: detail,
+            statusCode: StatusCodes.Status414RequestUriTooLong,
+            type: "/docs/errors/request-uri-too-long"
         );
     }
 
     protected IActionResult UnsupportedMediaTypeResponse(string detail)
     {
         return ProblemWithTrace(
-            "Unsupported Media Type.",
-            detail,
-            StatusCodes.Status415UnsupportedMediaType,
-            "/docs/errors/unsupported-media-libraryType"
+            title: "Unsupported Media Type.",
+            detail: detail,
+            statusCode: StatusCodes.Status415UnsupportedMediaType,
+            type: "/docs/errors/unsupported-media-libraryType"
         );
     }
 
     protected IActionResult RequestedRangeNotSatisfiableResponse(string detail)
     {
         return ProblemWithTrace(
-            "Requested Range Not Satisfiable.",
-            detail,
-            StatusCodes.Status416RequestedRangeNotSatisfiable,
-            "/docs/errors/requested-range-not-satisfiable"
+            title: "Requested Range Not Satisfiable.",
+            detail: detail,
+            statusCode: StatusCodes.Status416RequestedRangeNotSatisfiable,
+            type: "/docs/errors/requested-range-not-satisfiable"
         );
     }
 
     protected IActionResult ExpectationFailedResponse(string detail)
     {
         return ProblemWithTrace(
-            "Expectation Failed.",
-            detail,
-            StatusCodes.Status417ExpectationFailed,
-            "/docs/errors/expectation-failed"
+            title: "Expectation Failed.",
+            detail: detail,
+            statusCode: StatusCodes.Status417ExpectationFailed,
+            type: "/docs/errors/expectation-failed"
         );
     }
 
     protected IActionResult MisdirectedRequestResponse(string detail)
     {
         return ProblemWithTrace(
-            "Misdirected Request.",
-            detail,
-            StatusCodes.Status421MisdirectedRequest,
-            "/docs/errors/misdirected-request"
+            title: "Misdirected Request.",
+            detail: detail,
+            statusCode: StatusCodes.Status421MisdirectedRequest,
+            type: "/docs/errors/misdirected-request"
         );
     }
 
     protected IActionResult UnavailableForLegalReasonsResponse(string detail)
     {
         return ProblemWithTrace(
-            "Unavailable For Legal Reasons.",
-            detail,
-            StatusCodes.Status451UnavailableForLegalReasons,
-            "/docs/errors/unavailable-for-legal-reasons"
+            title: "Unavailable For Legal Reasons.",
+            detail: detail,
+            statusCode: StatusCodes.Status451UnavailableForLegalReasons,
+            type: "/docs/errors/unavailable-for-legal-reasons"
         );
     }
 

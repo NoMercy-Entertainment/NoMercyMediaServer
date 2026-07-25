@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Text.RegularExpressions;
 using Moq;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Output;
@@ -42,8 +43,8 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
     {
         IStorage storage = TestStorageFactory.CreateLocal();
 
-        WriteAudioVariant("audio_jpn", "audio_jpn", 60_000);
-        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
+        WriteAudioVariant("audio_jpn", "audio_jpn", segmentBytes: 60_000);
+        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
         SetupVideoProbe("video_1920x1080_SDR", "hevc", 1920, 1080, 8, "bt709");
 
         HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer.Object);
@@ -64,8 +65,8 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
     {
         IStorage storage = TestStorageFactory.CreateLocal();
 
-        WriteAudioVariant("audio_jpn_aac", "audio_jpn_aac", 60_000);
-        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
+        WriteAudioVariant("audio_jpn_aac", "audio_jpn_aac", segmentBytes: 60_000);
+        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
         SetupVideoProbe("video_1920x1080_SDR", "hevc", 1920, 1080, 8, "bt709");
 
         HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer.Object);
@@ -86,10 +87,10 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
     {
         IStorage storage = TestStorageFactory.CreateLocal();
 
-        WriteAudioVariant("audio_eng", "audio_eng", 60_000);
-        WriteAudioVariant("audio_fra", "audio_fra", 60_000);
-        WriteAudioVariant("audio_jpn", "audio_jpn", 60_000);
-        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
+        WriteAudioVariant("audio_eng", "audio_eng", segmentBytes: 60_000);
+        WriteAudioVariant("audio_fra", "audio_fra", segmentBytes: 60_000);
+        WriteAudioVariant("audio_jpn", "audio_jpn", segmentBytes: 60_000);
+        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
         SetupVideoProbe("video_1920x1080_SDR", "hevc", 1920, 1080, 8, "bt709");
 
         HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer.Object);
@@ -105,7 +106,7 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
             .Select(a => a.Language ?? string.Empty)
             .OrderBy(l => l)
             .ToArray();
-        languages.Should().Equal(["eng", "fra", "jpn"]);
+        languages.Should().Equal("eng", "fra", "jpn");
 
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
         {
@@ -118,10 +119,10 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
     {
         IStorage storage = TestStorageFactory.CreateLocal();
 
-        WriteAudioVariant("audio_eng_aac", "audio_eng_aac", 60_000);
-        WriteAudioVariant("audio_fra", "audio_fra", 60_000);
-        WriteAudioVariant("audio_jpn_opus", "audio_jpn_opus", 60_000);
-        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
+        WriteAudioVariant("audio_eng_aac", "audio_eng_aac", segmentBytes: 60_000);
+        WriteAudioVariant("audio_fra", "audio_fra", segmentBytes: 60_000);
+        WriteAudioVariant("audio_jpn_opus", "audio_jpn_opus", segmentBytes: 60_000);
+        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
         SetupVideoProbe("video_1920x1080_SDR", "hevc", 1920, 1080, 8, "bt709");
 
         HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer.Object);
@@ -149,8 +150,8 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
     {
         IStorage storage = TestStorageFactory.CreateLocal();
 
-        WriteAudioVariant("audio_eng_aac_2", "audio_eng_aac_2", 60_000);
-        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
+        WriteAudioVariant("audio_eng_aac_2", "audio_eng_aac_2", segmentBytes: 60_000);
+        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
         SetupVideoProbe("video_1920x1080_SDR", "hevc", 1920, 1080, 8, "bt709");
 
         HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer.Object);
@@ -172,8 +173,8 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
         IStorage storage = TestStorageFactory.CreateLocal();
 
         Directory.CreateDirectory(Path.Combine(_outputDirectory, "audio_123"));
-        WriteAudioVariant("audio_eng", "audio_eng", 60_000);
-        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
+        WriteAudioVariant("audio_eng", "audio_eng", segmentBytes: 60_000);
+        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
         SetupVideoProbe("video_1920x1080_SDR", "hevc", 1920, 1080, 8, "bt709");
 
         HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer.Object);
@@ -192,7 +193,7 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
     {
         IStorage storage = TestStorageFactory.CreateLocal();
 
-        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
+        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
         SetupVideoProbe("video_1920x1080_SDR", "hevc", 1920, 1080, 8, "bt709");
 
         HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer.Object);
@@ -210,8 +211,8 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
     {
         IStorage storage = TestStorageFactory.CreateLocal();
 
-        WriteAudioVariant("audio_eng", "audio_eng", 60_000);
-        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
+        WriteAudioVariant("audio_eng", "audio_eng", segmentBytes: 60_000);
+        WriteVideoVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
         SetupVideoProbe("video_1920x1080_SDR", "hevc", 1920, 1080, 8, "bt709");
 
         HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer.Object);
@@ -267,30 +268,31 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
     )
     {
         MediaInfo info = new(
-            dirName,
-            "mov,mp4,m4a,3gp,3g2,mj2",
-            TimeSpan.FromSeconds(6),
-            0,
-            0,
+            FilePath: dirName,
+            Format: "mov,mp4,m4a,3gp,3g2,mj2",
+            Duration: TimeSpan.FromSeconds(6),
+            OverallBitRateKbps: 0,
+            FileSizeBytes: 0,
+            VideoStreams:
             [
                 new VideoStreamInfo(
-                    0,
-                    codec,
-                    width,
-                    height,
-                    23.976,
-                    bitDepth,
-                    bitDepth >= 10 ? "yuv420p10le" : "yuv420p",
-                    "bt709",
-                    colorTransfer,
-                    "bt709",
-                    true,
-                    0
+                    Index: 0,
+                    Codec: codec,
+                    Width: width,
+                    Height: height,
+                    FrameRate: 23.976,
+                    BitDepth: bitDepth,
+                    PixelFormat: bitDepth >= 10 ? "yuv420p10le" : "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: colorTransfer,
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 0
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
         _mediaAnalyzer

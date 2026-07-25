@@ -93,7 +93,7 @@ public class UserSettingsTests : IDisposable
             ["cronRunners"] = "4",
         };
 
-        Action act = () => UserSettings.ApplySettings(settings, true);
+        Action act = () => UserSettings.ApplySettings(settings, silent: true);
 
         act.Should().NotThrow();
         RuntimeServerSettings.Current.InternalServerPort.Should().Be(7626);
@@ -107,7 +107,7 @@ public class UserSettingsTests : IDisposable
 
         Dictionary<string, string> settings = new() { ["internalPort"] = "8080" };
 
-        UserSettings.ApplySettings(settings, true);
+        UserSettings.ApplySettings(settings, silent: true);
 
         RuntimeServerSettings.Current.InternalServerPort.Should().Be(8080);
     }
@@ -117,7 +117,7 @@ public class UserSettingsTests : IDisposable
     {
         RuntimeServerSettings.Current.ExternalServerPort = 7626;
 
-        UserSettings.ApplySettings(new() { ["externalPort"] = "9090" }, true);
+        UserSettings.ApplySettings(new() { ["externalPort"] = "9090" }, silent: true);
 
         RuntimeServerSettings.Current.ExternalServerPort.Should().Be(9090);
     }
@@ -128,29 +128,29 @@ public class UserSettingsTests : IDisposable
         RuntimeServerSettings.Current.ExternalServerPort = 7626;
 
         Action act = () =>
-            UserSettings.ApplySettings(new() { ["externalPort"] = "garbage" }, true);
+            UserSettings.ApplySettings(new() { ["externalPort"] = "garbage" }, silent: true);
 
         act.Should().NotThrow();
         RuntimeServerSettings.Current.ExternalServerPort.Should().Be(7626);
     }
 
     [Theory]
-    [InlineData(["libraryRunners", 7])]
-    [InlineData(["importRunners", 8])]
-    [InlineData(["queueRunners", 9])] // alias for importRunners
-    [InlineData(["extrasRunners", 10])]
-    [InlineData(["dataRunners", 11])] // alias for extrasRunners
-    [InlineData(["encoderRunners", 12])]
-    [InlineData(["cronRunners", 13])]
-    [InlineData(["imageRunners", 14])]
-    [InlineData(["fileRunners", 15])]
-    [InlineData(["musicRunners", 16])]
+    [InlineData("libraryRunners", 7)]
+    [InlineData("importRunners", 8)]
+    [InlineData("queueRunners", 9)] // alias for importRunners
+    [InlineData("extrasRunners", 10)]
+    [InlineData("dataRunners", 11)] // alias for extrasRunners
+    [InlineData("encoderRunners", 12)]
+    [InlineData("cronRunners", 13)]
+    [InlineData("imageRunners", 14)]
+    [InlineData("fileRunners", 15)]
+    [InlineData("musicRunners", 16)]
     public void ApplySettings_WorkerCountSetting_UpdatesCorrespondingRuntimeWorkerCount(
         string key,
         int value
     )
     {
-        UserSettings.ApplySettings(new() { [key] = value.ToString() }, true);
+        UserSettings.ApplySettings(new() { [key] = value.ToString() }, silent: true);
 
         int actual = key switch
         {
@@ -173,26 +173,26 @@ public class UserSettingsTests : IDisposable
     {
         KeyValuePair<string, int> before = RuntimeServerSettings.Current.LibraryWorkers;
 
-        UserSettings.ApplySettings(new() { ["libraryRunners"] = "5" }, true);
+        UserSettings.ApplySettings(new() { ["libraryRunners"] = "5" }, silent: true);
 
         RuntimeServerSettings.Current.LibraryWorkers.Key.Should().Be(before.Key);
         RuntimeServerSettings.Current.LibraryWorkers.Value.Should().Be(5);
     }
 
     [Theory]
-    [InlineData(["swagger", "true", true])]
-    [InlineData(["swagger", "false", false])]
-    [InlineData(["UseSynthesizedDns", "true", true])]
-    [InlineData(["UseSynthesizedDns", "false", false])]
-    [InlineData(["allowAdultContent", "true", true])]
-    [InlineData(["allowAdultContent", "false", false])]
+    [InlineData("swagger", "true", true)]
+    [InlineData("swagger", "false", false)]
+    [InlineData("UseSynthesizedDns", "true", true)]
+    [InlineData("UseSynthesizedDns", "false", false)]
+    [InlineData("allowAdultContent", "true", true)]
+    [InlineData("allowAdultContent", "false", false)]
     public void ApplySettings_BooleanSetting_UpdatesCorrespondingRuntimeFlag(
         string key,
         string value,
         bool expected
     )
     {
-        UserSettings.ApplySettings(new() { [key] = value }, true);
+        UserSettings.ApplySettings(new() { [key] = value }, silent: true);
 
         bool actual = key switch
         {
@@ -211,7 +211,7 @@ public class UserSettingsTests : IDisposable
         Action act = () =>
             UserSettings.ApplySettings(
                 new() { ["someUnrecognizedFutureSetting"] = "x" },
-                true
+                silent: true
             );
 
         act.Should().NotThrow();
@@ -226,7 +226,7 @@ public class UserSettingsTests : IDisposable
         // Upsert call entirely; if it didn't, this would still pass (idempotent write)
         // but the guard's OWN branch (false path) needs a scenario where the value is
         // identical to prove it's actually being checked, not just always executed.
-        UserSettings.ApplySettings(new() { ["internalPort"] = "7626" }, true);
+        UserSettings.ApplySettings(new() { ["internalPort"] = "7626" }, silent: true);
 
         RuntimeServerSettings.Current.InternalServerPort.Should().Be(7626);
     }
@@ -310,7 +310,7 @@ public class UserSettingsTests : IDisposable
             ["client_secret_thing"] = "and-this",
         };
 
-        Action act = () => UserSettings.ApplySettings(settings, false);
+        Action act = () => UserSettings.ApplySettings(settings, silent: false);
 
         act.Should().NotThrow();
         // The guard must have flipped to true — proves the dump path was taken.
@@ -331,7 +331,7 @@ public class UserSettingsTests : IDisposable
         // With the guard already tripped, a second non-silent call must skip the dump
         // entirely (dumpConfig short-circuits to false) — still must not throw.
         Action act = () =>
-            UserSettings.ApplySettings(new() { ["cronRunners"] = "3" }, false);
+            UserSettings.ApplySettings(new() { ["cronRunners"] = "3" }, silent: false);
 
         act.Should().NotThrow();
     }
@@ -351,7 +351,7 @@ public class UserSettingsTests : IDisposable
         for (int i = 0; i < 7; i++)
             settings[$"setting{i}"] = $"value{i}";
 
-        Action act = () => UserSettings.ApplySettings(settings, false);
+        Action act = () => UserSettings.ApplySettings(settings, silent: false);
 
         act.Should().NotThrow();
     }

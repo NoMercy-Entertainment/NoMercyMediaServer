@@ -19,7 +19,7 @@ public class HardwareCapabilitiesTests
     [Fact]
     public void EmptyCapabilities_HasNoGpuEncoders()
     {
-        HardwareCapabilities caps = new([], 4);
+        HardwareCapabilities caps = new(Gpus: [], CpuCores: 4);
         caps.Gpus.Should().BeEmpty();
         caps.HasGpu.Should().BeFalse();
         caps.CpuCores.Should().Be(4);
@@ -35,7 +35,7 @@ public class HardwareCapabilitiesTests
             12,
             [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
         );
-        HardwareCapabilities caps = new([gpu], 16);
+        HardwareCapabilities caps = new(Gpus: [gpu], CpuCores: 16);
         caps.HasGpu.Should().BeTrue();
         caps.Gpus.Should().HaveCount(1);
         caps.Gpus[0].Vendor.Should().Be(GpuVendor.Nvidia);
@@ -51,7 +51,7 @@ public class HardwareCapabilitiesTests
             12,
             [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
         );
-        HardwareCapabilities caps = new([gpu], 16);
+        HardwareCapabilities caps = new(Gpus: [gpu], CpuCores: 16);
         caps.SupportsHardwareEncoding(VideoCodecType.H264).Should().BeTrue();
         caps.SupportsHardwareEncoding(VideoCodecType.Av1).Should().BeTrue();
     }
@@ -66,7 +66,7 @@ public class HardwareCapabilitiesTests
             12,
             [VideoCodecType.H264, VideoCodecType.H265]
         );
-        HardwareCapabilities caps = new([gpu], 8);
+        HardwareCapabilities caps = new(Gpus: [gpu], CpuCores: 8);
         caps.SupportsHardwareEncoding(VideoCodecType.Av1).Should().BeFalse();
         caps.SupportsHardwareEncoding(VideoCodecType.Vp9).Should().BeFalse();
     }
@@ -88,7 +88,7 @@ public class HardwareCapabilitiesTests
             int.MaxValue,
             [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1, VideoCodecType.Vp9]
         );
-        HardwareCapabilities caps = new([nvidia, intel], 16);
+        HardwareCapabilities caps = new(Gpus: [nvidia, intel], CpuCores: 16);
         GpuDevice? vp9Gpu = caps.GetGpuForCodec(VideoCodecType.Vp9);
         vp9Gpu.Should().NotBeNull();
         vp9Gpu!.Vendor.Should().Be(GpuVendor.Intel);
@@ -97,7 +97,7 @@ public class HardwareCapabilitiesTests
     [Fact]
     public void GetGpuForCodec_ReturnsNull_WhenNoGpuSupports()
     {
-        HardwareCapabilities caps = new([], 4);
+        HardwareCapabilities caps = new(Gpus: [], CpuCores: 4);
         GpuDevice? gpu = caps.GetGpuForCodec(VideoCodecType.H264);
         gpu.Should().BeNull();
     }

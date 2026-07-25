@@ -171,7 +171,9 @@ public class HardwareBenchmark(
         if (loadedVersion is null || loadedVersion.Value < BenchmarkSchemaVersion)
         {
             logger.LogInformation(
-                "SpeedIndex cache schema {Loaded} older than current {Current} — forcing recalibration", [loadedVersion?.ToString() ?? "(none)", BenchmarkSchemaVersion]
+                "SpeedIndex cache schema {Loaded} older than current {Current} — forcing recalibration",
+                loadedVersion?.ToString() ?? "(none)",
+                BenchmarkSchemaVersion
             );
             return true;
         }
@@ -250,7 +252,13 @@ public class HardwareBenchmark(
                 _cache = new(new(results));
 
                 logger.LogInformation(
-                    "Benchmarked {Encoder}{DeviceTag} @ {W}x{H}: {Fps:F1} fps ({Speed:F2}x)", [target.Encoder.FfmpegName, target.Device is null ? " (CPU)" : $" on {target.Device.Name}", tierWidth, tierHeight, measured.Fps, measured.SpeedMultiplier]
+                    "Benchmarked {Encoder}{DeviceTag} @ {W}x{H}: {Fps:F1} fps ({Speed:F2}x)",
+                    target.Encoder.FfmpegName,
+                    target.Device is null ? " (CPU)" : $" on {target.Device.Name}",
+                    tierWidth,
+                    tierHeight,
+                    measured.Fps,
+                    measured.SpeedMultiplier
                 );
             }
             catch (OperationCanceledException)
@@ -261,7 +269,11 @@ public class HardwareBenchmark(
             {
                 logger.LogWarning(
                     ex,
-                    "Benchmark failed for {Encoder}{DeviceTag} @ {W}x{H} — skipping", [target.Encoder.FfmpegName, target.Device is null ? "" : $" on {target.Device.Name}", tierWidth, tierHeight]
+                    "Benchmark failed for {Encoder}{DeviceTag} @ {W}x{H} — skipping",
+                    target.Encoder.FfmpegName,
+                    target.Device is null ? "" : $" on {target.Device.Name}",
+                    tierWidth,
+                    tierHeight
                 );
             }
             finally
@@ -310,7 +322,7 @@ public class HardwareBenchmark(
             else
             {
                 // Software encoder — no device, no index.
-                yield return new(codec, encoder, null, 0);
+                yield return new(codec, encoder, Device: null, VendorIndex: 0);
             }
         }
     }
@@ -425,7 +437,13 @@ public class HardwareBenchmark(
             // hid the explanation from anyone running on the default
             // Information log level.
             logger.LogInformation(
-                "Benchmark probe for {Encoder}{DeviceTag} @ {W}x{H} exited {Code} — encoder will be omitted from the speed index. Stderr tail: {StdErr}", [target.Encoder.FfmpegName, target.Device is null ? "" : $" on {target.Device.Name}", width, height, result.ExitCode, CalibrationArgumentBuilder.TruncateStderr(result.StdErr)]
+                "Benchmark probe for {Encoder}{DeviceTag} @ {W}x{H} exited {Code} — encoder will be omitted from the speed index. Stderr tail: {StdErr}",
+                target.Encoder.FfmpegName,
+                target.Device is null ? "" : $" on {target.Device.Name}",
+                width,
+                height,
+                result.ExitCode,
+                CalibrationArgumentBuilder.TruncateStderr(result.StdErr)
             );
             return null;
         }
@@ -443,7 +461,13 @@ public class HardwareBenchmark(
         {
             observedFps = lastFrame / wall.Elapsed.TotalSeconds;
             logger.LogDebug(
-                "Wall-clock fps fallback for {Encoder} @ {W}x{H}: {Frames} frames in {Elapsed:F2}s = {Fps:F1} fps", [target.Encoder.FfmpegName, width, height, lastFrame, wall.Elapsed.TotalSeconds, observedFps]
+                "Wall-clock fps fallback for {Encoder} @ {W}x{H}: {Frames} frames in {Elapsed:F2}s = {Fps:F1} fps",
+                target.Encoder.FfmpegName,
+                width,
+                height,
+                lastFrame,
+                wall.Elapsed.TotalSeconds,
+                observedFps
             );
         }
 
@@ -451,7 +475,7 @@ public class HardwareBenchmark(
             return null;
 
         double multiplier = observedFps / SourceFrameRate;
-        return new(observedFps, multiplier, DateTime.UtcNow);
+        return new(Fps: observedFps, SpeedMultiplier: multiplier, MeasuredAt: DateTime.UtcNow);
     }
 }
 

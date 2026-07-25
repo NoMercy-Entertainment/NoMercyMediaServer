@@ -151,8 +151,8 @@ public class ReclaimDeleteTests
                     driverId,
                     HostFolder,
                     "/movie.mkv",
-                    1,
-                    "Reclaimable Movie"
+                    movieId: 1,
+                    movieTitle: "Reclaimable Movie"
                 )
         );
         using SqliteConnection _ = connection;
@@ -238,8 +238,8 @@ public class ReclaimDeleteTests
                     driverId,
                     HostFolder,
                     "/movie.mkv",
-                    2,
-                    "Race Condition Movie"
+                    movieId: 2,
+                    movieTitle: "Race Condition Movie"
                 )
         );
         using SqliteConnection _ = connection;
@@ -316,8 +316,8 @@ public class ReclaimDeleteTests
                     driverId,
                     HostFolder,
                     "/movie.mkv",
-                    6,
-                    "Vanished Original Movie"
+                    movieId: 6,
+                    movieTitle: "Vanished Original Movie"
                 )
         );
         using SqliteConnection _ = connection;
@@ -406,8 +406,8 @@ public class ReclaimDeleteTests
                     driverId,
                     HostFolder,
                     "/movie.mkv",
-                    3,
-                    "Known Movie"
+                    movieId: 3,
+                    movieTitle: "Known Movie"
                 )
         );
         using SqliteConnection _ = connection;
@@ -462,8 +462,8 @@ public class ReclaimDeleteTests
                     staleDriverId,
                     StaleHostFolder,
                     "/movie.mkv",
-                    4,
-                    "Stale Partial Movie"
+                    movieId: 4,
+                    movieTitle: "Stale Partial Movie"
                 );
                 SeedMovieVideoFile(
                     context,
@@ -471,8 +471,8 @@ public class ReclaimDeleteTests
                     revivedDriverId,
                     RevivedHostFolder,
                     "/movie.mkv",
-                    5,
-                    "Revived Partial Movie"
+                    movieId: 5,
+                    movieTitle: "Revived Partial Movie"
                 );
             }
         );

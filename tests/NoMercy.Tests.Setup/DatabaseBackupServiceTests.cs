@@ -40,7 +40,7 @@ public sealed class DatabaseBackupServiceTests : IDisposable
         DatabaseBackupService.RetainCount = _originalRetainCount;
 
         if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+            Directory.Delete(_tempDir, recursive: true);
     }
 
     // A real SQLite database, not a text file: the service copies through
@@ -63,7 +63,7 @@ public sealed class DatabaseBackupServiceTests : IDisposable
     {
         string dbPath = CreateFakeDb();
 
-        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath, 0);
+        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 0);
 
         Assert.False(result);
         Assert.False(Directory.Exists(_backupDir));
@@ -76,7 +76,7 @@ public sealed class DatabaseBackupServiceTests : IDisposable
 
         bool result = DatabaseBackupService.BackupBeforeMigration(
             nonExistentPath,
-            3
+            pendingMigrationCount: 3
         );
 
         Assert.False(result);
@@ -88,7 +88,7 @@ public sealed class DatabaseBackupServiceTests : IDisposable
     {
         string dbPath = CreateFakeDb("media.db");
 
-        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath, 2);
+        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 2);
 
         Assert.True(result);
         Assert.True(Directory.Exists(_backupDir));
@@ -102,7 +102,7 @@ public sealed class DatabaseBackupServiceTests : IDisposable
     {
         string dbPath = CreateFakeDb("media.db");
 
-        DatabaseBackupService.BackupBeforeMigration(dbPath, 1);
+        DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
 
         string[] backups = Directory.GetFiles(_backupDir, "media.*.db");
         using SqliteConnection backup = new($"Data Source={backups[0]}; Pooling=False;");
@@ -117,7 +117,7 @@ public sealed class DatabaseBackupServiceTests : IDisposable
     {
         string dbPath = CreateFakeDb("queue.db");
 
-        DatabaseBackupService.BackupBeforeMigration(dbPath, 1);
+        DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
 
         string[] backups = Directory.GetFiles(_backupDir, "queue.*.db");
         string fileName = Path.GetFileName(backups[0]);
@@ -145,7 +145,7 @@ public sealed class DatabaseBackupServiceTests : IDisposable
             File.WriteAllText(fake, "old backup");
         }
 
-        DatabaseBackupService.BackupBeforeMigration(dbPath, 1);
+        DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
 
         string[] remaining = Directory.GetFiles(_backupDir, "app.*.db");
         Assert.Equal(3, remaining.Length);
@@ -166,7 +166,7 @@ public sealed class DatabaseBackupServiceTests : IDisposable
         File.WriteAllText(Path.Combine(_backupDir, "media.20260101000001.db"), "old");
         File.WriteAllText(Path.Combine(_backupDir, "media.20260101000002.db"), "old");
 
-        DatabaseBackupService.BackupBeforeMigration(dbPath, 1);
+        DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
 
         string[] remaining = Directory.GetFiles(_backupDir, "media.*.db");
         Assert.Equal(3, remaining.Length);
@@ -186,8 +186,8 @@ public sealed class DatabaseBackupServiceTests : IDisposable
             File.WriteAllText(Path.Combine(_backupDir, $"queue.2026010100000{index}.db"), "old");
         }
 
-        DatabaseBackupService.BackupBeforeMigration(mediaDb, 1);
-        DatabaseBackupService.BackupBeforeMigration(queueDb, 1);
+        DatabaseBackupService.BackupBeforeMigration(mediaDb, pendingMigrationCount: 1);
+        DatabaseBackupService.BackupBeforeMigration(queueDb, pendingMigrationCount: 1);
 
         string[] mediaBackups = Directory.GetFiles(_backupDir, "media.*.db");
         string[] queueBackups = Directory.GetFiles(_backupDir, "queue.*.db");
@@ -226,7 +226,7 @@ public sealed class DatabaseBackupServiceTests : IDisposable
 
             bool backedUp = DatabaseBackupService.BackupBeforeMigration(
                 dbPath,
-                1
+                pendingMigrationCount: 1
             );
 
             Assert.True(backedUp);
@@ -256,7 +256,7 @@ public sealed class DatabaseBackupServiceTests : IDisposable
         DatabaseBackupService.BackupRoot = "\0invalid\0path";
         string dbPath = CreateFakeDb("media.db");
 
-        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath, 1);
+        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
 
         // Must not throw — failure is non-fatal
         Assert.False(result);

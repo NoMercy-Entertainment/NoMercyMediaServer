@@ -55,17 +55,17 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan()],
-                [new("aac", 192, 2, 48000, StreamAction.Copy, "eng", "0:a:0")],
-                [],
-                null
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan()],
+                AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Copy, "eng", "0:a:0")],
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
 
         FfmpegCommand cmd = builder.Build("ffmpeg");
-        cmd.Arguments.Should().ContainInOrder(["-c:a", "copy"]);
+        cmd.Arguments.Should().ContainInOrder("-c:a", "copy");
         cmd.Arguments.Should().NotContain("-b:a"); // Copy → no bitrate emitted
     }
 
@@ -79,18 +79,18 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan()],
-                [new("eac3", 384, 6, 48000, StreamAction.Transcode, "eng", "[a0]")],
-                [],
-                null
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan()],
+                AudioOutputs: [new("eac3", 384, 6, 48000, StreamAction.Transcode, "eng", "[a0]")],
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
 
         FfmpegCommand cmd = builder.Build("ffmpeg");
-        cmd.Arguments.Should().ContainInOrder(["-c:a", "eac3"]);
-        cmd.Arguments.Should().ContainInOrder(["-b:a", "384k"]);
+        cmd.Arguments.Should().ContainInOrder("-c:a", "eac3");
+        cmd.Arguments.Should().ContainInOrder("-b:a", "384k");
     }
 
     [Fact]
@@ -104,11 +104,11 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan()],
-                [new("aac", 192, 2, 48000, StreamAction.Drop, "eng", "0:a:0")],
-                [],
-                null
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan()],
+                AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Drop, "eng", "0:a:0")],
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
@@ -129,25 +129,26 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan()],
-                [],
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan()],
+                AudioOutputs: [],
+                SubtitleOutputs:
                 [
                     new(
-                        SubtitleCodecType.Copy,
-                        StreamAction.Copy,
-                        "eng",
-                        2,
-                        "[s0]"
+                        OutputCodec: SubtitleCodecType.Copy,
+                        Action: StreamAction.Copy,
+                        Language: "eng",
+                        SourceIndex: 2,
+                        MapLabel: "[s0]"
                     ),
                 ],
-                null
+                Thumbnails: null
             ),
             "/output"
         );
 
         FfmpegCommand cmd = builder.Build("ffmpeg");
-        cmd.Arguments.Should().ContainInOrder(["-map", "[s0]"]);
+        cmd.Arguments.Should().ContainInOrder("-map", "[s0]");
     }
 
     [Fact]
@@ -163,25 +164,26 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan()],
-                [],
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan()],
+                AudioOutputs: [],
+                SubtitleOutputs:
                 [
                     new(
-                        SubtitleCodecType.Copy,
-                        StreamAction.Copy,
-                        "eng",
-                        4,
-                        null
+                        OutputCodec: SubtitleCodecType.Copy,
+                        Action: StreamAction.Copy,
+                        Language: "eng",
+                        SourceIndex: 4,
+                        MapLabel: null
                     ),
                 ],
-                null
+                Thumbnails: null
             ),
             "/output"
         );
 
         FfmpegCommand cmd = builder.Build("ffmpeg");
-        cmd.Arguments.Should().ContainInOrder(["-map", "0:s:4"]);
+        cmd.Arguments.Should().ContainInOrder("-map", "0:s:4");
     }
 
     [Theory]
@@ -200,19 +202,20 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan()],
-                [],
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan()],
+                AudioOutputs: [],
+                SubtitleOutputs:
                 [
                     new(
-                        SubtitleCodecType.WebVtt,
-                        action,
-                        "eng",
-                        2,
-                        "[s0]"
+                        OutputCodec: SubtitleCodecType.WebVtt,
+                        Action: action,
+                        Language: "eng",
+                        SourceIndex: 2,
+                        MapLabel: "[s0]"
                     ),
                 ],
-                null
+                Thumbnails: null
             ),
             "/output"
         );
@@ -233,11 +236,11 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder8,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan(tenBit: false, pixelFormat: "yuv420p")],
-                [],
-                [],
-                null
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan(tenBit: false, pixelFormat: "yuv420p")],
+                AudioOutputs: [],
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
@@ -247,17 +250,17 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder10,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan(tenBit: true, pixelFormat: "yuv420p10le")],
-                [],
-                [],
-                null
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan(tenBit: true, pixelFormat: "yuv420p10le")],
+                AudioOutputs: [],
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
 
         builder8.Build("ffmpeg").Arguments.Should().NotContain("-pix_fmt");
-        builder10.Build("ffmpeg").Arguments.Should().ContainInOrder(["-pix_fmt", "yuv420p10le"]);
+        builder10.Build("ffmpeg").Arguments.Should().ContainInOrder("-pix_fmt", "yuv420p10le");
     }
 
     [Fact]
@@ -273,18 +276,18 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan(crf: 0, bitrateKbps: 5000)],
-                [],
-                [],
-                null
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan(crf: 0, bitrateKbps: 5000)],
+                AudioOutputs: [],
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
 
         FfmpegCommand cmd = builder.Build("ffmpeg");
         cmd.Arguments.Should().NotContain("-crf");
-        cmd.Arguments.Should().ContainInOrder(["-b:v", "5000k"]);
+        cmd.Arguments.Should().ContainInOrder("-b:v", "5000k");
     }
 
     [Fact]
@@ -297,17 +300,17 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan(crf: 23, bitrateKbps: 0)],
-                [],
-                [],
-                null
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan(crf: 23, bitrateKbps: 0)],
+                AudioOutputs: [],
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
 
         FfmpegCommand cmd = builder.Build("ffmpeg");
-        cmd.Arguments.Should().ContainInOrder(["-crf", "23"]);
+        cmd.Arguments.Should().ContainInOrder("-crf", "23");
         cmd.Arguments.Should().NotContain("-b:v");
     }
 
@@ -323,28 +326,29 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan()],
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan()],
+                AudioOutputs:
                 [
                     new(
                         "aac",
-                        BitrateKbps: 192,
-                        Channels: 2,
-                        SampleRate: 48000,
-                        Action: StreamAction.Transcode,
-                        Language: "eng",
-                        MapLabel: "[a0]",
+                        192,
+                        2,
+                        48000,
+                        StreamAction.Transcode,
+                        "eng",
+                        "[a0]",
                         AudioFilter: "loudnorm=I=-23:LRA=7:tp=-2"
                     ),
                 ],
-                [],
-                null
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
 
         FfmpegCommand cmd = builder.Build("ffmpeg");
-        cmd.Arguments.Should().ContainInOrder(["-af", "loudnorm=I=-23:LRA=7:tp=-2"]);
+        cmd.Arguments.Should().ContainInOrder("-af", "loudnorm=I=-23:LRA=7:tp=-2");
     }
 
     [Fact]
@@ -360,22 +364,23 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan()],
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan()],
+                AudioOutputs:
                 [
                     new(
                         "aac",
-                        BitrateKbps: 192,
-                        Channels: 2,
-                        SampleRate: 48000,
-                        Action: StreamAction.Copy,
-                        Language: "eng",
-                        MapLabel: "0:a:0",
+                        192,
+                        2,
+                        48000,
+                        StreamAction.Copy,
+                        "eng",
+                        "0:a:0",
                         AudioFilter: "loudnorm=I=-23"
                     ),
                 ],
-                [],
-                null
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
@@ -394,22 +399,23 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [VideoPlan()],
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [VideoPlan()],
+                AudioOutputs:
                 [
                     new(
                         "aac",
-                        BitrateKbps: 192,
-                        Channels: 2,
-                        SampleRate: 48000,
-                        Action: StreamAction.Transcode,
-                        Language: "eng",
-                        MapLabel: "[a0]",
+                        192,
+                        2,
+                        48000,
+                        StreamAction.Transcode,
+                        "eng",
+                        "[a0]",
                         AudioFilter: ""
                     ),
                 ],
-                [],
-                null
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
@@ -430,11 +436,11 @@ public class MkvOutputStrategyBranchTests
         strategy.ConfigureOutput(
             builder,
             new(
-                OutputFormat.Mkv,
-                [],
-                [],
-                [],
-                null
+                Format: OutputFormat.Mkv,
+                VideoOutputs: [],
+                AudioOutputs: [],
+                SubtitleOutputs: [],
+                Thumbnails: null
             ),
             "/output"
         );
@@ -454,7 +460,7 @@ public class MkvOutputStrategyBranchTests
         storage.Setup(s => s.Exists(sourceMkv)).Returns(true);
 
         MkvOutputStrategy strategy = new(storage.Object);
-        await strategy.FinalizeAsync("/out", EmptyPlan(), "MyMovie", default);
+        await strategy.FinalizeAsync("/out", EmptyPlan(), "MyMovie", ct: default);
 
         storage.Verify(s => s.Delete(targetMkv), Times.Once); // pre-delete target
         storage.Verify(s => s.Move(sourceMkv, targetMkv), Times.Once);
@@ -467,7 +473,7 @@ public class MkvOutputStrategyBranchTests
         storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
 
         MkvOutputStrategy strategy = new(storage.Object);
-        await strategy.FinalizeAsync("/out", EmptyPlan(), "MyMovie", default);
+        await strategy.FinalizeAsync("/out", EmptyPlan(), "MyMovie", ct: default);
 
         storage.Verify(s => s.Move(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         storage.Verify(s => s.Delete(It.IsAny<string>()), Times.Never);
@@ -482,7 +488,7 @@ public class MkvOutputStrategyBranchTests
         storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
 
         MkvOutputStrategy strategy = new(storage.Object);
-        await strategy.FinalizeAsync("/out", EmptyPlan(), "output", default);
+        await strategy.FinalizeAsync("/out", EmptyPlan(), "output", ct: default);
 
         storage.Verify(s => s.Move(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
@@ -500,16 +506,18 @@ public class MkvOutputStrategyBranchTests
         strategy
             .GetOutputSubdirectories(
                 new(
-                    OutputFormat.Mkv,
-                    [VideoPlan(), VideoPlan(1280, 720)],
+                    Format: OutputFormat.Mkv,
+                    VideoOutputs: [VideoPlan(), VideoPlan(width: 1280, height: 720)],
+                    AudioOutputs:
                     [
                         new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "[a0]"),
                         new("eac3", 384, 6, 48000, StreamAction.Transcode, "fre", "[a1]"),
                     ],
+                    SubtitleOutputs:
                     [
                         new(SubtitleCodecType.Copy, StreamAction.Copy, "eng", 2, "[s0]"),
                     ],
-                    new(160, 90, 10)
+                    Thumbnails: new(160, 90, 10)
                 )
             )
             .Should()
@@ -537,26 +545,26 @@ public class MkvOutputStrategyBranchTests
         string pixelFormat = "yuv420p"
     ) =>
         new(
-            width,
-            height,
-            "libx264",
-            crf,
-            bitrateKbps,
-            "medium",
-            "high",
-            "4.0",
-            tenBit,
-            pixelFormat,
-            "[v0]",
-            []
+            Width: width,
+            Height: height,
+            EncoderName: "libx264",
+            Crf: crf,
+            BitrateKbps: bitrateKbps,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.0",
+            TenBit: tenBit,
+            PixelFormat: pixelFormat,
+            MapLabel: "[v0]",
+            ExtraFlags: []
         );
 
     private static OutputPlan EmptyPlan() =>
         new(
-            OutputFormat.Mkv,
-            [],
-            [],
-            [],
-            null
+            Format: OutputFormat.Mkv,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 }

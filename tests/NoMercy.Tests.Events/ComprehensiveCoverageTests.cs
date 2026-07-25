@@ -11,6 +11,7 @@
 
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
 using Xunit;
@@ -94,7 +95,7 @@ public class ComprehensiveCoverageTests
     [Fact]
     public async Task InMemoryEventBus_WithNullLogger_DoesNotThrow()
     {
-        InMemoryEventBus bus = new(null);
+        InMemoryEventBus bus = new(logger: null);
         TestEvent evt = new() { Data = "test" };
 
         Func<Task> act = () => bus.PublishAsync(evt);
@@ -317,7 +318,7 @@ public class ComprehensiveCoverageTests
     {
         InMemoryEventBus inner = new();
         List<string> logs = [];
-        LoggingEventBusDecorator decorator = new(inner, logs.Add, ["OtherEvent"]);
+        LoggingEventBusDecorator decorator = new(inner, logs.Add, excludedEventTypes: ["OtherEvent"]);
 
         await decorator.PublishAsync(new TestEvent { Data = "test" });
 
@@ -330,7 +331,7 @@ public class ComprehensiveCoverageTests
     {
         InMemoryEventBus inner = new();
         List<string> logs = [];
-        LoggingEventBusDecorator decorator = new(inner, logs.Add, ["TestEvent"]);
+        LoggingEventBusDecorator decorator = new(inner, logs.Add, excludedEventTypes: ["TestEvent"]);
 
         await decorator.PublishAsync(new TestEvent { Data = "test" });
 
@@ -342,7 +343,7 @@ public class ComprehensiveCoverageTests
     {
         InMemoryEventBus inner = new();
         List<string> logs = [];
-        LoggingEventBusDecorator decorator = new(inner, logs.Add, null);
+        LoggingEventBusDecorator decorator = new(inner, logs.Add, excludedEventTypes: null);
 
         await decorator.PublishAsync(new TestEvent { Data = "test" });
 
@@ -356,7 +357,7 @@ public class ComprehensiveCoverageTests
         List<string> logs = [];
         List<TestEvent> received = [];
 
-        LoggingEventBusDecorator decorator = new(inner, logs.Add, ["TestEvent"]);
+        LoggingEventBusDecorator decorator = new(inner, logs.Add, excludedEventTypes: ["TestEvent"]);
         decorator.Subscribe<TestEvent>((evt, _) =>
         {
             received.Add(evt);
@@ -410,7 +411,7 @@ public class ComprehensiveCoverageTests
     {
         InMemoryEventBus inner = new();
         List<string> logs = [];
-        LoggingEventBusDecorator decorator = new(inner, logs.Add, ["testevent"]);
+        LoggingEventBusDecorator decorator = new(inner, logs.Add, excludedEventTypes: ["testevent"]);
 
         await decorator.PublishAsync(new TestEvent { Data = "test" });
 
@@ -462,7 +463,7 @@ public class ComprehensiveCoverageTests
         await decorator.PublishAsync(evt);
 
         auditLog.Count.Should().Be(2);
-        order.Should().Equal([1, 2]);
+        order.Should().Equal(1, 2);
     }
 
     [Fact]
@@ -629,7 +630,7 @@ public class ComprehensiveCoverageTests
 
         await bus.PublishAsync(new TestEvent());
 
-        executed.Should().Equal(["handler1", "handler2", "handler3"]);
+        executed.Should().Equal("handler1", "handler2", "handler3");
     }
 
     [Fact]

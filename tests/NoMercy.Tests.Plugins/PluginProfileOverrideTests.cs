@@ -18,6 +18,7 @@ using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
 using EncoderProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using PluginMediaInfo = NoMercy.Plugins.Abstractions.MediaInfo;
 using PluginProfile = NoMercy.Plugins.Abstractions.EncodingProfile;
+using VideoStreamInfo = NoMercy.Encoder.Analysis.VideoStreamInfo;
 
 namespace NoMercy.Tests.Plugins;
 
@@ -67,7 +68,10 @@ public class PluginProfileOverrideTests
     public void FirstPluginReturningNonNull_Wins()
     {
         PluginProfileOverride sut = new(
-            new FakePluginManager([new FakePlugin(null), new FakePlugin(NamedProfile("Winner")), new FakePlugin(NamedProfile("Loser"))]
+            new FakePluginManager(
+                new FakePlugin(null),
+                new FakePlugin(NamedProfile("Winner")),
+                new FakePlugin(NamedProfile("Loser"))
             )
         );
 
@@ -184,24 +188,24 @@ public class PluginProfileOverrideTests
     }
 
     [Theory]
-    [InlineData(["ts", Encoder.Profiles.Container.HlsTs])]
-    [InlineData(["mpegts", Encoder.Profiles.Container.HlsTs])]
-    [InlineData(["hls_ts", Encoder.Profiles.Container.HlsTs])]
-    [InlineData(["m3u8", Encoder.Profiles.Container.HlsFmp4])]
-    [InlineData(["hls", Encoder.Profiles.Container.HlsFmp4])]
-    [InlineData(["fmp4", Encoder.Profiles.Container.HlsFmp4])]
-    [InlineData(["hls_fmp4", Encoder.Profiles.Container.HlsFmp4])]
-    [InlineData(["mkv", Encoder.Profiles.Container.Mkv])]
-    [InlineData(["matroska", Encoder.Profiles.Container.Mkv])]
-    [InlineData(["dash", Encoder.Profiles.Container.Dash])]
-    [InlineData(["mpd", Encoder.Profiles.Container.Dash])]
-    [InlineData(["mp3", Encoder.Profiles.Container.Mp3])]
-    [InlineData(["flac", Encoder.Profiles.Container.Flac])]
-    [InlineData(["ogg", Encoder.Profiles.Container.Ogg])]
-    [InlineData(["oga", Encoder.Profiles.Container.Ogg])]
-    [InlineData(["opus", Encoder.Profiles.Container.Ogg])]
-    [InlineData(["MP4", Encoder.Profiles.Container.Mp4])]
-    [InlineData(["something-unrecognized", Encoder.Profiles.Container.Mp4])]
+    [InlineData("ts", Encoder.Profiles.Container.HlsTs)]
+    [InlineData("mpegts", Encoder.Profiles.Container.HlsTs)]
+    [InlineData("hls_ts", Encoder.Profiles.Container.HlsTs)]
+    [InlineData("m3u8", Encoder.Profiles.Container.HlsFmp4)]
+    [InlineData("hls", Encoder.Profiles.Container.HlsFmp4)]
+    [InlineData("fmp4", Encoder.Profiles.Container.HlsFmp4)]
+    [InlineData("hls_fmp4", Encoder.Profiles.Container.HlsFmp4)]
+    [InlineData("mkv", Encoder.Profiles.Container.Mkv)]
+    [InlineData("matroska", Encoder.Profiles.Container.Mkv)]
+    [InlineData("dash", Encoder.Profiles.Container.Dash)]
+    [InlineData("mpd", Encoder.Profiles.Container.Dash)]
+    [InlineData("mp3", Encoder.Profiles.Container.Mp3)]
+    [InlineData("flac", Encoder.Profiles.Container.Flac)]
+    [InlineData("ogg", Encoder.Profiles.Container.Ogg)]
+    [InlineData("oga", Encoder.Profiles.Container.Ogg)]
+    [InlineData("opus", Encoder.Profiles.Container.Ogg)]
+    [InlineData("MP4", Encoder.Profiles.Container.Mp4)]
+    [InlineData("something-unrecognized", Encoder.Profiles.Container.Mp4)]
     public void PluginProfile_ContainerAlias_MapsToExpectedContainer(
         string containerAlias,
         Encoder.Profiles.Container expected
@@ -236,40 +240,41 @@ public class PluginProfileOverrideTests
 
     private static EncoderProfile Configured() =>
         new(
-            Ulid.NewUlid(),
-            "Configured Default",
-            Encoder.Profiles.Container.HlsTs,
-            null,
-            [],
-            []
+            Id: Ulid.NewUlid(),
+            Name: "Configured Default",
+            Container: Encoder.Profiles.Container.HlsTs,
+            Video: null,
+            Audio: [],
+            Subtitles: []
         );
 
     private static EncoderMediaInfo Source() =>
         new(
-            "/media/x.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            20000,
-            10_000_000_000,
+            FilePath: "/media/x.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 20000,
+            FileSizeBytes: 10_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "hevc",
-                    3840,
-                    2160,
-                    24.0,
-                    10,
-                    "yuv420p10le",
-                    "bt2020",
-                    "smpte2084",
-                    "bt2020nc",
-                    true,
-                    18000
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: 3840,
+                    Height: 2160,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: "smpte2084",
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 18000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncoderMediaInfo SourceWithNoVideoStream() =>
@@ -284,14 +289,14 @@ public class PluginProfileOverrideTests
             AudioStreams =
             [
                 new(
-                    0,
-                    "aac",
-                    2,
-                    48000,
-                    192,
-                    "eng",
-                    true,
-                    false
+                    Index: 0,
+                    Codec: "aac",
+                    Channels: 2,
+                    SampleRate: 48000,
+                    BitRateKbps: 192,
+                    Language: "eng",
+                    IsDefault: true,
+                    IsForced: false
                 ),
             ],
         };

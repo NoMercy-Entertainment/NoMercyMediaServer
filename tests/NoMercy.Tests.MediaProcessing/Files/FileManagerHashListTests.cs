@@ -97,7 +97,7 @@ public sealed class FileManagerHashListTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, true);
+            Directory.Delete(_tempRoot, recursive: true);
     }
 
     /// <summary>

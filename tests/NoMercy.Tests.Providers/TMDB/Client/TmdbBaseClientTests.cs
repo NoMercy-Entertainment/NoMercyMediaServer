@@ -211,7 +211,7 @@ public class TmdbBaseClientTests : TmdbTestBase
         Task<TmdbGenreMovies?> task = client.Get<TmdbGenreMovies>(
             "genre/movie/list",
             query,
-            false
+            priority: false
         );
 
         query["language"].Should().Be("nl");

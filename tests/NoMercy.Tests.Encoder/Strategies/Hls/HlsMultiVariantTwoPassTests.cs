@@ -20,6 +20,7 @@ using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Tests.Encoder.Storage;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
+using LadderConfig = NoMercy.Encoder.Profiles.LadderConfig;
 using LadderMode = NoMercy.Encoder.Profiles.LadderMode;
 using LadderRung = NoMercy.Encoder.Profiles.LadderRung;
 
@@ -45,7 +46,7 @@ public class HlsMultiVariantTwoPassTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_outputDir))
-            Directory.Delete(_outputDir, true);
+            Directory.Delete(_outputDir, recursive: true);
         GC.SuppressFinalize(this);
     }
 
@@ -75,7 +76,7 @@ public class HlsMultiVariantTwoPassTests : IDisposable
             );
 
         HlsTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(3), null, CancellationToken.None);
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
 
         Assert.Equal(new[] { 0, 1, 2 }, pass1Indices);
     }
@@ -89,7 +90,7 @@ public class HlsMultiVariantTwoPassTests : IDisposable
         SetupSuccessfulEncoder();
 
         HlsTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(3), null, CancellationToken.None);
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
 
         _encoder.Verify(
             e =>
@@ -128,7 +129,7 @@ public class HlsMultiVariantTwoPassTests : IDisposable
 
         HlsTwoPassStrategy strategy = BuildStrategy();
         EncodingResult result = await strategy.EncodeAsync(
-            BuildRequest(3),
+            BuildRequest(variantCount: 3),
             null,
             CancellationToken.None
         );
@@ -166,15 +167,15 @@ public class HlsMultiVariantTwoPassTests : IDisposable
             await File.WriteAllTextAsync($"{statsFile}_v{i}-0.log", $"variant {i} done");
 
         JobCheckpoint existing = new(
-            "job-1",
-            "/media/src.mkv",
-            _outputDir,
-            [],
-            DateTime.UtcNow,
-            statsFile,
-            true,
-            -1,
-            "TwoPass"
+            JobId: "job-1",
+            InputPath: "/media/src.mkv",
+            OutputDirectory: _outputDir,
+            CompletedGroupIndices: [],
+            LastUpdated: DateTime.UtcNow,
+            StatsFilePath: statsFile,
+            Pass1Completed: true,
+            LastCompletedSegment: -1,
+            EncodeMode: "TwoPass"
         );
 
         _checkpointStore
@@ -183,7 +184,7 @@ public class HlsMultiVariantTwoPassTests : IDisposable
         SetupSuccessfulEncoder();
 
         HlsTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(3), null, CancellationToken.None);
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
 
         _encoder.Verify(
             e =>
@@ -208,15 +209,15 @@ public class HlsMultiVariantTwoPassTests : IDisposable
         await File.WriteAllTextAsync($"{statsFile}_v0-0.log", "stale");
 
         JobCheckpoint existing = new(
-            "job-1",
-            "/media/src.mkv",
-            _outputDir,
-            [],
-            DateTime.UtcNow,
-            statsFile,
-            true,
-            -1,
-            "TwoPass"
+            JobId: "job-1",
+            InputPath: "/media/src.mkv",
+            OutputDirectory: _outputDir,
+            CompletedGroupIndices: [],
+            LastUpdated: DateTime.UtcNow,
+            StatsFilePath: statsFile,
+            Pass1Completed: true,
+            LastCompletedSegment: -1,
+            EncodeMode: "TwoPass"
         );
 
         _checkpointStore
@@ -225,7 +226,7 @@ public class HlsMultiVariantTwoPassTests : IDisposable
         SetupSuccessfulEncoder();
 
         HlsTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(3), null, CancellationToken.None);
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
 
         _encoder.Verify(
             e =>
@@ -253,20 +254,20 @@ public class HlsMultiVariantTwoPassTests : IDisposable
 
     private static EncodingResult Success() =>
         new(
-            true,
-            "/out",
-            TimeSpan.FromSeconds(1),
-            null,
-            new(1024, 2.0, 24.0, "libx264", null)
+            Success: true,
+            OutputPath: "/out",
+            Duration: TimeSpan.FromSeconds(1),
+            Error: null,
+            Metrics: new(1024, 2.0, 24.0, "libx264", null)
         );
 
     private static EncodingResult Fail(string message) =>
         new(
-            false,
-            string.Empty,
-            TimeSpan.Zero,
-            new(EncodingErrorKind.ProcessCrashed, message, null, "Pass1", false),
-            new(0, 0, 0, string.Empty, null)
+            Success: false,
+            OutputPath: string.Empty,
+            Duration: TimeSpan.Zero,
+            Error: new(EncodingErrorKind.ProcessCrashed, message, null, "Pass1", false),
+            Metrics: new(0, 0, 0, string.Empty, null)
         );
 
     private HlsTwoPassStrategy BuildStrategy() =>
@@ -279,10 +280,10 @@ public class HlsMultiVariantTwoPassTests : IDisposable
 
     private EncodingRequest BuildRequest(int variantCount) =>
         new(
-            "/media/src.mkv",
-            _outputDir,
-            new(
-                Ulid.NewUlid(),
+            InputPath: "/media/src.mkv",
+            OutputDirectory: _outputDir,
+            Profile: new(
+                Id: Ulid.NewUlid(),
                 Name: $"HLS 2-pass {variantCount}-variant",
                 Container: Container.HlsTs,
                 Video: null,
@@ -295,17 +296,17 @@ public class HlsMultiVariantTwoPassTests : IDisposable
                     Rungs = Enumerable
                         .Range(0, variantCount)
                         .Select(i => new LadderRung(
-                            1920 >> i,
-                            1080 >> i,
-                            VideoCodecType.H264,
-                            4000 >> i,
-                            6000 >> i,
-                            8000 >> i,
-                            24.0,
-                            "medium",
-                            CodecProfile.High,
-                            8,
-                            "yuv420p"
+                            Width: 1920 >> i,
+                            Height: 1080 >> i,
+                            Codec: VideoCodecType.H264,
+                            BitrateKbps: 4000 >> i,
+                            MaxBitrateKbps: 6000 >> i,
+                            BufferSizeKbps: 8000 >> i,
+                            Framerate: 24.0,
+                            Preset: "medium",
+                            CodecProfile: CodecProfile.High,
+                            BitDepth: 8,
+                            PixelFormat: "yuv420p"
                         ))
                         .ToArray(),
                 }

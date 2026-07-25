@@ -165,7 +165,7 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         byte[] data = "hello s3"u8.ToArray();
 
         // Write
-        await using (Stream w = backend.OpenWrite(path, true))
+        await using (Stream w = backend.OpenWrite(path, overwrite: true))
         {
             await w.WriteAsync(data);
         }
@@ -193,7 +193,7 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         byte[] data = new byte[6 * 1024 * 1024];
         new Random(42).NextBytes(data);
 
-        await using (Stream w = backend.OpenWrite(path, true))
+        await using (Stream w = backend.OpenWrite(path, overwrite: true))
         {
             await w.WriteAsync(data);
         }
@@ -217,9 +217,9 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         string fileB = $"{prefix}/b.txt";
         byte[] bytes = "x"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(fileA, true))
+        await using (Stream w = backend.OpenWrite(fileA, overwrite: true))
             await w.WriteAsync(bytes);
-        await using (Stream w2 = backend.OpenWrite(fileB, true))
+        await using (Stream w2 = backend.OpenWrite(fileB, overwrite: true))
             await w2.WriteAsync(bytes);
 
         IEnumerable<string> entries = backend.EnumerateFileSystemEntries(
@@ -230,7 +230,7 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
 
         entries.Should().HaveCount(2);
 
-        backend.DeleteDirectory(prefix, true);
+        backend.DeleteDirectory(prefix, recursive: true);
     }
 
     [SkippableFact]
@@ -243,7 +243,7 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         string dst = $"move/{Ulid.NewUlid()}-dst.txt";
         byte[] data = "move me"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(src, true))
+        await using (Stream w = backend.OpenWrite(src, overwrite: true))
             await w.WriteAsync(data);
 
         backend.MoveFile(src, dst);
@@ -264,10 +264,10 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         string dst = $"copy/{Ulid.NewUlid()}-dst.txt";
         byte[] data = "copy me"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(src, true))
+        await using (Stream w = backend.OpenWrite(src, overwrite: true))
             await w.WriteAsync(data);
 
-        backend.CopyFile(src, dst, true);
+        backend.CopyFile(src, dst, overwrite: true);
 
         backend.FileExists(src).Should().BeTrue();
         backend.FileExists(dst).Should().BeTrue();
@@ -286,7 +286,7 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         byte[] data = new byte[2 * 1024 * 1024];
         new Random(7).NextBytes(data);
 
-        await using (Stream w = backend.OpenWrite(path, true))
+        await using (Stream w = backend.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
         await using Stream r = backend.OpenRead(path);
@@ -306,10 +306,10 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         string path = $"nooverwrite/{Ulid.NewUlid()}.txt";
         byte[] data = "original"u8.ToArray();
 
-        await using (Stream w = backend.OpenWrite(path, true))
+        await using (Stream w = backend.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
-        Action act = () => backend.OpenWrite(path, false);
+        Action act = () => backend.OpenWrite(path, overwrite: false);
         act.Should().Throw<IOException>().WithMessage("*overwrite*");
 
         backend.DeleteFile(path);

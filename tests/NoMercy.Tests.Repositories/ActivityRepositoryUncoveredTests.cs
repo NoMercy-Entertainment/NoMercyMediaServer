@@ -14,6 +14,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Users;
 
 namespace NoMercy.Tests.Repositories;
@@ -132,19 +133,19 @@ public class ActivityRepositoryTests : IDisposable
             Time = DateTime.UtcNow,
         };
 
-        context.ActivityLogs.AddRange([authLog, playbackLog]);
+        context.ActivityLogs.AddRange(authLog, playbackLog);
         await context.SaveChangesAsync();
 
         List<ActivityLog> result = await repository.GetPagedAsync(
-            ActivityCategory.Auth,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            10
+            category: ActivityCategory.Auth,
+            userId: null,
+            deviceId: null,
+            mediaId: null,
+            from: null,
+            to: null,
+            success: null,
+            skip: 0,
+            take: 10
         );
 
         result.Should().ContainSingle();
@@ -180,19 +181,19 @@ public class ActivityRepositoryTests : IDisposable
             Time = DateTime.UtcNow,
         };
 
-        context.ActivityLogs.AddRange([user1Log, user2Log]);
+        context.ActivityLogs.AddRange(user1Log, user2Log);
         await context.SaveChangesAsync();
 
         List<ActivityLog> result = await repository.GetPagedAsync(
-            null,
-            user1,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            10
+            category: null,
+            userId: user1,
+            deviceId: null,
+            mediaId: null,
+            from: null,
+            to: null,
+            success: null,
+            skip: 0,
+            take: 10
         );
 
         result.Should().ContainSingle();
@@ -228,19 +229,19 @@ public class ActivityRepositoryTests : IDisposable
             Time = DateTime.UtcNow,
         };
 
-        context.ActivityLogs.AddRange([device1Log, device2Log]);
+        context.ActivityLogs.AddRange(device1Log, device2Log);
         await context.SaveChangesAsync();
 
         List<ActivityLog> result = await repository.GetPagedAsync(
-            null,
-            null,
-            device1,
-            null,
-            null,
-            null,
-            null,
-            0,
-            10
+            category: null,
+            userId: null,
+            deviceId: device1,
+            mediaId: null,
+            from: null,
+            to: null,
+            success: null,
+            skip: 0,
+            take: 10
         );
 
         result.Should().ContainSingle();
@@ -280,19 +281,19 @@ public class ActivityRepositoryTests : IDisposable
             Time = DateTime.UtcNow,
         };
 
-        context.ActivityLogs.AddRange([media1Log, media2Log]);
+        context.ActivityLogs.AddRange(media1Log, media2Log);
         await context.SaveChangesAsync();
 
         List<ActivityLog> result = await repository.GetPagedAsync(
-            null,
-            null,
-            null,
-            media1,
-            null,
-            null,
-            null,
-            0,
-            10
+            category: null,
+            userId: null,
+            deviceId: null,
+            mediaId: media1,
+            from: null,
+            to: null,
+            success: null,
+            skip: 0,
+            take: 10
         );
 
         result.Should().ContainSingle();
@@ -340,7 +341,7 @@ public class ActivityRepositoryTests : IDisposable
             Time = cutoffEnd.AddMinutes(5),
         };
 
-        context.ActivityLogs.AddRange([beforeLog, withinLog, afterLog]);
+        context.ActivityLogs.AddRange(beforeLog, withinLog, afterLog);
         await context.SaveChangesAsync();
 
         await PinCreatedAtAsync(context, beforeLog.Id, beforeLog.Time);
@@ -348,15 +349,15 @@ public class ActivityRepositoryTests : IDisposable
         await PinCreatedAtAsync(context, afterLog.Id, afterLog.Time);
 
         List<ActivityLog> result = await repository.GetPagedAsync(
-            null,
-            null,
-            null,
-            null,
-            cutoffStart,
-            cutoffEnd,
-            null,
-            0,
-            10
+            category: null,
+            userId: null,
+            deviceId: null,
+            mediaId: null,
+            from: cutoffStart,
+            to: cutoffEnd,
+            success: null,
+            skip: 0,
+            take: 10
         );
 
         result.Should().ContainSingle();
@@ -393,19 +394,19 @@ public class ActivityRepositoryTests : IDisposable
             Time = DateTime.UtcNow,
         };
 
-        context.ActivityLogs.AddRange([successLog, failLog]);
+        context.ActivityLogs.AddRange(successLog, failLog);
         await context.SaveChangesAsync();
 
         List<ActivityLog> result = await repository.GetPagedAsync(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            0,
-            10
+            category: null,
+            userId: null,
+            deviceId: null,
+            mediaId: null,
+            from: null,
+            to: null,
+            success: true,
+            skip: 0,
+            take: 10
         );
 
         result.Should().ContainSingle();
@@ -466,15 +467,15 @@ public class ActivityRepositoryTests : IDisposable
         await PinCreatedAtAsync(context, newest.Id, anchor.AddHours(1));
 
         List<ActivityLog> result = await repository.GetPagedAsync(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            10
+            category: null,
+            userId: null,
+            deviceId: null,
+            mediaId: null,
+            from: null,
+            to: null,
+            success: null,
+            skip: 0,
+            take: 10
         );
 
         result.Should().HaveCount(3);
@@ -511,27 +512,27 @@ public class ActivityRepositoryTests : IDisposable
         await context.SaveChangesAsync();
 
         List<ActivityLog> page1 = await repository.GetPagedAsync(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            3
+            category: null,
+            userId: null,
+            deviceId: null,
+            mediaId: null,
+            from: null,
+            to: null,
+            success: null,
+            skip: 0,
+            take: 3
         );
 
         List<ActivityLog> page2 = await repository.GetPagedAsync(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            3,
-            3
+            category: null,
+            userId: null,
+            deviceId: null,
+            mediaId: null,
+            from: null,
+            to: null,
+            success: null,
+            skip: 3,
+            take: 3
         );
 
         page1.Should().HaveCount(3);
@@ -567,15 +568,15 @@ public class ActivityRepositoryTests : IDisposable
         context.ChangeTracker.Clear();
 
         List<ActivityLog> result = await repository.GetPagedAsync(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            10
+            category: null,
+            userId: null,
+            deviceId: null,
+            mediaId: null,
+            from: null,
+            to: null,
+            success: null,
+            skip: 0,
+            take: 10
         );
 
         result.Should().ContainSingle();
@@ -610,10 +611,10 @@ public class ActivityRepositoryTests : IDisposable
             Time = DateTime.UtcNow,
         };
 
-        context.ActivityLogs.AddRange([authLog, playbackLog]);
+        context.ActivityLogs.AddRange(authLog, playbackLog);
         await context.SaveChangesAsync();
 
-        int deleted = await repository.DeleteAsync(ActivityCategory.Auth, null);
+        int deleted = await repository.DeleteAsync(category: ActivityCategory.Auth, before: null);
 
         deleted.Should().Be(1);
 
@@ -655,13 +656,13 @@ public class ActivityRepositoryTests : IDisposable
             Time = cutoff.AddMinutes(5),
         };
 
-        context.ActivityLogs.AddRange([beforeLog, afterLog]);
+        context.ActivityLogs.AddRange(beforeLog, afterLog);
         await context.SaveChangesAsync();
 
         await PinCreatedAtAsync(context, beforeLog.Id, beforeLog.Time);
         await PinCreatedAtAsync(context, afterLog.Id, afterLog.Time);
 
-        int deleted = await repository.DeleteAsync(null, cutoff);
+        int deleted = await repository.DeleteAsync(category: null, before: cutoff);
 
         deleted.Should().Be(1);
 
@@ -709,14 +710,14 @@ public class ActivityRepositoryTests : IDisposable
             Time = cutoff.AddMinutes(-5),
         };
 
-        context.ActivityLogs.AddRange([authBeforeCutoff, authAfterCutoff, playbackBeforeCutoff]);
+        context.ActivityLogs.AddRange(authBeforeCutoff, authAfterCutoff, playbackBeforeCutoff);
         await context.SaveChangesAsync();
 
         await PinCreatedAtAsync(context, authBeforeCutoff.Id, authBeforeCutoff.Time);
         await PinCreatedAtAsync(context, authAfterCutoff.Id, authAfterCutoff.Time);
         await PinCreatedAtAsync(context, playbackBeforeCutoff.Id, playbackBeforeCutoff.Time);
 
-        int deleted = await repository.DeleteAsync(ActivityCategory.Auth, cutoff);
+        int deleted = await repository.DeleteAsync(category: ActivityCategory.Auth, before: cutoff);
 
         deleted.Should().Be(1);
 

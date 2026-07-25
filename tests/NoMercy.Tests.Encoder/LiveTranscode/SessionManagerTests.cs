@@ -18,16 +18,16 @@ public class SessionManagerTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            "720p",
-            "720p",
-            1280,
-            720,
-            VideoCodecType.H264,
-            4000,
-            "libx264",
-            false,
-            1.5,
-            true
+            Id: "720p",
+            Label: "720p",
+            Width: 1280,
+            Height: 720,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 4000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 1.5,
+            CanRealtime: true
         );
 
     private static LiveSession MakeSession(string id) => new(id, MakeQuality());
@@ -78,10 +78,10 @@ public class SessionManagerTests
     public void CanStartSession_WhenUserAtMax_ReturnsFalse()
     {
         SessionManager manager = new(new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 2 });
-        manager.RegisterSession(MakeSession("u1-s1"), "user-1");
-        manager.RegisterSession(MakeSession("u1-s2"), "user-1");
+        manager.RegisterSession(MakeSession("u1-s1"), userId: "user-1");
+        manager.RegisterSession(MakeSession("u1-s2"), userId: "user-1");
 
-        bool result = manager.CanStartSession("user-1");
+        bool result = manager.CanStartSession(userId: "user-1");
 
         result.Should().BeFalse();
     }
@@ -90,10 +90,10 @@ public class SessionManagerTests
     public void CanStartSession_DifferentUser_NotAffectedByOtherUserLimit()
     {
         SessionManager manager = new(new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 2 });
-        manager.RegisterSession(MakeSession("u1-s1"), "user-1");
-        manager.RegisterSession(MakeSession("u1-s2"), "user-1");
+        manager.RegisterSession(MakeSession("u1-s1"), userId: "user-1");
+        manager.RegisterSession(MakeSession("u1-s2"), userId: "user-1");
 
-        bool result = manager.CanStartSession("user-2");
+        bool result = manager.CanStartSession(userId: "user-2");
 
         result.Should().BeTrue();
     }
@@ -106,7 +106,7 @@ public class SessionManagerTests
         manager.RegisterSession(MakeSession("anon-2"));
 
         // Anonymous sessions are not tracked per-user
-        bool result = manager.CanStartSession(null);
+        bool result = manager.CanStartSession(userId: null);
 
         result.Should().BeTrue();
     }

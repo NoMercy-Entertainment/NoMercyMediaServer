@@ -39,7 +39,7 @@ public class JsonSpeedIndexStoreTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+            Directory.Delete(_tempDir, recursive: true);
     }
 
     private JsonSpeedIndexStore BuildStore(string? cachePath = null)
@@ -54,7 +54,7 @@ public class JsonSpeedIndexStoreTests : IDisposable
     [Fact]
     public void Load_NullPath_ReturnsNull()
     {
-        JsonSpeedIndexStore store = BuildStore("");
+        JsonSpeedIndexStore store = BuildStore(cachePath: "");
 
         store.Load().Should().BeNull();
     }
@@ -63,7 +63,7 @@ public class JsonSpeedIndexStoreTests : IDisposable
     public void Load_MissingFile_ReturnsNull()
     {
         JsonSpeedIndexStore store = BuildStore(
-            Path.Combine(_tempDir, "does_not_exist.json")
+            cachePath: Path.Combine(_tempDir, "does_not_exist.json")
         );
 
         store.Load().Should().BeNull();
@@ -85,7 +85,7 @@ public class JsonSpeedIndexStoreTests : IDisposable
     public void Save_NullPath_NoOps()
     {
         // No cache path → save is a no-op; LastCalibratedAt stays null.
-        JsonSpeedIndexStore store = BuildStore("");
+        JsonSpeedIndexStore store = BuildStore(cachePath: "");
         SpeedIndex index = new(new());
 
         store.Save(index);

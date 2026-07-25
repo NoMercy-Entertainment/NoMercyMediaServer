@@ -46,7 +46,7 @@ public class Start
             // CreateAppFolders runs first so the DataProtection keyring directory
             // exists (with restrictive perms on Unix) before TokenStore lazy-bootstraps
             // during the Configuration table read in UserSettings.
-            new("CreateAppFolders", AppFiles.CreateAppFolders, false, 1),
+            new("CreateAppFolders", AppFiles.CreateAppFolders, CanDefer: false, Phase: 1),
             new(
                 "UserSettings",
                 async () =>
@@ -54,9 +54,9 @@ public class Start
                     if (UserSettings.TryGetUserSettings(out Dictionary<string, string> settings))
                         UserSettings.ApplySettings(settings);
                 },
-                false,
-                1,
-                ["CreateAppFolders"]
+                CanDefer: false,
+                Phase: 1,
+                DependsOn: ["CreateAppFolders"]
             ),
             // ── PHASE 2: BEST-EFFORT (network, with fallback) ──────────
             new(
@@ -65,9 +65,9 @@ public class Start
                 {
                     hasNetwork = await NetworkProbe.CheckConnectivity();
                 },
-                false,
-                2,
-                ["CreateAppFolders"]
+                CanDefer: false,
+                Phase: 2,
+                DependsOn: ["CreateAppFolders"]
             ),
             // Auth is now handled by AuthManager (DI) via BootOrchestrator — not here.
             new(
@@ -83,9 +83,9 @@ public class Start
                 // momentarily-empty release feed, network blip) must not permanently wedge
                 // BootStage.Binaries with no recovery path. DegradedModeRecovery retries
                 // provisioning with backoff and marks the stage once ffmpeg is on disk.
-                true,
-                2,
-                ["NetworkProbe"]
+                CanDefer: true,
+                Phase: 2,
+                DependsOn: ["NetworkProbe"]
             ),
             // ── PHASE 3: NETWORK-DEPENDENT (run if possible, degrade if not) ──
             new(
@@ -95,9 +95,9 @@ public class Start
                     if (NetworkDiscovery is not null)
                         await NetworkDiscovery.DiscoverExternalIpAsync();
                 },
-                true,
-                3,
-                ["NetworkProbe"]
+                CanDefer: true,
+                Phase: 3,
+                DependsOn: ["NetworkProbe"]
             ),
             new(
                 "ChromeCast",
@@ -106,9 +106,9 @@ public class Start
                     if (ChromeCast is not null)
                         await ChromeCast.Init();
                 },
-                true,
-                3,
-                ["NetworkProbe"]
+                CanDefer: true,
+                Phase: 3,
+                DependsOn: ["NetworkProbe"]
             ),
             new(
                 "DesktopIcon",
@@ -120,8 +120,8 @@ public class Start
                             AppFiles.AppIcon
                         )
                     ),
-                true,
-                3
+                CanDefer: true,
+                Phase: 3
             ),
             // Registration removed — BootOrchestrator handles it in Phase 3.
             // Having it here caused double registration + 5-minute cert retry loops.

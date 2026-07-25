@@ -27,16 +27,16 @@ public class LiveSessionAuthoritativePlayheadTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            "1080p",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     // Directly backdates the private authority stamp instead of sleeping past
@@ -57,7 +57,7 @@ public class LiveSessionAuthoritativePlayheadTests
         LiveSession session = new("sess-001", MakeQuality());
         session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(30), "/tmp/seg0.ts", 1));
 
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), true);
+        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), authoritative: true);
 
         session.BufferAhead.Should().Be(TimeSpan.FromSeconds(20));
     }
@@ -68,11 +68,11 @@ public class LiveSessionAuthoritativePlayheadTests
         LiveSession session = new("sess-001", MakeQuality());
         session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(30), "/tmp/seg0.ts", 1));
 
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), true);
+        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), authoritative: true);
 
         // The prefetch frontier tries to drag the playhead forward to 25s; it
         // must be ignored while the authoritative report is still fresh.
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(25), false);
+        session.ReportPlaybackPosition(TimeSpan.FromSeconds(25), authoritative: false);
 
         session.BufferAhead.Should().Be(TimeSpan.FromSeconds(20));
     }
@@ -83,12 +83,12 @@ public class LiveSessionAuthoritativePlayheadTests
         LiveSession session = new("sess-001", MakeQuality());
         session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(30), "/tmp/seg0.ts", 1));
 
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), true);
+        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), authoritative: true);
         BackdateAuthoritativeStamp(session, TimeSpan.FromSeconds(16));
 
         // No fresh heartbeat has landed for 16s (window is 15s) — the
         // segment-request-derived estimate is now allowed to move the playhead.
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(25), false);
+        session.ReportPlaybackPosition(TimeSpan.FromSeconds(25), authoritative: false);
 
         session.BufferAhead.Should().Be(TimeSpan.FromSeconds(5));
     }
@@ -102,7 +102,7 @@ public class LiveSessionAuthoritativePlayheadTests
         LiveSession session = new("sess-001", MakeQuality());
         session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(30), "/tmp/seg0.ts", 1));
 
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(12), false);
+        session.ReportPlaybackPosition(TimeSpan.FromSeconds(12), authoritative: false);
 
         session.BufferAhead.Should().Be(TimeSpan.FromSeconds(18));
     }
@@ -112,13 +112,13 @@ public class LiveSessionAuthoritativePlayheadTests
     {
         LiveSession session = new("sess-001", MakeQuality());
         session.PushSegment(new(0, TimeSpan.Zero, TimeSpan.FromSeconds(60), "/tmp/seg0.ts", 1));
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), true);
+        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), authoritative: true);
 
         await session.SeekAsync(TimeSpan.FromSeconds(40), CancellationToken.None);
 
         // A prefetch report for the pre-seek position, landing just after the
         // seek completes, must not override the fresh seek target.
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(5), false);
+        session.ReportPlaybackPosition(TimeSpan.FromSeconds(5), authoritative: false);
 
         // SeekAsync resets TranscodedPosition to the seek target too, so a
         // clobbered playhead would show up as a non-zero BufferAhead here.

@@ -100,10 +100,11 @@ public class HlsOutputStrategyMasterGuardTests : IDisposable
     private static OutputPlan CreateSimplePlan()
     {
         return new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
-                    1920,
+                    Width: 1920,
                     Height: 1080,
                     EncoderName: "libx264",
                     Crf: 23,
@@ -119,21 +120,22 @@ public class HlsOutputStrategyMasterGuardTests : IDisposable
                     PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
                 ),
             ],
+            AudioOutputs:
             [
                 new(
-                    "aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    "eng",
-                    "0:a:0",
-                    ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                    ":type:_:language:_:codec:/:type:_:language:_:codec:"
+                    EncoderName: "aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: "eng",
+                    MapLabel: "0:a:0",
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
     }
 }

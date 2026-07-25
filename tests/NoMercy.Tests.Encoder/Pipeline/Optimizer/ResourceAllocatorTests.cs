@@ -31,10 +31,10 @@ public class ResourceAllocatorTests
                     [VideoCodecType.H264, VideoCodecType.H265]
                 ),
             ],
-            16
+            CpuCores: 16
         );
 
-    private static IHardwareCapabilities CpuOnly => new HardwareCapabilities([], 8);
+    private static IHardwareCapabilities CpuOnly => new HardwareCapabilities([], CpuCores: 8);
 
     private static List<ExecutionGroup> MakeGroups(int encodeCount, bool requiresGpu)
     {
@@ -47,13 +47,13 @@ public class ResourceAllocatorTests
         return
         [
             new(
-                "group_0",
-                allNodes.ToArray(),
-                requiresGpu ? "RTX 4090" : null,
-                requiresGpu ? encodeCount : 0,
-                requiresGpu ? 0 : 4,
-                requiresGpu,
-                1
+                GroupId: "group_0",
+                Nodes: allNodes.ToArray(),
+                DeviceId: requiresGpu ? "RTX 4090" : null,
+                GpuSlotsRequired: requiresGpu ? encodeCount : 0,
+                CpuThreadsRequired: requiresGpu ? 0 : 4,
+                RequiresGpu: requiresGpu,
+                Priority: 1
             ),
         ];
     }
@@ -67,9 +67,9 @@ public class ResourceAllocatorTests
     {
         ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
 
-        List<ExecutionGroup> groups = MakeGroups(1, true);
+        List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: true);
 
-        bool result = allocator.CheckMemoryCeiling(groups, 8192);
+        bool result = allocator.CheckMemoryCeiling(groups, availableMemoryMb: 8192);
 
         result.Should().BeTrue();
     }
@@ -79,9 +79,9 @@ public class ResourceAllocatorTests
     {
         ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
 
-        List<ExecutionGroup> groups = MakeGroups(100, true);
+        List<ExecutionGroup> groups = MakeGroups(encodeCount: 100, requiresGpu: true);
 
-        bool result = allocator.CheckMemoryCeiling(groups, 1024);
+        bool result = allocator.CheckMemoryCeiling(groups, availableMemoryMb: 1024);
 
         result.Should().BeFalse();
     }
@@ -91,9 +91,9 @@ public class ResourceAllocatorTests
     {
         ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
 
-        List<ExecutionGroup> groups = MakeGroups(1, true);
+        List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: true);
 
-        bool result = allocator.CheckMemoryCeiling(groups, 267);
+        bool result = allocator.CheckMemoryCeiling(groups, availableMemoryMb: 267);
 
         result.Should().BeFalse();
     }
@@ -106,17 +106,17 @@ public class ResourceAllocatorTests
         List<ExecutionGroup> groups =
         [
             new(
-                "group_0",
-                [new("sub_0", OperationType.SubtitleExtract, [], new())],
-                null,
-                0,
-                1,
-                false,
-                0
+                GroupId: "group_0",
+                Nodes: [new("sub_0", OperationType.SubtitleExtract, [], new())],
+                DeviceId: null,
+                GpuSlotsRequired: 0,
+                CpuThreadsRequired: 1,
+                RequiresGpu: false,
+                Priority: 0
             ),
         ];
 
-        bool result = allocator.CheckMemoryCeiling(groups, 256);
+        bool result = allocator.CheckMemoryCeiling(groups, availableMemoryMb: 256);
 
         result.Should().BeTrue();
     }
@@ -125,7 +125,7 @@ public class ResourceAllocatorTests
     public async Task AllocateResources_DoesNotThrowForGpuGroups()
     {
         ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
-        List<ExecutionGroup> groups = MakeGroups(2, true);
+        List<ExecutionGroup> groups = MakeGroups(encodeCount: 2, requiresGpu: true);
 
         Func<Task> act = async () => await allocator.AllocateResourcesAsync(groups);
 
@@ -136,7 +136,7 @@ public class ResourceAllocatorTests
     public async Task AllocateResources_DoesNotThrowForCpuGroups()
     {
         ResourceAllocator allocator = new(CpuOnly, NullMonitor);
-        List<ExecutionGroup> groups = MakeGroups(1, false);
+        List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: false);
 
         Func<Task> act = async () => await allocator.AllocateResourcesAsync(groups);
 
@@ -161,7 +161,7 @@ public class ResourceAllocatorTests
     public async Task AllocateResources_GpuGroup_AssignsDeviceIdFromHardware()
     {
         ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
-        List<ExecutionGroup> groups = MakeGroups(1, true);
+        List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: true);
 
         await allocator.AllocateResourcesAsync(groups);
 
@@ -175,13 +175,13 @@ public class ResourceAllocatorTests
         List<ExecutionGroup> groups =
         [
             new(
-                "group_0",
-                [new("encode_0", OperationType.Encode, [], new())],
-                null,
-                0,
-                0,
-                false,
-                1
+                GroupId: "group_0",
+                Nodes: [new("encode_0", OperationType.Encode, [], new())],
+                DeviceId: null,
+                GpuSlotsRequired: 0,
+                CpuThreadsRequired: 0,
+                RequiresGpu: false,
+                Priority: 1
             ),
         ];
 
@@ -195,7 +195,7 @@ public class ResourceAllocatorTests
     public async Task AllocateResources_CpuGroup_WithExistingThreadCount_DoesNotOverwrite()
     {
         ResourceAllocator allocator = new(CpuOnly, NullMonitor);
-        List<ExecutionGroup> groups = MakeGroups(1, false);
+        List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: false);
 
         await allocator.AllocateResourcesAsync(groups);
 
@@ -210,21 +210,21 @@ public class ResourceAllocatorTests
                 new(GpuVendor.Nvidia, "GPU-0", 8192, 3, [VideoCodecType.H264]),
                 new(GpuVendor.Nvidia, "GPU-1", 8192, 3, [VideoCodecType.H264]),
             ],
-            8
+            CpuCores: 8
         );
 
         IResourceMonitor loadedGpu0Monitor = new FixedGpuSampleMonitor([
             new(
-                100,
-                0,
-                80,
-                0
+                Pid: 100,
+                GpuIndex: 0,
+                EncoderUtilizationPercent: 80,
+                EncoderMemoryBytes: 0
             ),
             new(
-                101,
-                1,
-                20,
-                0
+                Pid: 101,
+                GpuIndex: 1,
+                EncoderUtilizationPercent: 20,
+                EncoderMemoryBytes: 0
             ),
         ]);
 
@@ -232,13 +232,13 @@ public class ResourceAllocatorTests
         List<ExecutionGroup> groups =
         [
             new(
-                "group_0",
-                [new("encode_0", OperationType.Encode, [], new())],
-                null,
-                1,
-                0,
-                true,
-                1
+                GroupId: "group_0",
+                Nodes: [new("encode_0", OperationType.Encode, [], new())],
+                DeviceId: null,
+                GpuSlotsRequired: 1,
+                CpuThreadsRequired: 0,
+                RequiresGpu: true,
+                Priority: 1
             ),
         ];
 

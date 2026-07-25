@@ -85,7 +85,7 @@ public sealed class RemoteStorageTests
         int read = await stream.ReadAsync(buffer, CancellationToken.None);
 
         read.Should().Be(3);
-        buffer.Should().Equal([0xAA, 0xBB, 0xCC]);
+        buffer.Should().Equal(0xAA, 0xBB, 0xCC);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public sealed class RemoteStorageTests
         {
             await using Stream s = await storage.OpenWriteAsync(
                 "existing.txt",
-                false,
+                overwrite: false,
                 CancellationToken.None
             );
         };
@@ -149,11 +149,11 @@ public sealed class RemoteStorageTests
         RemoteStorage storage = NewStorage(out InMemoryStorageDriver driver);
         driver.SeedDirectory("old-lib");
 
-        await storage.DeleteDirectoryAsync("old-lib", true, CancellationToken.None);
+        await storage.DeleteDirectoryAsync("old-lib", recursive: true, CancellationToken.None);
         driver.DirectoryExists("old-lib").Should().BeFalse();
 
         Func<Task> act = async () =>
-            await storage.DeleteDirectoryAsync("old-lib", true, CancellationToken.None);
+            await storage.DeleteDirectoryAsync("old-lib", recursive: true, CancellationToken.None);
         await act.Should().NotThrowAsync("deleting an already-missing directory must be a no-op");
     }
 
@@ -241,7 +241,7 @@ public sealed class RemoteStorageTests
             StorageEntry entry in storage.ListAsync(
                 "season1",
                 null,
-                false,
+                recursive: false,
                 CancellationToken.None
             )
         )
@@ -262,7 +262,7 @@ public sealed class RemoteStorageTests
         Func<Task> act = async () =>
         {
             await foreach (
-                StorageEntry _ in storage.ListAsync("", null, true, cts.Token)
+                StorageEntry _ in storage.ListAsync("", null, recursive: true, cts.Token)
             ) { }
         };
 
@@ -389,10 +389,10 @@ public sealed class RemoteStorageTests
         RemoteStorage storage = NewStorage(out InMemoryStorageDriver driver);
         driver.SeedDirectory("d");
 
-        storage.DeleteDirectory("d", false);
+        storage.DeleteDirectory("d", recursive: false);
         driver.DirectoryExists("d").Should().BeFalse();
 
-        Action act = () => storage.DeleteDirectory("d", false);
+        Action act = () => storage.DeleteDirectory("d", recursive: false);
         act.Should().NotThrow("deleting an already-missing directory is idempotent");
     }
 
@@ -402,7 +402,7 @@ public sealed class RemoteStorageTests
         RemoteStorage storage = NewStorage(out InMemoryStorageDriver driver);
         driver.SeedFile("f.txt", [0x9, 0x8, 0x7]);
 
-        storage.Read("f.txt").Should().Equal([0x9, 0x8, 0x7]);
+        storage.Read("f.txt").Should().Equal(0x9, 0x8, 0x7);
     }
 
     [Fact]
@@ -421,7 +421,7 @@ public sealed class RemoteStorageTests
     {
         RemoteStorage storage = NewStorage(out InMemoryStorageDriver driver);
 
-        using (Stream stream = storage.OpenWrite("out.txt", true))
+        using (Stream stream = storage.OpenWrite("out.txt", overwrite: true))
             stream.Write([0x5, 0x6], 0, 2);
 
         driver.FileExists("out.txt").Should().BeTrue();
@@ -435,7 +435,7 @@ public sealed class RemoteStorageTests
         storage.Write("out.txt", [0x1, 0x2, 0x3]);
 
         driver.FileExists("out.txt").Should().BeTrue();
-        storage.Read("out.txt").Should().Equal([0x1, 0x2, 0x3]);
+        storage.Read("out.txt").Should().Equal(0x1, 0x2, 0x3);
     }
 
     [Fact]
@@ -468,7 +468,7 @@ public sealed class RemoteStorageTests
         RemoteStorage storage = NewStorage(out InMemoryStorageDriver driver);
         driver.SeedFile("dir/a.txt", new byte[3]);
 
-        IReadOnlyList<StorageEntry> entries = storage.List("dir", null, false);
+        IReadOnlyList<StorageEntry> entries = storage.List("dir", null, recursive: false);
 
         entries.Should().ContainSingle();
         entries[0].SizeBytes.Should().Be(3);
@@ -557,7 +557,7 @@ public sealed class RemoteStorageTests
         act.Should()
             .Throw<NotSupportedException>(
                 "GetFullPath escapes the abstraction and is only valid for LocalStorage; "
-                         + "remote drivers have no meaningful local filesystem path"
+                    + "remote drivers have no meaningful local filesystem path"
             );
     }
 

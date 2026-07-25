@@ -234,7 +234,9 @@ public class WorkerSelfRegistrationService(
                 );
                 TimeSpan delay = BackoffSequence[backoffIndex];
                 logger.LogWarning(
-                    "Token request returned 401 (failure #{Count}) — backing off {Delay} before next attempt", [_consecutiveAuthFailures, delay]
+                    "Token request returned 401 (failure #{Count}) — backing off {Delay} before next attempt",
+                    _consecutiveAuthFailures,
+                    delay
                 );
                 try
                 {
@@ -249,7 +251,9 @@ public class WorkerSelfRegistrationService(
 
             default:
                 logger.LogDebug(
-                    "Token request failed ({Failure}): {Message}", [result.Failure, result.Message]
+                    "Token request failed ({Failure}): {Message}",
+                    result.Failure,
+                    result.Message
                 );
                 return;
         }
@@ -262,12 +266,12 @@ public class WorkerSelfRegistrationService(
         try
         {
             RegisterPayload payload = new(
-                options.WorkerId,
-                options.WorkerSelfBaseUrl,
-                capabilities.CpuCores,
-                capabilities.CpuCores,
-                capabilities.Gpus.Sum(g => g.MaxEncoderSessions),
-                capabilities.Gpus
+                WorkerId: options.WorkerId,
+                BaseUrl: options.WorkerSelfBaseUrl,
+                CpuCores: capabilities.CpuCores,
+                AvailableCpuThreads: capabilities.CpuCores,
+                AvailableGpuSlots: capabilities.Gpus.Sum(g => g.MaxEncoderSessions),
+                Gpus: capabilities.Gpus
             );
 
             using HttpResponseMessage response = await http.PostAsJsonAsync(
@@ -280,7 +284,9 @@ public class WorkerSelfRegistrationService(
             if (response.IsSuccessStatusCode)
             {
                 logger.LogInformation(
-                    "Registered as worker {WorkerId} at {CoordinatorUrl}", [options.WorkerId, options.CoordinatorUrl]
+                    "Registered as worker {WorkerId} at {CoordinatorUrl}",
+                    options.WorkerId,
+                    options.CoordinatorUrl
                 );
                 return true;
             }
@@ -303,9 +309,9 @@ public class WorkerSelfRegistrationService(
         try
         {
             HeartbeatPayload payload = new(
-                capabilities.CpuCores,
-                capabilities.Gpus.Sum(g => g.MaxEncoderSessions),
-                0.0
+                AvailableCpuThreads: capabilities.CpuCores,
+                AvailableGpuSlots: capabilities.Gpus.Sum(g => g.MaxEncoderSessions),
+                GpuUtilization: 0.0
             );
 
             using HttpResponseMessage response = await http.PostAsJsonAsync(

@@ -25,14 +25,15 @@ public class AudioCdIdentifierTests
 {
     private static DiscInfo MakeCdDisc(string label = "AUDIO_CD") =>
         new(
-            OpticalDiscType.Cd,
-            label,
-            [],
+            Type: OpticalDiscType.Cd,
+            DiscLabel: label,
+            Titles: [],
+            AudioTracks:
             [
                 new(1, null, null, TimeSpan.FromSeconds(180), 44100, 2),
                 new(2, null, null, TimeSpan.FromSeconds(210), 44100, 2),
             ],
-            TimeSpan.FromSeconds(390)
+            TotalDuration: TimeSpan.FromSeconds(390)
         );
 
     private static AudioCdIdentifier MakeSut(
@@ -48,10 +49,10 @@ public class AudioCdIdentifierTests
     // ── CanHandle ──────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData([OpticalDiscType.Cd, true])]
-    [InlineData([OpticalDiscType.Dvd, false])]
-    [InlineData([OpticalDiscType.BluRay, false])]
-    [InlineData([OpticalDiscType.None, false])]
+    [InlineData(OpticalDiscType.Cd, true)]
+    [InlineData(OpticalDiscType.Dvd, false)]
+    [InlineData(OpticalDiscType.BluRay, false)]
+    [InlineData(OpticalDiscType.None, false)]
     public void CanHandle_ReturnsCorrectValueForDiscType(OpticalDiscType type, bool expectedResult)
     {
         AudioCdIdentifier sut = MakeSut();
@@ -68,7 +69,7 @@ public class AudioCdIdentifierTests
             .Setup(r => r.ReadTocAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((DiscToc?)null);
 
-        AudioCdIdentifier sut = MakeSut(tocMock.Object);
+        AudioCdIdentifier sut = MakeSut(tocReader: tocMock.Object);
         DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.NeedsManualAssignment.Should().BeTrue();
@@ -80,7 +81,7 @@ public class AudioCdIdentifierTests
     [Fact]
     public async Task IdentifyAsync_WithNullTocReaderDefault_ReturnsNeedsManualAssignment()
     {
-        AudioCdIdentifier sut = MakeSut(new NullTocReader());
+        AudioCdIdentifier sut = MakeSut(tocReader: new NullTocReader());
         DiscIdentification result = await sut.IdentifyAsync(MakeCdDisc(), CancellationToken.None);
 
         result.NeedsManualAssignment.Should().BeTrue();
@@ -89,10 +90,10 @@ public class AudioCdIdentifierTests
     // ── VideoDiscIdentifier CanHandle ──────────────────────────────────────
 
     [Theory]
-    [InlineData([OpticalDiscType.Dvd, true])]
-    [InlineData([OpticalDiscType.BluRay, true])]
-    [InlineData([OpticalDiscType.Cd, false])]
-    [InlineData([OpticalDiscType.None, false])]
+    [InlineData(OpticalDiscType.Dvd, true)]
+    [InlineData(OpticalDiscType.BluRay, true)]
+    [InlineData(OpticalDiscType.Cd, false)]
+    [InlineData(OpticalDiscType.None, false)]
     public void VideoDiscIdentifier_CanHandle_CorrectDiscTypes(
         OpticalDiscType type,
         bool expectedResult
@@ -108,10 +109,10 @@ public class AudioCdIdentifierTests
     public void BuildTocString_FormatsFirstLastLeadOutAndTrackOffsetsWith150Pregap()
     {
         DiscToc toc = new(
-            1,
-            2,
-            30000,
-            [150, 15150]
+            FirstTrack: 1,
+            LastTrack: 2,
+            LeadOutOffsetSectors: 30000,
+            TrackOffsetsSectors: [150, 15150]
         );
 
         string result = AudioCdIdentifier.BuildTocString(toc);
@@ -132,20 +133,22 @@ public class AudioCdIdentifierTests
 public sealed class AudioCdIdentifierHttpTests : ProviderHttpHarness
 {
     public AudioCdIdentifierHttpTests()
-        : base([NoMercy.Providers.Helpers.HttpClientNames.MusicBrainz, NoMercy.Providers.Helpers.HttpClientNames.CoverArt]
+        : base(
+            NoMercy.Providers.Helpers.HttpClientNames.MusicBrainz,
+            NoMercy.Providers.Helpers.HttpClientNames.CoverArt
         ) { }
 
     private static DiscInfo MakeCdDisc() =>
         new(
-            OpticalDiscType.Cd,
-            "AUDIO_CD",
-            [],
-            [new(1, null, null, TimeSpan.FromSeconds(180), 44100, 2)],
-            TimeSpan.FromSeconds(180)
+            Type: OpticalDiscType.Cd,
+            DiscLabel: "AUDIO_CD",
+            Titles: [],
+            AudioTracks: [new(1, null, null, TimeSpan.FromSeconds(180), 44100, 2)],
+            TotalDuration: TimeSpan.FromSeconds(180)
         );
 
     private static DiscToc MakeToc(int leadOut) =>
-        new(1, 1, leadOut, [150]);
+        new(FirstTrack: 1, LastTrack: 1, LeadOutOffsetSectors: leadOut, TrackOffsetsSectors: [150]);
 
     private static Mock<ITocReader> MakeTocReader(DiscToc toc)
     {

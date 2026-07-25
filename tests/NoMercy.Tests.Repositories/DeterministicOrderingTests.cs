@@ -47,7 +47,7 @@ public class DeterministicOrderingTests : IDisposable
                 connectionString,
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors([_interceptor, new SqliteNormalizeSearchInterceptor()])
+            .AddInterceptors(_interceptor, new SqliteNormalizeSearchInterceptor())
             .Options;
 
         using TestMediaContext init = new(_options);
@@ -71,7 +71,7 @@ public class DeterministicOrderingTests : IDisposable
         HomeRepository repository = new(context, new TestDbContextFactory(_options));
         _interceptor.Clear();
 
-        await repository.GetHome(Guid.NewGuid(), "en", 10, 1);
+        await repository.GetHome(Guid.NewGuid(), "en", take: 10, page: 1);
 
         // The genre list query is the one that paginates (LIMIT/OFFSET); it must
         // carry an ORDER BY so page N is stable across requests.

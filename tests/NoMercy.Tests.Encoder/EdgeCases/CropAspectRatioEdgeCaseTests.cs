@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
@@ -20,6 +21,7 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
+using Xunit;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
@@ -43,10 +45,10 @@ public class CropAspectRatioEdgeCaseTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new CropResult(1920, 800, 0, 140, true));
+            .ReturnsAsync(new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
 
         PlanStage stage = BuildStage(detector.Object);
-        EncodingProfile profile = BuildProfile(true);
+        EncodingProfile profile = BuildProfile(autoDetectCrop: true);
         OutputPlan plan = await RunPlan(stage, profile);
 
         plan.VideoOutputs.Should().HaveCountGreaterThan(0);
@@ -66,10 +68,10 @@ public class CropAspectRatioEdgeCaseTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new CropResult(1920, 800, 0, 140, true));
+            .ReturnsAsync(new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
 
         PlanStage stage = BuildStage(detector.Object);
-        EncodingProfile profile = BuildProfile(false);
+        EncodingProfile profile = BuildProfile(autoDetectCrop: false);
         OutputPlan plan = await RunPlan(stage, profile);
 
         plan.VideoOutputs.Should().HaveCountGreaterThan(0);
@@ -98,23 +100,23 @@ public class CropAspectRatioEdgeCaseTests
             )
             .Returns(
                 new ResolvedCodec(
-                    "libx264",
-                    new(
-                        "libx264",
-                        null,
-                        ["medium"],
-                        ["high"],
-                        ["4.1"],
-                        new(0, 51, 23),
-                        [RateControlMode.Crf],
-                        false,
-                        false,
-                        int.MaxValue,
-                        "yuv420p10le",
-                        new()
+                    FfmpegEncoderName: "libx264",
+                    EncoderInfo: new(
+                        FfmpegName: "libx264",
+                        RequiredVendor: null,
+                        Presets: ["medium"],
+                        Profiles: ["high"],
+                        Levels: ["4.1"],
+                        QualityRange: new(0, 51, 23),
+                        SupportedRateControl: [RateControlMode.Crf],
+                        Supports10Bit: false,
+                        SupportsHdr: false,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new()
                     ),
-                    null,
-                    RateControlMode.Crf
+                    Device: null,
+                    DefaultRateControl: RateControlMode.Crf
                 )
             );
 
@@ -144,57 +146,58 @@ public class CropAspectRatioEdgeCaseTests
 
     private static MediaInfo BuildMedia() =>
         new(
-            "/media/test.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            8000,
-            4_000_000_000,
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile BuildProfile(bool autoDetectCrop) =>
         new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "Crop Test",
             Container: Container.HlsTs,
             Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                "video/{label}",
-                "video/{label}/playlist"
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
             ),
             Audio: [],
             Subtitles: [],

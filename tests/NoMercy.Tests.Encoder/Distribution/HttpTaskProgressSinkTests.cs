@@ -29,14 +29,14 @@ public class HttpTaskProgressSinkTests
 {
     private static EncodingProgress Progress(double percent = 50.0) =>
         new(
-            "corr",
-            percent,
-            TimeSpan.FromSeconds(10),
-            TimeSpan.FromSeconds(10),
-            30,
-            1.5,
-            "encode",
-            "av1_nvenc"
+            CorrelationId: "corr",
+            PercentComplete: percent,
+            Elapsed: TimeSpan.FromSeconds(10),
+            EstimatedRemaining: TimeSpan.FromSeconds(10),
+            CurrentFps: 30,
+            CurrentSpeed: 1.5,
+            CurrentStage: "encode",
+            CurrentOperation: "av1_nvenc"
         );
 
     private sealed class TestHandler : HttpMessageHandler
@@ -65,7 +65,7 @@ public class HttpTaskProgressSinkTests
         Mock<IHttpClientFactory> factory = new();
         factory
             .Setup(f => f.CreateClient(It.IsAny<string>()))
-            .Returns(() => new(handler, false));
+            .Returns(() => new(handler, disposeHandler: false));
         EncoderOptions options = new() { CoordinatorUrl = coordinatorUrl, WorkerId = "w1" };
 
         return (
@@ -83,7 +83,7 @@ public class HttpTaskProgressSinkTests
     {
         // Standalone worker / coordinator-only host → nothing to push.
         // The sink must short-circuit before even resolving an HttpClient.
-        (HttpTaskProgressSink sink, TestHandler handler) = Build(null);
+        (HttpTaskProgressSink sink, TestHandler handler) = Build(coordinatorUrl: null);
 
         sink.Report("task-1", Progress());
 
@@ -93,7 +93,7 @@ public class HttpTaskProgressSinkTests
     [Fact]
     public void Report_WhitespaceCoordinatorUrl_DoesNotPush()
     {
-        (HttpTaskProgressSink sink, TestHandler handler) = Build("   ");
+        (HttpTaskProgressSink sink, TestHandler handler) = Build(coordinatorUrl: "   ");
 
         sink.Report("task-1", Progress());
 
@@ -119,8 +119,8 @@ public class HttpTaskProgressSinkTests
         // window MUST NOT trigger another POST.
         (HttpTaskProgressSink sink, TestHandler handler) = Build();
 
-        sink.Report("task-1", Progress(10));
-        sink.Report("task-1", Progress(11));
+        sink.Report("task-1", Progress(percent: 10));
+        sink.Report("task-1", Progress(percent: 11));
 
         await WaitForCount(handler, 1);
         handler.RequestCount.Should().Be(1);

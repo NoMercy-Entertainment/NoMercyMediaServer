@@ -148,21 +148,25 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
             OrphanTriageResult result = await OrphanRecoveryTriage
                 .RunAsync(
                     context,
-                    null,
+                    checkpointLookup: null,
                     candidates,
-                    Array.Empty<string>().ToHashSet(),
+                    encoderQueues: Array.Empty<string>().ToHashSet(),
                     // Must NOT refund — see the class doc's convergence
                     // rationale. Repeated hangs cross the dead-letter
                     // threshold instead of looping forever.
-                    false,
-                    BuildDeadLetterReason,
-                    LogReclaim,
-                    cancellationToken
+                    refundAttemptOnRequeue: false,
+                    deadLetterReasonFactory: BuildDeadLetterReason,
+                    onReclaimed: LogReclaim,
+                    cancellationToken: cancellationToken
                 )
                 .ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Stuck-reservation reaper: reclaimed {Total} job(s) reserved longer than {Cutoff}; {Failed} moved to FailedJobs, {Requeued} released for retry", [candidates.Count, _cutoff, result.Failed, result.Requeued]
+                "Stuck-reservation reaper: reclaimed {Total} job(s) reserved longer than {Cutoff}; {Failed} moved to FailedJobs, {Requeued} released for retry",
+                candidates.Count,
+                _cutoff,
+                result.Failed,
+                result.Requeued
             );
         }
         catch (Exception ex)
@@ -182,7 +186,12 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
         string jobType = JobPayloadTypeReader.ReadShortTypeName(job.Payload);
 
         _logger.LogWarning(
-            "Stuck-reservation reaper: reclaimed job {JobId} ({JobType}) on queue {Queue} — reserved for {ReservedFor:g}, outcome: {Outcome}", [job.Id, jobType, job.Queue, reservedFor, outcome]
+            "Stuck-reservation reaper: reclaimed job {JobId} ({JobType}) on queue {Queue} — reserved for {ReservedFor:g}, outcome: {Outcome}",
+            job.Id,
+            jobType,
+            job.Queue,
+            reservedFor,
+            outcome
         );
     }
 }

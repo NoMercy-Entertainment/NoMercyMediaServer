@@ -53,7 +53,7 @@ public class CastIntentTests
     [Fact]
     public void PlayVideo_WithResumeAt_SetsResumePosition()
     {
-        CastIntent intent = CastIntent.PlayVideo("tv", "1399", 842);
+        CastIntent intent = CastIntent.PlayVideo("tv", "1399", resumeAt: 842);
 
         Assert.Equal(842, intent.ResumeAt);
     }
@@ -74,7 +74,7 @@ public class CastIntentTests
     [Fact]
     public void PlayMusic_WithTrackIdAndResumeAt_SetsBoth()
     {
-        CastIntent intent = CastIntent.PlayMusic("playlist", "xyz-789", "track-1", 30);
+        CastIntent intent = CastIntent.PlayMusic("playlist", "xyz-789", "track-1", resumeAt: 30);
 
         Assert.Equal("track-1", intent.TrackId);
         Assert.Equal(30, intent.ResumeAt);

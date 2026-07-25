@@ -20,8 +20,8 @@ public class ProfileFingerprintTests
     public void Compute_SameResolvedProfile_ProducesTheSameHash()
     {
         Ulid id = Ulid.NewUlid();
-        EncodingProfile first = Build(id, 6);
-        EncodingProfile second = Build(id, 6);
+        EncodingProfile first = Build(id, segmentDurationSeconds: 6);
+        EncodingProfile second = Build(id, segmentDurationSeconds: 6);
 
         ProfileFingerprint.Compute(first).Should().Be(ProfileFingerprint.Compute(second));
     }
@@ -30,8 +30,8 @@ public class ProfileFingerprintTests
     public void Compute_ChangedSetting_ProducesADifferentHash()
     {
         Ulid id = Ulid.NewUlid();
-        EncodingProfile original = Build(id, 6);
-        EncodingProfile editedInPlace = Build(id, 4);
+        EncodingProfile original = Build(id, segmentDurationSeconds: 6);
+        EncodingProfile editedInPlace = Build(id, segmentDurationSeconds: 4);
 
         ProfileFingerprint
             .Compute(original)
@@ -52,7 +52,7 @@ public class ProfileFingerprintTests
 
     private static EncodingProfile Build(Ulid id, int segmentDurationSeconds) =>
         new(
-            id,
+            Id: id,
             Name: "test-profile",
             Container: Container.HlsFmp4,
             Video: null,

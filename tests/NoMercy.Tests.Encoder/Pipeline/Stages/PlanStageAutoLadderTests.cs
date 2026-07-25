@@ -58,23 +58,23 @@ public class PlanStageAutoLadderTests
             )
             .Returns(
                 new ResolvedCodec(
-                    "libx264",
-                    new(
-                        "libx264",
-                        null,
-                        ["medium"],
-                        ["high"],
-                        ["4.1"],
-                        new(0, 51, 23),
-                        [RateControlMode.Crf],
-                        false,
-                        false,
-                        int.MaxValue,
-                        "yuv420p10le",
-                        new()
+                    FfmpegEncoderName: "libx264",
+                    EncoderInfo: new(
+                        FfmpegName: "libx264",
+                        RequiredVendor: null,
+                        Presets: ["medium"],
+                        Profiles: ["high"],
+                        Levels: ["4.1"],
+                        QualityRange: new(0, 51, 23),
+                        SupportedRateControl: [RateControlMode.Crf],
+                        Supports10Bit: false,
+                        SupportsHdr: false,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new()
                     ),
-                    null,
-                    RateControlMode.Crf
+                    Device: null,
+                    DefaultRateControl: RateControlMode.Crf
                 )
             );
 
@@ -96,8 +96,8 @@ public class PlanStageAutoLadderTests
     public async Task AutoLadder_Off_PreservesManualVariants()
     {
         EncodingProfile profile = BuildProfile(
-            false,
-            [BuildVideo(1920, 1080), BuildVideo(1280, 720)]
+            autoLadder: false,
+            rungs: [BuildVideo(1920, 1080), BuildVideo(1280, 720)]
         );
 
         OutputPlan plan = await RunPlan(BuildMedia(1920, 1080), profile);
@@ -110,9 +110,9 @@ public class PlanStageAutoLadderTests
     [Fact]
     public async Task AutoLadder_On_Expand1080pReference_Produces360_480_720_1080()
     {
-        EncodingProfile profile = BuildProfile(true, [BuildVideo(1920, 1080)]);
+        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(1920, 1080)]);
 
-        OutputPlan plan = await RunPlan(BuildMedia(1920, 1080, 6000), profile);
+        OutputPlan plan = await RunPlan(BuildMedia(1920, 1080, bitrateKbps: 6000), profile);
 
         int[] heights = plan.VideoOutputs.Select(v => v.Height).ToArray();
         Assert.Contains(360, heights);
@@ -124,9 +124,9 @@ public class PlanStageAutoLadderTests
     [Fact]
     public async Task AutoLadder_On_720pSource_SkipsHigherTiers()
     {
-        EncodingProfile profile = BuildProfile(true, [BuildVideo(1280, 720)]);
+        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(1280, 720)]);
 
-        OutputPlan plan = await RunPlan(BuildMedia(1280, 720, 3000), profile);
+        OutputPlan plan = await RunPlan(BuildMedia(1280, 720, bitrateKbps: 3000), profile);
 
         Assert.All(plan.VideoOutputs, v => Assert.True(v.Height <= 720));
         Assert.DoesNotContain(1080, plan.VideoOutputs.Select(v => v.Height));
@@ -138,8 +138,8 @@ public class PlanStageAutoLadderTests
         // AutoLadder requires exactly 1 reference profile — with more than 1,
         // the stage logs a warning and keeps the manual variants.
         EncodingProfile profile = BuildProfile(
-            true,
-            [BuildVideo(1920, 1080), BuildVideo(1280, 720)]
+            autoLadder: true,
+            rungs: [BuildVideo(1920, 1080), BuildVideo(1280, 720)]
         );
 
         OutputPlan plan = await RunPlan(BuildMedia(1920, 1080), profile);
@@ -150,7 +150,7 @@ public class PlanStageAutoLadderTests
     [Fact]
     public async Task AutoLadder_On_AudioOnlySource_NoExpansion()
     {
-        EncodingProfile profile = BuildProfile(true, [BuildVideo(1920, 1080)]);
+        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(1920, 1080)]);
 
         // Source has no video streams → auto-ladder passthrough.
         OutputPlan plan = await RunPlan(BuildAudioOnlyMedia(), profile);
@@ -170,48 +170,49 @@ public class PlanStageAutoLadderTests
 
     private static MediaInfo BuildMedia(int width, int height, long bitrateKbps = 6000) =>
         new(
-            "/media/test.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            bitrateKbps + 500,
-            4_000_000_000,
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: bitrateKbps + 500,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    width,
-                    height,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    bitrateKbps
+                    Index: 0,
+                    Codec: "h264",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: bitrateKbps
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static MediaInfo BuildAudioOnlyMedia() =>
         new(
-            "/media/song.flac",
-            "flac",
-            TimeSpan.FromMinutes(4),
-            800,
-            20_000_000,
-            [],
-            [],
-            [],
-            []
+            FilePath: "/media/song.flac",
+            Format: "flac",
+            Duration: TimeSpan.FromMinutes(4),
+            OverallBitRateKbps: 800,
+            FileSizeBytes: 20_000_000,
+            VideoStreams: [],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile BuildProfile(bool autoLadder, LadderRung[] rungs) =>
         new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "Test",
             Container: Container.HlsTs,
             Video: null,
@@ -226,17 +227,17 @@ public class PlanStageAutoLadderTests
 
     private static LadderRung BuildVideo(int width, int height) =>
         new(
-            width,
-            height,
-            VideoCodecType.H264,
-            4000,
-            6000,
-            8000,
-            24.0,
-            "medium",
-            CodecProfile.High,
-            8,
-            "yuv420p"
+            Width: width,
+            Height: height,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 4000,
+            MaxBitrateKbps: 6000,
+            BufferSizeKbps: 8000,
+            Framerate: 24.0,
+            Preset: "medium",
+            CodecProfile: CodecProfile.High,
+            BitDepth: 8,
+            PixelFormat: "yuv420p"
         );
 }
 
@@ -271,23 +272,23 @@ public class PlanStageAutoLadderRoutingTests
             )
             .Returns(
                 new ResolvedCodec(
-                    "libx264",
-                    new(
-                        "libx264",
-                        null,
-                        ["medium"],
-                        ["high"],
-                        ["4.1"],
-                        new(0, 51, 23),
-                        [RateControlMode.Crf],
-                        false,
-                        false,
-                        int.MaxValue,
-                        "yuv420p10le",
-                        new()
+                    FfmpegEncoderName: "libx264",
+                    EncoderInfo: new(
+                        FfmpegName: "libx264",
+                        RequiredVendor: null,
+                        Presets: ["medium"],
+                        Profiles: ["high"],
+                        Levels: ["4.1"],
+                        QualityRange: new(0, 51, 23),
+                        SupportedRateControl: [RateControlMode.Crf],
+                        Supports10Bit: false,
+                        SupportsHdr: false,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new()
                     ),
-                    null,
-                    RateControlMode.Crf
+                    Device: null,
+                    DefaultRateControl: RateControlMode.Crf
                 )
             );
 
@@ -307,30 +308,31 @@ public class PlanStageAutoLadderRoutingTests
 
     private static MediaInfo Build1080pMedia() =>
         new(
-            "/media/test.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            4500,
-            3_000_000_000,
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 4500,
+            FileSizeBytes: 3_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    4000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 4000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static LadderRung[] ThreeKnownRungs() =>
@@ -365,29 +367,29 @@ public class PlanStageAutoLadderRoutingTests
             .Returns(mockedRungs);
 
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "AutoConfigTest",
             Container: Container.HlsTs,
             Video: new(
-                NoMercy.Encoder.Profiles.StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                NoMercy.Encoder.Profiles.RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                "video/:label:",
-                "video/:label:/playlist"
+                Policy: NoMercy.Encoder.Profiles.StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: NoMercy.Encoder.Profiles.RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/:label:",
+                PlaylistNameTemplate: "video/:label:/playlist"
             ),
             Audio: [],
             Subtitles: [],
@@ -437,52 +439,52 @@ public class PlanStageAutoLadderRoutingTests
             .Setup(g => g.Generate(It.IsAny<MediaInfo>(), It.IsAny<VideoOutput>()))
             .Returns([
                 new(
-                    NoMercy.Encoder.Profiles.StreamPolicy.Transcode,
-                    VideoCodecType.H264,
-                    1920,
-                    1080,
-                    NoMercy.Encoder.Profiles.RateControlMode.Crf,
-                    23,
-                    4000,
-                    null,
-                    null,
-                    "medium",
-                    CodecProfile.High,
-                    "4.1",
-                    null,
-                    8,
-                    "yuv420p",
-                    2,
-                    false,
-                    "video/:label:",
-                    "video/:label:/playlist"
+                    Policy: NoMercy.Encoder.Profiles.StreamPolicy.Transcode,
+                    Codec: VideoCodecType.H264,
+                    Width: 1920,
+                    Height: 1080,
+                    RateControl: NoMercy.Encoder.Profiles.RateControlMode.Crf,
+                    Crf: 23,
+                    BitrateKbps: 4000,
+                    MaxBitrateKbps: null,
+                    BufferSizeKbps: null,
+                    Preset: "medium",
+                    CodecProfile: CodecProfile.High,
+                    Level: "4.1",
+                    Tune: null,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    KeyframeIntervalSeconds: 2,
+                    ConvertHdrToSdr: false,
+                    SegmentNameTemplate: "video/:label:",
+                    PlaylistNameTemplate: "video/:label:/playlist"
                 ),
             ]);
 
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "LegacyAutoTest",
             Container: Container.HlsTs,
             Video: new(
-                NoMercy.Encoder.Profiles.StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                NoMercy.Encoder.Profiles.RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                "video/:label:",
-                "video/:label:/playlist"
+                Policy: NoMercy.Encoder.Profiles.StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: NoMercy.Encoder.Profiles.RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/:label:",
+                PlaylistNameTemplate: "video/:label:/playlist"
             ),
             Audio: [],
             Subtitles: [],

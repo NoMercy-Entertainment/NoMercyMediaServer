@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using FluentAssertions;
 using NoMercy.Data.Jobs;
 using NoMercy.Database.Models.Media;
+using Xunit;
 
 namespace NoMercy.Tests.Repositories;
 
@@ -75,15 +76,15 @@ public class StorageJobUsageTests
 
         List<Metadata?> movieMetaData =
         [
-            MakeMovieMetadata(folder, 1000, 1200),
-            MakeMovieMetadata("/media/movies/two", 9999, 9999),
+            MakeMovieMetadata(folder, videoFileSize: 1000, folderSize: 1200),
+            MakeMovieMetadata("/media/movies/two", videoFileSize: 9999, folderSize: 9999),
         ];
 
         StorageUsageDelta delta = StorageJob.ComputeFolderUsageDelta(
             folder,
             movieMetaData,
-            [],
-            []
+            tvMetaData: [],
+            albumMetaData: []
         );
 
         delta.Movies.Should().Be(1000);
@@ -119,8 +120,8 @@ public class StorageJobUsageTests
     [Fact]
     public void StorageUsageDelta_Add_IsCommutative()
     {
-        StorageUsageDelta a = new(10, 20, 30, 40, 50);
-        StorageUsageDelta b = new(1, 2, 3, 4, 5);
+        StorageUsageDelta a = new(Movies: 10, Shows: 20, Music: 30, Other: 40, Used: 50);
+        StorageUsageDelta b = new(Movies: 1, Shows: 2, Music: 3, Other: 4, Used: 5);
 
         StorageUsageDelta ab = a.Add(b);
         StorageUsageDelta ba = b.Add(a);
@@ -150,7 +151,7 @@ public class StorageJobUsageTests
             .Select(i =>
                 Task.Run(() =>
                 {
-                    StorageUsageDelta delta = new(1, 2, 3, 4, 5);
+                    StorageUsageDelta delta = new(Movies: 1, Shows: 2, Music: 3, Other: 4, Used: 5);
                     deltas.AddOrUpdate(folder, delta, (_, existing) => existing.Add(delta));
                 })
             );
@@ -185,7 +186,7 @@ public class StorageJobUsageTests
                 Task.Run(() =>
                 {
                     string path = $"/media/folder-{i % folderCount}";
-                    StorageUsageDelta delta = new(0, 0, 0, 0, 7);
+                    StorageUsageDelta delta = new(Movies: 0, Shows: 0, Music: 0, Other: 0, Used: 7);
                     deltas.AddOrUpdate(path, delta, (_, existing) => existing.Add(delta));
                 })
             );

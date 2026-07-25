@@ -52,7 +52,7 @@ public class PluginManagerVerificationTests : IDisposable
         {
             if (Directory.Exists(_tempPluginsDir))
             {
-                Directory.Delete(_tempPluginsDir, true);
+                Directory.Delete(_tempPluginsDir, recursive: true);
             }
         }
         catch (IOException)
@@ -79,7 +79,7 @@ public class PluginManagerVerificationTests : IDisposable
     {
         string sourceDll = WriteSourceDll([9, 9, 9]);
 
-        Func<Task> act = () => _manager.InstallPluginAsync(sourceDll, "deadbeef");
+        Func<Task> act = () => _manager.InstallPluginAsync(sourceDll, expectedChecksum: "deadbeef");
 
         await act.Should().ThrowAsync<PluginVerificationException>();
         File.Exists(InstalledPathFor(sourceDll)).Should().BeFalse();
@@ -92,7 +92,7 @@ public class PluginManagerVerificationTests : IDisposable
         string sourceDll = WriteSourceDll(bytes);
         string sha = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
 
-        await _manager.InstallPluginAsync(sourceDll, sha);
+        await _manager.InstallPluginAsync(sourceDll, expectedChecksum: sha);
 
         File.Exists(InstalledPathFor(sourceDll)).Should().BeTrue();
     }

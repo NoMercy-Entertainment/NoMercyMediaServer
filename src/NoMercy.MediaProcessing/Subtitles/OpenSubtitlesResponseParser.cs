@@ -54,22 +54,25 @@ public static class OpenSubtitlesResponseParser
                         StringComparer.OrdinalIgnoreCase
                     );
 
-                string language = Coalesce([members.GetValueOrDefault("SubLanguageID"), members.GetValueOrDefault("ISO639"), "und"]
+                string language = Coalesce(
+                    members.GetValueOrDefault("SubLanguageID"),
+                    members.GetValueOrDefault("ISO639"),
+                    "und"
                 );
 
                 yield return new(
-                    language,
-                    members.GetValueOrDefault("SubRating"),
-                    members.GetValueOrDefault("SubDownloadsCnt"),
-                    members.GetValueOrDefault("SubFromTrusted"),
-                    members.GetValueOrDefault("MovieFPS"),
-                    members.GetValueOrDefault("SubDownloadLink"),
-                    members.GetValueOrDefault("SubFormat"),
-                    Coalesce([members.GetValueOrDefault("MatchedBy"), matchedBy]),
-                    members.GetValueOrDefault("SubFileName"),
-                    members.GetValueOrDefault("MovieReleaseName"),
-                    members.GetValueOrDefault("SubHearingImpaired"),
-                    members.GetValueOrDefault("UserNickName")
+                    Language: language,
+                    SubRating: members.GetValueOrDefault("SubRating"),
+                    SubDownloadsCnt: members.GetValueOrDefault("SubDownloadsCnt"),
+                    SubFromTrusted: members.GetValueOrDefault("SubFromTrusted"),
+                    MovieFPS: members.GetValueOrDefault("MovieFPS"),
+                    SubDownloadLink: members.GetValueOrDefault("SubDownloadLink"),
+                    SubFormat: members.GetValueOrDefault("SubFormat"),
+                    MatchedBy: Coalesce(members.GetValueOrDefault("MatchedBy"), matchedBy),
+                    SubFileName: members.GetValueOrDefault("SubFileName"),
+                    MovieReleaseName: members.GetValueOrDefault("MovieReleaseName"),
+                    SubHearingImpaired: members.GetValueOrDefault("SubHearingImpaired"),
+                    UserNickName: members.GetValueOrDefault("UserNickName")
                 );
             }
         }

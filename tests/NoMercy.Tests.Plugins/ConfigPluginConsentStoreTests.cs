@@ -41,7 +41,7 @@ public class ConfigPluginConsentStoreTests : IDisposable
         try
         {
             if (Directory.Exists(_tempDir))
-                Directory.Delete(_tempDir, true);
+                Directory.Delete(_tempDir, recursive: true);
         }
         catch (IOException) { }
     }

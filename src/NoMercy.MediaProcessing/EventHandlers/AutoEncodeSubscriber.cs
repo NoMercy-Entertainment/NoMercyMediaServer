@@ -196,7 +196,9 @@ public class AutoEncodeSubscriber(
             if (dispatched > 0)
             {
                 logger.LogInformation(
-                    "Auto-encode dispatched {Count} VideoEncodeJob(s) for media {MediaId}", [dispatched, evt.MediaId]
+                    "Auto-encode dispatched {Count} VideoEncodeJob(s) for media {MediaId}",
+                    dispatched,
+                    evt.MediaId
                 );
             }
         }
@@ -282,12 +284,12 @@ public class AutoEncodeSubscriber(
 
             // Any .NoMercy subdirectory counts as encoded.
             if (
-                storage.List(file.HostFolder, "*.NoMercy", false).Any(e => e.IsDirectory)
+                storage.List(file.HostFolder, "*.NoMercy", recursive: false).Any(e => e.IsDirectory)
             )
                 return true;
 
             // Any master playlist alongside counts too.
-            if (storage.List(file.HostFolder, "*.m3u8", false).Any(e => !e.IsDirectory))
+            if (storage.List(file.HostFolder, "*.m3u8", recursive: false).Any(e => !e.IsDirectory))
                 return true;
 
             _ = sourceExt;

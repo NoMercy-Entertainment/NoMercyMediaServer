@@ -192,7 +192,8 @@ public class Mp4OutputStrategyTests
 
     private static OutputPlan CreatePlan() =>
         new(
-            OutputFormat.Mp4,
+            Format: OutputFormat.Mp4,
+            VideoOutputs:
             [
                 new(
                     1920,
@@ -209,8 +210,8 @@ public class Mp4OutputStrategyTests
                     new()
                 ),
             ],
-            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
-            [],
-            null
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 }

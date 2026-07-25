@@ -17,6 +17,7 @@ using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Status;
 using NoMercy.Setup.Auth;
+using Xunit;
 
 namespace NoMercy.Tests.Setup.Auth;
 
@@ -81,8 +82,8 @@ public class ServerRegistrationServiceSingleFlightTests
     {
         ServerRegistrationService service = MakeService();
 
-        Task first = service.Init(1);
-        Task second = service.Init(1);
+        Task first = service.Init(maxRetries: 1);
+        Task second = service.Init(maxRetries: 1);
 
         first.Should().BeSameAs(second);
 
@@ -97,9 +98,9 @@ public class ServerRegistrationServiceSingleFlightTests
     {
         ServerRegistrationService service = MakeService();
 
-        Task first = service.Init(1);
-        Task second = service.Init(1);
-        Task third = service.Init(1);
+        Task first = service.Init(maxRetries: 1);
+        Task second = service.Init(maxRetries: 1);
+        Task third = service.Init(maxRetries: 1);
 
         first.Should().BeSameAs(second);
         second.Should().BeSameAs(third);
@@ -116,7 +117,7 @@ public class ServerRegistrationServiceSingleFlightTests
         ServerRegistrationService service = MakeService();
         SetLastFailureUtc(service, DateTime.UtcNow);
 
-        Action act = () => service.Init(1);
+        Action act = () => service.Init(maxRetries: 1);
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*cooldown*");
     }

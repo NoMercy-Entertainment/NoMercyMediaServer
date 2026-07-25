@@ -53,7 +53,7 @@ public class EncoderProfilesController_Routes_Test
         foreach (MethodInfo method in PublicActions(controller))
         {
             HttpMethodAttribute? attr = method
-                .GetCustomAttributes(httpVerbAttribute, false)
+                .GetCustomAttributes(httpVerbAttribute, inherit: false)
                 .Cast<HttpMethodAttribute>()
                 .FirstOrDefault();
 
@@ -123,18 +123,18 @@ public class EncoderProfilesController_Routes_Test
     // =========================================================================
 
     [Theory]
-    [InlineData([typeof(HttpGetAttribute), "", "GET / (index)"])]
-    [InlineData([typeof(HttpGetAttribute), "{id}", "GET /{id}"])]
-    [InlineData([typeof(HttpPostAttribute), "", "POST / (create)"])]
-    [InlineData([typeof(HttpGetAttribute), "tags", "GET /tags"])]
-    [InlineData([typeof(HttpGetAttribute), "{id}/resolve", "GET /{id}/resolve"])]
-    [InlineData([typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}"])]
-    [InlineData([typeof(HttpPostAttribute), "validate", "POST /validate"])]
-    [InlineData([typeof(HttpPostAttribute), "{id}/preview", "POST /{id}/preview"])]
-    [InlineData([typeof(HttpPutAttribute), "{id}", "PUT /{id}"])]
-    [InlineData([typeof(HttpPostAttribute), "{parentId}/clone", "POST /{parentId}/clone"])]
-    [InlineData([typeof(HttpPostAttribute), "import", "POST /import"])]
-    [InlineData([typeof(HttpGetAttribute), "{id}/export", "GET /{id}/export"])]
+    [InlineData(typeof(HttpGetAttribute), "", "GET / (index)")]
+    [InlineData(typeof(HttpGetAttribute), "{id}", "GET /{id}")]
+    [InlineData(typeof(HttpPostAttribute), "", "POST / (create)")]
+    [InlineData(typeof(HttpGetAttribute), "tags", "GET /tags")]
+    [InlineData(typeof(HttpGetAttribute), "{id}/resolve", "GET /{id}/resolve")]
+    [InlineData(typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}")]
+    [InlineData(typeof(HttpPostAttribute), "validate", "POST /validate")]
+    [InlineData(typeof(HttpPostAttribute), "{id}/preview", "POST /{id}/preview")]
+    [InlineData(typeof(HttpPutAttribute), "{id}", "PUT /{id}")]
+    [InlineData(typeof(HttpPostAttribute), "{parentId}/clone", "POST /{parentId}/clone")]
+    [InlineData(typeof(HttpPostAttribute), "import", "POST /import")]
+    [InlineData(typeof(HttpGetAttribute), "{id}/export", "GET /{id}/export")]
     public void EncoderProfilesController_HasExpectedEndpoint(
         Type httpVerb,
         string routeSuffix,
@@ -149,19 +149,19 @@ public class EncoderProfilesController_Routes_Test
     // =========================================================================
 
     [Theory]
-    [InlineData([typeof(HttpGetAttribute), "", "GET / (list)"])]
-    [InlineData([typeof(HttpGetAttribute), "{id}", "GET /{id}"])]
-    [InlineData([typeof(HttpPostAttribute), "", "POST / (create)"])]
-    [InlineData([typeof(HttpPutAttribute), "{id}", "PUT /{id}"])]
-    [InlineData([typeof(HttpGetAttribute), "tags", "GET /tags"])]
-    [InlineData([typeof(HttpPostAttribute), "{id}/clone", "POST /{id}/clone"])]
-    [InlineData([typeof(HttpGetAttribute), "{id}/resolve", "GET /{id}/resolve"])]
-    [InlineData([typeof(HttpGetAttribute), "{id}/export", "GET /{id}/export"])]
-    [InlineData([typeof(HttpPostAttribute), "import", "POST /import"])]
-    [InlineData([typeof(HttpPostAttribute), "import-url", "POST /import-url"])]
-    [InlineData([typeof(HttpPostAttribute), "validate", "POST /validate"])]
-    [InlineData([typeof(HttpPostAttribute), "preview", "POST /preview"])]
-    [InlineData([typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}"])]
+    [InlineData(typeof(HttpGetAttribute), "", "GET / (list)")]
+    [InlineData(typeof(HttpGetAttribute), "{id}", "GET /{id}")]
+    [InlineData(typeof(HttpPostAttribute), "", "POST / (create)")]
+    [InlineData(typeof(HttpPutAttribute), "{id}", "PUT /{id}")]
+    [InlineData(typeof(HttpGetAttribute), "tags", "GET /tags")]
+    [InlineData(typeof(HttpPostAttribute), "{id}/clone", "POST /{id}/clone")]
+    [InlineData(typeof(HttpGetAttribute), "{id}/resolve", "GET /{id}/resolve")]
+    [InlineData(typeof(HttpGetAttribute), "{id}/export", "GET /{id}/export")]
+    [InlineData(typeof(HttpPostAttribute), "import", "POST /import")]
+    [InlineData(typeof(HttpPostAttribute), "import-url", "POST /import-url")]
+    [InlineData(typeof(HttpPostAttribute), "validate", "POST /validate")]
+    [InlineData(typeof(HttpPostAttribute), "preview", "POST /preview")]
+    [InlineData(typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}")]
     public void EncodingPresetsController_EndpointIsObsolete(
         Type httpVerb,
         string routeSuffix,

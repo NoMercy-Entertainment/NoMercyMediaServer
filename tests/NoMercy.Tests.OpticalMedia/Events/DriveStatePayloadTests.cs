@@ -30,12 +30,12 @@ public class DriveStatePayloadTests
     public void KnownMethod_RoundTrips_WithRequiredFields(string method)
     {
         DriveStatePayload payload = new(
-            method,
-            "/dev/sr0",
-            "MY_DISC",
-            true,
-            "bluray",
-            DateTime.UtcNow
+            Method: method,
+            Drive: "/dev/sr0",
+            VolumeLabel: "MY_DISC",
+            HasDisc: true,
+            DiscType: "bluray",
+            Timestamp: DateTime.UtcNow
         );
 
         payload.Method.Should().Be(method);
@@ -48,12 +48,12 @@ public class DriveStatePayloadTests
     public void OptionalFields_DefaultToNull()
     {
         DriveStatePayload payload = new(
-            "drive_added",
-            "D:\\",
-            null,
-            false,
-            "none",
-            DateTime.UtcNow
+            Method: "drive_added",
+            Drive: "D:\\",
+            VolumeLabel: null,
+            HasDisc: false,
+            DiscType: "none",
+            Timestamp: DateTime.UtcNow
         );
 
         payload.JobId.Should().BeNull();
@@ -67,14 +67,14 @@ public class DriveStatePayloadTests
         string jobId = Guid.NewGuid().ToString("N");
 
         DriveStatePayload payload = new(
-            "rip_progress",
-            "D:\\",
-            "MOVIE_2023",
-            true,
-            "dvd",
-            DateTime.UtcNow,
-            jobId,
-            "Ripping title 01 — 42%"
+            Method: "rip_progress",
+            Drive: "D:\\",
+            VolumeLabel: "MOVIE_2023",
+            HasDisc: true,
+            DiscType: "dvd",
+            Timestamp: DateTime.UtcNow,
+            JobId: jobId,
+            Message: "Ripping title 01 — 42%"
         );
 
         payload.JobId.Should().Be(jobId);
@@ -86,12 +86,12 @@ public class DriveStatePayloadTests
     public void DriveStateChangedEvent_CarriesTypedPayload()
     {
         DriveStatePayload payload = new(
-            "disc_inserted",
-            "/dev/sr0",
-            "LABEL",
-            true,
-            "cd",
-            DateTime.UtcNow
+            Method: "disc_inserted",
+            Drive: "/dev/sr0",
+            VolumeLabel: "LABEL",
+            HasDisc: true,
+            DiscType: "cd",
+            Timestamp: DateTime.UtcNow
         );
 
         DriveStateChangedEvent evt = new() { DriveStateData = payload };

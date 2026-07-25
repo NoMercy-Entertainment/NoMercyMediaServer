@@ -62,12 +62,12 @@ public class ActivityLoggerTests : IDisposable
         ActivityLogger logger = new(
             factory,
             NullLogger<ActivityLogger>.Instance,
-            null
+            hubBroadcaster: null
         );
         Guid userId = Guid.NewGuid();
         Ulid deviceId = Ulid.NewUlid();
 
-        await logger.LogAuthAsync("auth.login", userId, deviceId, true);
+        await logger.LogAuthAsync("auth.login", userId, deviceId, success: true);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ActivityLog row = ctx.ActivityLogs.Single();
@@ -86,7 +86,7 @@ public class ActivityLoggerTests : IDisposable
         ActivityLogger logger = new(
             factory,
             NullLogger<ActivityLogger>.Instance,
-            null
+            hubBroadcaster: null
         );
 
         await logger.LogConnectionAsync("connection.connected", Guid.NewGuid(), Ulid.NewUlid());
@@ -102,7 +102,7 @@ public class ActivityLoggerTests : IDisposable
         ActivityLogger logger = new(
             factory,
             NullLogger<ActivityLogger>.Instance,
-            null
+            hubBroadcaster: null
         );
         Ulid mediaId = Ulid.NewUlid();
         object metadata = new { title = "Heat", duration_ms = 9_900_000 };
@@ -130,16 +130,16 @@ public class ActivityLoggerTests : IDisposable
         ActivityLogger logger = new(
             factory,
             NullLogger<ActivityLogger>.Instance,
-            null
+            hubBroadcaster: null
         );
 
         await logger.LogConfigurationAsync(
             "config.server_changed",
             Guid.NewGuid(),
             Ulid.NewUlid(),
-            "encoder.default_profile",
-            "x264",
-            "x265"
+            configKey: "encoder.default_profile",
+            oldValue: "x264",
+            newValue: "x265"
         );
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
@@ -157,15 +157,15 @@ public class ActivityLoggerTests : IDisposable
         ActivityLogger logger = new(
             factory,
             NullLogger<ActivityLogger>.Instance,
-            null
+            hubBroadcaster: null
         );
 
         await logger.LogFailureAsync(
             "failure.playback_start",
             Guid.NewGuid(),
             Ulid.NewUlid(),
-            "transcoder_unavailable",
-            "FFmpeg returned exit code 2"
+            errorCode: "transcoder_unavailable",
+            message: "FFmpeg returned exit code 2"
         );
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
@@ -190,7 +190,7 @@ public class ActivityLoggerTests : IDisposable
             NullLogger<ActivityLogger>.Instance,
             broadcaster.Object
         );
-        await logger.LogAuthAsync("auth.login", Guid.NewGuid(), Ulid.NewUlid(), true);
+        await logger.LogAuthAsync("auth.login", Guid.NewGuid(), Ulid.NewUlid(), success: true);
 
         broadcaster.Verify(
             b =>
@@ -218,7 +218,7 @@ public class ActivityLoggerTests : IDisposable
         );
 
         Func<Task> act = () =>
-            logger.LogAuthAsync("auth.login", Guid.NewGuid(), Ulid.NewUlid(), true);
+            logger.LogAuthAsync("auth.login", Guid.NewGuid(), Ulid.NewUlid(), success: true);
 
         await act.Should().NotThrowAsync();
     }

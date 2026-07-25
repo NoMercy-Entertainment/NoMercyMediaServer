@@ -102,7 +102,7 @@ public class SetupCompleteSignalTests
     public async Task SetupComplete_DoesNotBlock_WhenAlreadyComplete()
     {
         SetupState state = new();
-        state.DetermineInitialPhase(true, true);
+        state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
 
         Assert.Equal(SetupPhase.Complete, state.CurrentPhase);
 
@@ -233,7 +233,7 @@ public class SetupStateSurvivesContainerRebuildTests
         // The OLD container's SetupState: BootOrchestrator.RunAsync drove this to
         // Complete because auth succeeded and the server was already registered.
         SetupState oldContainerState = new();
-        oldContainerState.DetermineInitialPhase(true, true);
+        oldContainerState.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
         Assert.Equal(SetupPhase.Complete, oldContainerState.CurrentPhase);
 
         // ServerBootstrapper disposes the app (and the old SetupState singleton with
@@ -252,7 +252,7 @@ public class SetupStateSurvivesContainerRebuildTests
         // Old container reaches Complete (orchestrator ran once, needsSetupMode came
         // back false because auth succeeded).
         SetupState oldContainerState = new();
-        oldContainerState.DetermineInitialPhase(true, true);
+        oldContainerState.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
         Assert.False(oldContainerState.IsSetupRequired);
 
         // Rebuild: new container, new SetupState singleton.
@@ -262,7 +262,7 @@ public class SetupStateSurvivesContainerRebuildTests
         // new container's SetupState to the phase the orchestrator already reached —
         // hasValidToken/isRegistered are both true by construction at that call site
         // (needsSetupMode was false, and EnsureHttpsCertificate() just returned true).
-        newContainerState.DetermineInitialPhase(true, true);
+        newContainerState.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
 
         Assert.Equal(SetupPhase.Complete, newContainerState.CurrentPhase);
         Assert.False(newContainerState.IsSetupRequired);

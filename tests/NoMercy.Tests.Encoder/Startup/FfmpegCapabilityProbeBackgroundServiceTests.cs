@@ -55,7 +55,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
             lifetime,
             NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
             CompletedPhaseTracker(),
-            TimeSpan.Zero
+            initialGrace: TimeSpan.Zero
         );
 
         using CancellationTokenSource cts = new();
@@ -95,7 +95,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
             lifetime,
             NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
             CompletedPhaseTracker(),
-            TimeSpan.Zero
+            initialGrace: TimeSpan.Zero
         );
 
         Func<Task> act = () => StartExecuteAsync(service, CancellationToken.None);
@@ -115,7 +115,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
             lifetime,
             NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
             CompletedPhaseTracker(),
-            TimeSpan.Zero
+            initialGrace: TimeSpan.Zero
         );
 
         using CancellationTokenSource cts = new();
@@ -145,7 +145,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
             lifetime,
             NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
             CompletedPhaseTracker(),
-            TimeSpan.FromSeconds(5)
+            initialGrace: TimeSpan.FromSeconds(5)
         );
 
         using CancellationTokenSource cts = new();
@@ -176,7 +176,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
             lifetime,
             NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
             CompletedPhaseTracker(),
-            TimeSpan.Zero
+            initialGrace: TimeSpan.Zero
         );
 
         Func<Task> act = () => StartExecuteAsync(service, CancellationToken.None);

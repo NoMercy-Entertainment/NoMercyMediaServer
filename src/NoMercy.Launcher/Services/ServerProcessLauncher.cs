@@ -153,7 +153,7 @@ public class ServerProcessLauncher
         {
             if (_serverProcess is { HasExited: false })
             {
-                _serverProcess.Kill(true);
+                _serverProcess.Kill(entireProcessTree: true);
                 _serverProcess = null;
             }
         }
@@ -365,9 +365,19 @@ public class ServerProcessLauncher
 
         string[] searchPaths =
         [
-            Path.Combine([serverProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine(
+                serverProjectDir,
+                "bin",
+                "Debug",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
             ),
-            Path.Combine([serverProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine(
+                serverProjectDir,
+                "bin",
+                "Release",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
             ),
         ];
 
@@ -418,9 +428,19 @@ public class ServerProcessLauncher
 
         string[] searchPaths =
         [
-            Path.Combine([appProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine(
+                appProjectDir,
+                "bin",
+                "Debug",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
             ),
-            Path.Combine([appProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine(
+                appProjectDir,
+                "bin",
+                "Release",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
             ),
         ];
 

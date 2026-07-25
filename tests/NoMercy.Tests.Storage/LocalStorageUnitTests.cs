@@ -60,7 +60,7 @@ public class LocalStorageUnitTests
             StoragePathGuard guard = new([root], driver.Object);
             LocalStorage storage = new(driver.Object, guard);
 
-            IReadOnlyList<StorageEntry> entries = storage.List("", null, false);
+            IReadOnlyList<StorageEntry> entries = storage.List("", null, recursive: false);
 
             entries.Should().NotBeNull();
             driver.Verify(
@@ -78,7 +78,7 @@ public class LocalStorageUnitTests
         {
             try
             {
-                Directory.Delete(root, true);
+                Directory.Delete(root, recursive: true);
             }
             catch { }
         }
@@ -219,7 +219,7 @@ public class LocalStorageUnitTests
         }
         finally
         {
-            Directory.Delete(root, true);
+            Directory.Delete(root, recursive: true);
         }
     }
 
@@ -269,7 +269,7 @@ public class LocalStorageUnitTests
                 StorageEntry e in storage.ListAsync(
                     "",
                     "*",
-                    false,
+                    recursive: false,
                     CancellationToken.None
                 )
             )
@@ -292,7 +292,7 @@ public class LocalStorageUnitTests
         {
             try
             {
-                Directory.Delete(root, true);
+                Directory.Delete(root, recursive: true);
             }
             catch { }
         }
@@ -391,7 +391,7 @@ public class LocalStorageUnitTests
         {
             try
             {
-                Directory.Delete(root, true);
+                Directory.Delete(root, recursive: true);
             }
             catch { }
         }
@@ -421,7 +421,7 @@ public class LocalStorageUnitTests
         {
             try
             {
-                Directory.Delete(root, true);
+                Directory.Delete(root, recursive: true);
             }
             catch { }
         }

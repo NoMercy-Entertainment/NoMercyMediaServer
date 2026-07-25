@@ -28,12 +28,12 @@ public class VideoDiscIdentifierTests
     // ── NormalizeLabel ─────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(["Avatar_Book_1_Disc_1", "Avatar Book 1"])]
-    [InlineData(["THE_DARK_KNIGHT", "THE DARK KNIGHT"])]
-    [InlineData(["Inception", "Inception"])]
-    [InlineData(["Lord.Of.The.Rings", "Lord Of The Rings"])]
-    [InlineData(["Star-Wars-A-New-Hope", "Star Wars A New Hope"])]
-    [InlineData(["Breaking_Bad_Season_2_Disc_3", "Breaking Bad Season 2"])]
+    [InlineData("Avatar_Book_1_Disc_1", "Avatar Book 1")]
+    [InlineData("THE_DARK_KNIGHT", "THE DARK KNIGHT")]
+    [InlineData("Inception", "Inception")]
+    [InlineData("Lord.Of.The.Rings", "Lord Of The Rings")]
+    [InlineData("Star-Wars-A-New-Hope", "Star Wars A New Hope")]
+    [InlineData("Breaking_Bad_Season_2_Disc_3", "Breaking Bad Season 2")]
     public void NormalizeLabel_StripsDiscSuffixAndNormalizesSeparators(
         string input,
         string expected
@@ -51,9 +51,9 @@ public class VideoDiscIdentifierTests
         double confidence = VideoDiscIdentifier.BlendConfidence(
             "Avatar",
             "Avatar",
-            0,
-            0,
-            null
+            rank: 0,
+            discDurationSec: 0,
+            runtimeMin: null
         );
 
         confidence.Should().BeApproximately(1.0, 0.001);
@@ -65,9 +65,9 @@ public class VideoDiscIdentifierTests
         double confidence = VideoDiscIdentifier.BlendConfidence(
             "Avatar",
             "Avatar",
-            0,
-            162 * 60,
-            162
+            rank: 0,
+            discDurationSec: 162 * 60,
+            runtimeMin: 162
         );
 
         confidence.Should().BeGreaterThan(0.85);
@@ -79,16 +79,16 @@ public class VideoDiscIdentifierTests
         double rank0 = VideoDiscIdentifier.BlendConfidence(
             "Avatar",
             "Avatar",
-            0,
-            0,
-            null
+            rank: 0,
+            discDurationSec: 0,
+            runtimeMin: null
         );
         double rank2 = VideoDiscIdentifier.BlendConfidence(
             "Avatar",
             "Avatar",
-            2,
-            0,
-            null
+            rank: 2,
+            discDurationSec: 0,
+            runtimeMin: null
         );
 
         rank0.Should().BeGreaterThan(rank2);
@@ -102,9 +102,9 @@ public class VideoDiscIdentifierTests
         double confidence = VideoDiscIdentifier.BlendConfidence(
             "",
             "Avatar",
-            0,
-            0,
-            null
+            rank: 0,
+            discDurationSec: 0,
+            runtimeMin: null
         );
 
         confidence.Should().Be(0);
@@ -123,10 +123,10 @@ public class VideoDiscIdentifierTests
     /// This test exercises the pure delta function directly.
     /// </summary>
     [Theory]
-    [InlineData([3600, 3600, 1])]
-    [InlineData([7200, 3600, 2])]
-    [InlineData([10800, 3600, 3])]
-    [InlineData([14400, 3600, 4])]
+    [InlineData(3600, 3600, 1)]
+    [InlineData(7200, 3600, 2)]
+    [InlineData(10800, 3600, 3)]
+    [InlineData(14400, 3600, 4)]
     public void EpisodeDeltaFunction_MultiEpisodeDisc_PicksCorrectEpisodeCount(
         int discDurationSec,
         int episodeRunSec,
@@ -204,7 +204,7 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         int durationSec = 0
     ) =>
         new(
-            OpticalDiscType.Dvd,
+            Type: OpticalDiscType.Dvd,
             DiscLabel: label,
             Titles: durationSec > 0
                 ? [new(0, "Main", TimeSpan.FromSeconds(durationSec), [], [], [], [], 0, true)]
@@ -276,7 +276,7 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(null),
+            MakeDisc(label: null),
             CancellationToken.None
         );
 
@@ -290,7 +290,7 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
 
         // "Disc 1" strips entirely via the disc-suffix regex, leaving nothing.
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc("Disc_1"),
+            MakeDisc(label: "Disc_1"),
             CancellationToken.None
         );
 
@@ -317,7 +317,7 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc("Inception", durationSec: 148 * 60),
+            MakeDisc(label: "Inception", durationSec: 148 * 60),
             CancellationToken.None
         );
 
@@ -364,7 +364,7 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
 
         // "Matrix Something" (full query) never matches; "Matrix" (first word) does.
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc("Matrix_Something"),
+            MakeDisc(label: "Matrix_Something"),
             CancellationToken.None
         );
 
@@ -382,7 +382,7 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc("Completely_Unknown_Title_Xyzzy"),
+            MakeDisc(label: "Completely_Unknown_Title_Xyzzy"),
             CancellationToken.None
         );
 
@@ -420,7 +420,7 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc("DISC_ONE_UNRELATED", "Dark Knight"),
+            MakeDisc(label: "DISC_ONE_UNRELATED", embeddedTitle: "Dark Knight"),
             CancellationToken.None
         );
 
@@ -450,15 +450,15 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
             MockResponse.Json(
                 HttpStatusCode.OK,
                 """
-                      {
-                        "season_number": 1,
-                        "episodes": [
-                          { "id": 1, "episode_number": 1 },
-                          { "id": 2, "episode_number": 2 },
-                          { "id": 3, "episode_number": 3 }
-                        ]
-                      }
-                      """
+                {
+                  "season_number": 1,
+                  "episodes": [
+                    { "id": 1, "episode_number": 1 },
+                    { "id": 2, "episode_number": 2 },
+                    { "id": 3, "episode_number": 3 }
+                  ]
+                }
+                """
             )
         );
         Handler.WhenGet(
@@ -466,12 +466,12 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
             MockResponse.Json(
                 HttpStatusCode.OK,
                 $$"""
-                        {
-                          "name": "Breaking Bad",
-                          "episode_run_time": [45],
-                          "seasons": [ { "id": 1, "season_number": 1, "name": "Season 1" } ]
-                        }
-                        """
+                {
+                  "name": "Breaking Bad",
+                  "episode_run_time": [45],
+                  "seasons": [ { "id": 1, "season_number": 1, "name": "Season 1" } ]
+                }
+                """
             )
         );
 
@@ -479,7 +479,7 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
 
         // Disc holds 2 episodes worth of runtime (2 * 45min = 90min).
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc("Breaking_Bad_Season_1_Disc_1", durationSec: 90 * 60),
+            MakeDisc(label: "Breaking_Bad_Season_1_Disc_1", durationSec: 90 * 60),
             CancellationToken.None
         );
 
@@ -505,19 +505,19 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
             MockResponse.Json(
                 HttpStatusCode.OK,
                 """
-                      {
-                        "name": "Unknown Runtime Show",
-                        "episode_run_time": [],
-                        "seasons": [ { "id": 1, "season_number": 1, "name": "Season 1" } ]
-                      }
-                      """
+                {
+                  "name": "Unknown Runtime Show",
+                  "episode_run_time": [],
+                  "seasons": [ { "id": 1, "season_number": 1, "name": "Season 1" } ]
+                }
+                """
             )
         );
 
         VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc("Unknown_Runtime_Show", durationSec: 3600),
+            MakeDisc(label: "Unknown_Runtime_Show", durationSec: 3600),
             CancellationToken.None
         );
 
@@ -549,11 +549,11 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
             MockResponse.Json(
                 HttpStatusCode.OK,
                 """
-                      {
-                        "season_number": 2,
-                        "episodes": [ { "id": 1, "episode_number": 1 }, { "id": 2, "episode_number": 2 } ]
-                      }
-                      """
+                {
+                  "season_number": 2,
+                  "episodes": [ { "id": 1, "episode_number": 1 }, { "id": 2, "episode_number": 2 } ]
+                }
+                """
             )
         );
         Handler.WhenGet(
@@ -561,22 +561,22 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
             MockResponse.Json(
                 HttpStatusCode.OK,
                 $$"""
-                        {
-                          "name": "Multi Season Show",
-                          "episode_run_time": [30],
-                          "seasons": [
-                            { "id": 1, "season_number": 1, "name": "Season 1" },
-                            { "id": 2, "season_number": 2, "name": "Season 2" }
-                          ]
-                        }
-                        """
+                {
+                  "name": "Multi Season Show",
+                  "episode_run_time": [30],
+                  "seasons": [
+                    { "id": 1, "season_number": 1, "name": "Season 1" },
+                    { "id": 2, "season_number": 2, "name": "Season 2" }
+                  ]
+                }
+                """
             )
         );
 
         VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc("Multi_Season_Show", durationSec: 30 * 60),
+            MakeDisc(label: "Multi_Season_Show", durationSec: 30 * 60),
             CancellationToken.None
         );
 
@@ -604,19 +604,19 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
             MockResponse.Json(
                 HttpStatusCode.OK,
                 """
-                      {
-                        "name": "Specials Only Show",
-                        "episode_run_time": [30],
-                        "seasons": [ { "id": 0, "season_number": 0, "name": "Specials" } ]
-                      }
-                      """
+                {
+                  "name": "Specials Only Show",
+                  "episode_run_time": [30],
+                  "seasons": [ { "id": 0, "season_number": 0, "name": "Specials" } ]
+                }
+                """
             )
         );
 
         VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc("Specials_Only_Show", durationSec: 30 * 60),
+            MakeDisc(label: "Specials_Only_Show", durationSec: 30 * 60),
             CancellationToken.None
         );
 
@@ -754,14 +754,14 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscCandidate candidate = new(
-            "tmdb",
-            "not-a-number",
-            "Some Show",
-            2020,
-            null,
-            null,
-            0.5,
-            MediaType.TvShow
+            Source: "tmdb",
+            StableId: "not-a-number",
+            Title: "Some Show",
+            Year: 2020,
+            PosterUrl: null,
+            BackdropUrl: null,
+            Confidence: 0.5,
+            Type: MediaType.TvShow
         );
 
         System.Reflection.MethodInfo method = typeof(VideoDiscIdentifier).GetMethod(

@@ -71,13 +71,13 @@ public class InboxRepositoryTests : IDisposable
     public async Task GetAllAsync_NoStatusFilter_ReturnsEveryItem()
     {
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.InboxItems.AddRange([MakeItem("NeedsReview"), MakeItem("Done")]);
+        seedCtx.InboxItems.AddRange(MakeItem("NeedsReview"), MakeItem("Done"));
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
         InboxRepository repository = new(queryCtx, null!);
 
-        List<InboxItem> result = await repository.GetAllAsync(null);
+        List<InboxItem> result = await repository.GetAllAsync(status: null);
 
         result.Should().HaveCount(2);
     }
@@ -88,13 +88,13 @@ public class InboxRepositoryTests : IDisposable
         await using MediaContext seedCtx = OpenContext();
         InboxItem needsReview = MakeItem("NeedsReview");
         InboxItem done = MakeItem("Done");
-        seedCtx.InboxItems.AddRange([needsReview, done]);
+        seedCtx.InboxItems.AddRange(needsReview, done);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
         InboxRepository repository = new(queryCtx, null!);
 
-        List<InboxItem> result = await repository.GetAllAsync("NeedsReview");
+        List<InboxItem> result = await repository.GetAllAsync(status: "NeedsReview");
 
         result.Should().ContainSingle(i => i.Id == needsReview.Id);
     }
@@ -137,7 +137,7 @@ public class InboxRepositoryTests : IDisposable
         await using MediaContext queryCtx = OpenContext();
         InboxRepository repository = new(queryCtx, null!);
 
-        List<InboxItem> result = await repository.GetAllAsync(null);
+        List<InboxItem> result = await repository.GetAllAsync(status: null);
 
         result.Should().HaveCount(3);
         result[0].Id.Should().Be(newest.Id, "the strictly newer CreatedAt must sort first");
@@ -252,7 +252,7 @@ public class InboxRepositoryTests : IDisposable
         InboxItem toDelete = MakeItem("NeedsReview");
         InboxItem toKeep = MakeItem("NeedsReview");
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.InboxItems.AddRange([toDelete, toKeep]);
+        seedCtx.InboxItems.AddRange(toDelete, toKeep);
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext ctx = OpenContext();

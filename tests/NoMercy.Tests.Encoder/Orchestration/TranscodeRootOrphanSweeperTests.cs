@@ -26,7 +26,7 @@ public class TranscodeRootOrphanSweeperTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_root))
-            Directory.Delete(_root, true);
+            Directory.Delete(_root, recursive: true);
     }
 
     private static IStorage MakeStorage() =>
@@ -53,7 +53,7 @@ public class TranscodeRootOrphanSweeperTests : IDisposable
         Directory.CreateDirectory(unrelatedDir);
         await File.WriteAllTextAsync(unrelatedFile, "keep me");
 
-        TranscodeRootOrphanSweeper sweeper = BuildSweeper(false);
+        TranscodeRootOrphanSweeper sweeper = BuildSweeper(sweepAllChildren: false);
         await sweeper.StartAsync(CancellationToken.None);
 
         Directory.Exists(enc1).Should().BeFalse();
@@ -73,7 +73,7 @@ public class TranscodeRootOrphanSweeperTests : IDisposable
         Directory.CreateDirectory(mirroredShow);
         await File.WriteAllTextAsync(strayFile, "log");
 
-        TranscodeRootOrphanSweeper sweeper = BuildSweeper(true);
+        TranscodeRootOrphanSweeper sweeper = BuildSweeper(sweepAllChildren: true);
         await sweeper.StartAsync(CancellationToken.None);
 
         Directory.Exists(enc).Should().BeFalse();
@@ -87,7 +87,7 @@ public class TranscodeRootOrphanSweeperTests : IDisposable
     [Fact]
     public async Task StartAsync_MissingRoot_DoesNotThrow()
     {
-        TranscodeRootOrphanSweeper sweeper = BuildSweeper(true);
+        TranscodeRootOrphanSweeper sweeper = BuildSweeper(sweepAllChildren: true);
 
         Func<Task> act = () => sweeper.StartAsync(CancellationToken.None);
 

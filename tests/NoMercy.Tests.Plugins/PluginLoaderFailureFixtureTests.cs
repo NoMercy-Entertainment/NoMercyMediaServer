@@ -89,7 +89,7 @@ public class PluginLoaderFailureFixtureTests : IDisposable
         try
         {
             if (Directory.Exists(_tempPluginsDir))
-                Directory.Delete(_tempPluginsDir, true);
+                Directory.Delete(_tempPluginsDir, recursive: true);
         }
         catch (Exception) { }
     }
@@ -102,9 +102,15 @@ public class PluginLoaderFailureFixtureTests : IDisposable
         string tfmDir = testBinDir;
         string configDir = Path.GetDirectoryName(tfmDir)!;
         string buildConfig = Path.GetFileName(configDir);
-        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
+        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
 
-        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0"]
+        return Path.Combine(
+            repoRoot,
+            "tests",
+            "NoMercy.Plugin.Samples.Failures",
+            "bin",
+            buildConfig,
+            "net10.0"
         );
     }
 
@@ -122,10 +128,10 @@ public class PluginLoaderFailureFixtureTests : IDisposable
         Directory.CreateDirectory(pluginDir);
 
         foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
-            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), overwrite: true);
 
         foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
-            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), overwrite: true);
 
         return Path.Combine(pluginDir, "NoMercy.Plugin.Samples.Failures.dll");
     }

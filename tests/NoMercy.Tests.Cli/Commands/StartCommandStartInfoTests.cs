@@ -85,7 +85,7 @@ public sealed class StartCommandStartInfoTests
         if (File.Exists(exePath))
             File.Delete(exePath);
 
-        CreateProductionStartInfo(false).Should().BeNull();
+        CreateProductionStartInfo(dev: false).Should().BeNull();
     }
 
     [Theory]
@@ -123,7 +123,7 @@ public sealed class StartCommandStartInfoTests
         // Deterministic in any test environment: nothing puts a
         // "NoMercyMediaServer.exe" next to the dotnet/testhost process that
         // runs the test suite.
-        CreateInstalledStartInfo(false).Should().BeNull();
+        CreateInstalledStartInfo(dev: false).Should().BeNull();
     }
 
     [Fact]
@@ -151,9 +151,19 @@ public sealed class StartCommandStartInfoTests
         serviceDir.Should().NotBeNull();
 
         string net = $"net{Environment.Version.Major}.{Environment.Version.Minor}";
-        string debugPath = Path.Combine([serviceDir!, "bin", "Debug", net, "NoMercyMediaServer" + Info.ExecSuffix]
+        string debugPath = Path.Combine(
+            serviceDir!,
+            "bin",
+            "Debug",
+            net,
+            "NoMercyMediaServer" + Info.ExecSuffix
         );
-        string releasePath = Path.Combine([serviceDir!, "bin", "Release", net, "NoMercyMediaServer" + Info.ExecSuffix]
+        string releasePath = Path.Combine(
+            serviceDir!,
+            "bin",
+            "Release",
+            net,
+            "NoMercyMediaServer" + Info.ExecSuffix
         );
 
         ProcessStartInfo? result = CreateDevBinaryStartInfo();
@@ -181,7 +191,7 @@ public sealed class StartCommandStartInfoTests
         if (File.Exists(exePath))
             File.Delete(exePath);
 
-        ProcessStartInfo? result = FindServerStartInfo(false);
+        ProcessStartInfo? result = FindServerStartInfo(dev: false);
 
         result.Should().NotBeNull();
     }
@@ -198,6 +208,6 @@ public sealed class StartCommandStartInfoTests
         result!.FileName.Should().Be("dotnet");
         result
             .ArgumentList.Should()
-            .Equal(["run", "--project", FindProjectDirectory("NoMercy.Service")!, "--", "--dev"]);
+            .Equal("run", "--project", FindProjectDirectory("NoMercy.Service")!, "--", "--dev");
     }
 }

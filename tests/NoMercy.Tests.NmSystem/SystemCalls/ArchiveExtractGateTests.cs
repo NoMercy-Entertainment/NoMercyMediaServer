@@ -24,7 +24,7 @@ public class ArchiveExtractGateTests
     [Fact]
     public void CanProceed_FileMissing_ReturnsFalse()
     {
-        bool result = ArchiveExtractGate.CanProceed(false, 0);
+        bool result = ArchiveExtractGate.CanProceed(fileExists: false, actualSizeBytes: 0);
 
         Assert.False(result, "a missing archive must never be handed to the extractor");
     }
@@ -35,8 +35,8 @@ public class ArchiveExtractGateTests
         // Defends against a caller passing a stale cached size for a path that no
         // longer exists — existence is authoritative, size alone is not enough.
         bool result = ArchiveExtractGate.CanProceed(
-            false,
-            224_525_275
+            fileExists: false,
+            actualSizeBytes: 224_525_275
         );
 
         Assert.False(result);
@@ -46,7 +46,7 @@ public class ArchiveExtractGateTests
     public void CanProceed_ZeroByteFile_ReturnsFalse()
     {
         // The signature of an aborted, partial, or not-yet-flushed download.
-        bool result = ArchiveExtractGate.CanProceed(true, 0);
+        bool result = ArchiveExtractGate.CanProceed(fileExists: true, actualSizeBytes: 0);
 
         Assert.False(result, "a zero-byte file is never a valid archive");
     }
@@ -54,7 +54,7 @@ public class ArchiveExtractGateTests
     [Fact]
     public void CanProceed_ExistingNonEmptyFile_ReturnsTrue()
     {
-        bool result = ArchiveExtractGate.CanProceed(true, 224_525_275);
+        bool result = ArchiveExtractGate.CanProceed(fileExists: true, actualSizeBytes: 224_525_275);
 
         Assert.True(result, "a fully-downloaded, verified archive must be allowed to extract");
     }
@@ -65,7 +65,7 @@ public class ArchiveExtractGateTests
         // The gate only rejects the impossible (missing/empty) case; it is not a
         // substitute for the caller's own SHA-256/size verification against the
         // release manifest — that happens earlier in the download pipeline.
-        bool result = ArchiveExtractGate.CanProceed(true, 1);
+        bool result = ArchiveExtractGate.CanProceed(fileExists: true, actualSizeBytes: 1);
 
         Assert.True(result);
     }

@@ -60,23 +60,23 @@ public class PlanStageCustomArgumentsTests
             )
             .Returns(
                 new ResolvedCodec(
-                    "libx264",
-                    new(
-                        "libx264",
-                        null,
-                        ["medium"],
-                        ["high"],
-                        ["4.1"],
-                        new(0, 51, 23),
-                        [RateControlMode.Crf],
-                        false,
-                        false,
-                        int.MaxValue,
-                        "yuv420p10le",
-                        new()
+                    FfmpegEncoderName: "libx264",
+                    EncoderInfo: new(
+                        FfmpegName: "libx264",
+                        RequiredVendor: null,
+                        Presets: ["medium"],
+                        Profiles: ["high"],
+                        Levels: ["4.1"],
+                        QualityRange: new(0, 51, 23),
+                        SupportedRateControl: [RateControlMode.Crf],
+                        Supports10Bit: false,
+                        SupportsHdr: false,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new()
                     ),
-                    null,
-                    RateControlMode.Crf
+                    Device: null,
+                    DefaultRateControl: RateControlMode.Crf
                 )
             );
 
@@ -98,7 +98,7 @@ public class PlanStageCustomArgumentsTests
     public async Task VideoCustomArguments_ReachTheOutputExtraFlags()
     {
         EncodingProfile profile = BuildProfile(
-            new() { ["-x264-params"] = "keyint=48:min-keyint=48" }
+            customArgs: new() { ["-x264-params"] = "keyint=48:min-keyint=48" }
         );
 
         OutputPlan plan = await RunPlan(profile);
@@ -114,7 +114,7 @@ public class PlanStageCustomArgumentsTests
     [Fact]
     public async Task ProfileCustomArguments_ReachTheGlobalExtraFlags()
     {
-        EncodingProfile profile = BuildProfile(null) with
+        EncodingProfile profile = BuildProfile(customArgs: null) with
         {
             CustomArguments = new() { ["-max_muxing_queue_size"] = "1024" },
         };
@@ -132,23 +132,23 @@ public class PlanStageCustomArgumentsTests
     [Fact]
     public async Task AudioCustomArguments_ReachTheAudioOutputExtraFlags()
     {
-        EncodingProfile profile = BuildProfile(null) with
+        EncodingProfile profile = BuildProfile(customArgs: null) with
         {
             Audio =
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    "audio/{lang}",
-                    "audio/{lang}/playlist",
-                    new() { ["-aac_coder"] = "twoloop" }
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "audio/{lang}",
+                    PlaylistNameTemplate: "audio/{lang}/playlist",
+                    CustomArguments: new() { ["-aac_coder"] = "twoloop" }
                 ),
             ],
         };
@@ -162,18 +162,18 @@ public class PlanStageCustomArgumentsTests
     [Fact]
     public async Task SubtitleCustomArguments_ReachTheSubtitleOutputExtraFlags()
     {
-        EncodingProfile profile = BuildProfile(null) with
+        EncodingProfile profile = BuildProfile(customArgs: null) with
         {
             Subtitles =
             [
                 new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    [],
-                    false,
-                    null,
-                    "subtitles/{lang}",
-                    new() { ["-canvas_size"] = "1920x1080" }
+                    Policy: SubtitlePolicy.Extract,
+                    Codec: SubtitleCodecType.WebVtt,
+                    AllowedLanguages: [],
+                    IncludeForced: false,
+                    OcrLanguage: null,
+                    PlaylistNameTemplate: "subtitles/{lang}",
+                    CustomArguments: new() { ["-canvas_size"] = "1920x1080" }
                 ),
             ],
         };
@@ -202,78 +202,79 @@ public class PlanStageCustomArgumentsTests
             AudioStreams =
             [
                 new(
-                    1,
-                    "aac",
-                    6,
-                    48000,
-                    384,
-                    "eng",
-                    true,
-                    false
+                    Index: 1,
+                    Codec: "aac",
+                    Channels: 6,
+                    SampleRate: 48000,
+                    BitRateKbps: 384,
+                    Language: "eng",
+                    IsDefault: true,
+                    IsForced: false
                 ),
             ],
             SubtitleStreams =
             [
-                new(2, "subrip", "eng", true, false),
+                new(Index: 2, Codec: "subrip", Language: "eng", IsDefault: true, IsForced: false),
             ],
         };
 
     private static MediaInfo BuildSdrMedia() =>
         new(
-            "/media/sdr.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            8000,
-            4_000_000_000,
+            FilePath: "/media/sdr.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile BuildProfile(Dictionary<string, string>? customArgs) =>
         new(
-            Ulid.NewUlid(),
-            "CustomArgs Test",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                23,
-                5000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                "video/{label}",
-                "video/{label}/playlist",
-                customArgs
+            Id: Ulid.NewUlid(),
+            Name: "CustomArgs Test",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 5000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist",
+                CustomArguments: customArgs
             ),
-            [],
-            []
+            Audio: [],
+            Subtitles: []
         );
 }

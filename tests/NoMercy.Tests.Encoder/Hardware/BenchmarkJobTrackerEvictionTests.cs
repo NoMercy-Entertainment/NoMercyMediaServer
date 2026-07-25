@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Hardware;
+using Xunit;
 
 namespace NoMercy.Tests.Encoder.Hardware;
 
@@ -21,14 +22,14 @@ public class BenchmarkJobTrackerEvictionTests
 {
     private static BenchmarkJobStatus Job(string id, DateTime? completedAt) =>
         new(
-            id,
-            completedAt is null ? "running" : "completed",
-            DateTime.UtcNow,
-            completedAt,
-            0,
-            [],
-            [],
-            null
+            JobId: id,
+            Status: completedAt is null ? "running" : "completed",
+            StartedAt: DateTime.UtcNow,
+            CompletedAt: completedAt,
+            MeasurementCount: 0,
+            RequestedCodecs: [],
+            RequestedResolutions: [],
+            Error: null
         );
 
     [Fact]

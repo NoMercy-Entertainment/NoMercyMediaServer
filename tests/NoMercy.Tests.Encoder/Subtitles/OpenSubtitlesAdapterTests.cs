@@ -83,14 +83,14 @@ public class OpenSubtitlesAdapterTests
         List<OpenSubtitlesSearchResult> providerResults =
         [
             new(
-                "en",
-                "8.5",
-                "1234",
-                "1",
-                "23.976",
-                "https://dl.example.com/sub1.srt",
-                "srt",
-                "moviehash"
+                Language: "en",
+                SubRating: "8.5",
+                SubDownloadsCnt: "1234",
+                SubFromTrusted: "1",
+                MovieFPS: "23.976",
+                SubDownloadLink: "https://dl.example.com/sub1.srt",
+                SubFormat: "srt",
+                MatchedBy: "moviehash"
             ),
         ];
 
@@ -131,24 +131,24 @@ public class OpenSubtitlesAdapterTests
         List<OpenSubtitlesSearchResult> providerResults =
         [
             new(
-                "en",
-                "7.0",
-                "500",
-                "0",
-                null,
-                "https://dl.example.com/sub2.srt",
-                "srt",
-                "moviehash"
+                Language: "en",
+                SubRating: "7.0",
+                SubDownloadsCnt: "500",
+                SubFromTrusted: "0",
+                MovieFPS: null,
+                SubDownloadLink: "https://dl.example.com/sub2.srt",
+                SubFormat: "srt",
+                MatchedBy: "moviehash"
             ),
             new(
-                "en",
-                "6.0",
-                "200",
-                "1",
-                null,
-                "https://dl.example.com/sub3.srt",
-                "srt",
-                "moviehash"
+                Language: "en",
+                SubRating: "6.0",
+                SubDownloadsCnt: "200",
+                SubFromTrusted: "1",
+                MovieFPS: null,
+                SubDownloadLink: "https://dl.example.com/sub3.srt",
+                SubFormat: "srt",
+                MatchedBy: "moviehash"
             ),
         ];
 
@@ -169,7 +169,7 @@ public class OpenSubtitlesAdapterTests
             ["en"],
             TimeSpan.FromSeconds(5),
             CancellationToken.None,
-            true
+            trustedOnly: true
         );
 
         candidates.Should().HaveCount(1);
@@ -207,14 +207,14 @@ public class OpenSubtitlesAdapterTests
         List<OpenSubtitlesSearchResult> providerResults =
         [
             new(
-                "nl",
-                "5.0",
-                "99",
-                "0",
-                "25.0",
-                "https://dl.example.com/sub.vtt",
-                "vtt",
-                "moviehash"
+                Language: "nl",
+                SubRating: "5.0",
+                SubDownloadsCnt: "99",
+                SubFromTrusted: "0",
+                MovieFPS: "25.0",
+                SubDownloadLink: "https://dl.example.com/sub.vtt",
+                SubFormat: "vtt",
+                MatchedBy: "moviehash"
             ),
         ];
 

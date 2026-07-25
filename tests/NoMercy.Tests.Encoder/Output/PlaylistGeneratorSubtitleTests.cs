@@ -53,19 +53,20 @@ public class PlaylistGeneratorSubtitleTests
     public void MasterPlaylist_SubtitleWithDropAction_IsExcluded()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [BuildVideo()],
-            [BuildAudio()],
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildVideo()],
+            AudioOutputs: [BuildAudio()],
+            SubtitleOutputs:
             [
                 new(
-                    SubtitleCodecType.WebVtt,
-                    StreamAction.Drop,
-                    "eng",
-                    0,
-                    "0:s:0"
+                    OutputCodec: SubtitleCodecType.WebVtt,
+                    Action: StreamAction.Drop,
+                    Language: "eng",
+                    SourceIndex: 0,
+                    MapLabel: "0:s:0"
                 ),
             ],
-            null
+            Thumbnails: null
         );
 
         string playlist = Generate(plan);
@@ -84,38 +85,38 @@ public class PlaylistGeneratorSubtitleTests
     private static OutputPlan CreatePlanWithoutSubtitles()
     {
         return new(
-            OutputFormat.Hls,
-            [BuildVideo()],
-            [BuildAudio()],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildVideo()],
+            AudioOutputs: [BuildAudio()],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
     }
 
     private static VideoOutputPlan BuildVideo() =>
         new(
-            1920,
-            1080,
-            "libx264",
-            23,
-            4000,
-            "medium",
-            "high",
-            "4.1",
-            false,
-            "yuv420p",
-            "[v0]",
-            new()
+            Width: 1920,
+            Height: 1080,
+            EncoderName: "libx264",
+            Crf: 23,
+            BitrateKbps: 4000,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.1",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "[v0]",
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudio() =>
         new(
-            "aac",
-            192,
-            2,
-            48000,
-            StreamAction.Transcode,
-            "eng",
-            "0:a:0"
+            EncoderName: "aac",
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: "eng",
+            MapLabel: "0:a:0"
         );
 }

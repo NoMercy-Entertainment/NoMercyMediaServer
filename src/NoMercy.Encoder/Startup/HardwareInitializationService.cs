@@ -122,7 +122,7 @@ public class HardwareInitializationService(
             summary.Append("Hardware detection complete - encoder ready:");
             summary.Append(
                 $"\n  FFmpeg : {ffmpegCapabilities.AvailableEncoders.Count} encoders, "
-                         + $"{ffmpegCapabilities.AvailableFilters.Count} filters"
+                    + $"{ffmpegCapabilities.AvailableFilters.Count} filters"
             );
             summary.Append($"\n  CPU    : {cpuCores} cores");
             if (gpus.Count == 0)
@@ -131,7 +131,7 @@ public class HardwareInitializationService(
                 foreach (GpuDevice gpu in gpus)
                     summary.Append(
                         $"\n  GPU    : {gpu.Vendor} {gpu.Name} "
-                                 + $"({gpu.VramMb}MB VRAM, max {gpu.MaxEncoderSessions} sessions)"
+                            + $"({gpu.VramMb}MB VRAM, max {gpu.MaxEncoderSessions} sessions)"
                     );
             summary.Append(
                 usableHardwareEncoders.Count == 0
@@ -143,7 +143,7 @@ public class HardwareInitializationService(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Hardware detection failed — software-only fallback");
-            Capabilities = new HardwareCapabilities([], Environment.ProcessorCount);
+            Capabilities = new HardwareCapabilities(Gpus: [], CpuCores: Environment.ProcessorCount);
             IsReady = true;
         }
 
@@ -168,7 +168,9 @@ public class HardwareInitializationService(
             else if (driverResult.Changed)
             {
                 logger.LogWarning(
-                    "GPU driver change detected (prev={Prev}, curr={Curr}) — queuing benchmark recalibration", [driverResult.PreviousHash, driverResult.CurrentHash]
+                    "GPU driver change detected (prev={Prev}, curr={Curr}) — queuing benchmark recalibration",
+                    driverResult.PreviousHash,
+                    driverResult.CurrentHash
                 );
                 benchmarkJobTracker.Start(Array.Empty<VideoCodecType>(), Array.Empty<int>());
             }
@@ -255,7 +257,10 @@ public class HardwareInitializationService(
 
                 logger.LogWarning(
                     ex,
-                    "ffmpeg probe failed (attempt {Attempt}/{Max}), retrying in {DelayMs}ms", [attempt + 1, MaxProbeRetries, probeRetryDelayMs]
+                    "ffmpeg probe failed (attempt {Attempt}/{Max}), retrying in {DelayMs}ms",
+                    attempt + 1,
+                    MaxProbeRetries,
+                    probeRetryDelayMs
                 );
                 await Task.Delay(probeRetryDelayMs, ct).ConfigureAwait(false);
                 continue;
@@ -274,7 +279,10 @@ public class HardwareInitializationService(
             }
 
             logger.LogWarning(
-                "ffmpeg -encoders returned empty set (attempt {Attempt}/{Max}), retrying in {DelayMs}ms", [attempt + 1, MaxProbeRetries, probeRetryDelayMs]
+                "ffmpeg -encoders returned empty set (attempt {Attempt}/{Max}), retrying in {DelayMs}ms",
+                attempt + 1,
+                MaxProbeRetries,
+                probeRetryDelayMs
             );
             await Task.Delay(probeRetryDelayMs, ct).ConfigureAwait(false);
         }

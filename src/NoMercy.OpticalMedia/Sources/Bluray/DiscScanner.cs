@@ -62,8 +62,8 @@ public class DiscScanner(
                 ProcessResult preProbe = await processRunner.RunAsync(
                     options.FfprobePath,
                     ["-v", "quiet", "-show_format", drivePath],
-                    null,
-                    probeCts.Token
+                    workingDirectory: null,
+                    cancellationToken: probeCts.Token
                 );
 
                 if (!preProbe.IsSuccess)
@@ -91,14 +91,17 @@ public class DiscScanner(
         ProcessResult result = await processRunner.RunAsync(
             options.FfprobePath,
             args,
-            null,
-            ct
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
         if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
         {
             logger.LogWarning(
-                "Disc scan failed for {Drive} (exit {Exit}): {Stderr}", [drivePath, result.ExitCode, TrimStderr(result.StdErr)]
+                "Disc scan failed for {Drive} (exit {Exit}): {Stderr}",
+                drivePath,
+                result.ExitCode,
+                TrimStderr(result.StdErr)
             );
             return new(discType, null, [], null, TimeSpan.Zero);
         }
@@ -201,15 +204,15 @@ public class DiscScanner(
         }
 
         DiscTitle singleTitle = new(
-            0,
-            discLabel,
-            duration,
-            videoStreams.ToArray(),
-            audioStreams.ToArray(),
-            subtitles.ToArray(),
-            chapters.ToArray(),
-            0,
-            true
+            Index: 0,
+            Name: discLabel,
+            Duration: duration,
+            VideoStreams: videoStreams.ToArray(),
+            AudioStreams: audioStreams.ToArray(),
+            Subtitles: subtitles.ToArray(),
+            Chapters: chapters.ToArray(),
+            EstimatedSizeBytes: 0,
+            IsMainFeature: true
         );
 
         return new(discType, discLabel, [singleTitle], null, duration);
@@ -217,22 +220,22 @@ public class DiscScanner(
 
     private static VideoStreamInfo ParseVideo(JsonElement stream) =>
         new(
-            stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
-            stream.TryGetProperty("codec_name", out JsonElement c)
+            Index: stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
+            Codec: stream.TryGetProperty("codec_name", out JsonElement c)
                 ? (c.GetString() ?? "")
                 : "",
-            stream.TryGetProperty("width", out JsonElement w) ? w.GetInt32() : 0,
-            stream.TryGetProperty("height", out JsonElement h) ? h.GetInt32() : 0,
-            0,
-            8,
-            stream.TryGetProperty("pix_fmt", out JsonElement px)
+            Width: stream.TryGetProperty("width", out JsonElement w) ? w.GetInt32() : 0,
+            Height: stream.TryGetProperty("height", out JsonElement h) ? h.GetInt32() : 0,
+            FrameRate: 0,
+            BitDepth: 8,
+            PixelFormat: stream.TryGetProperty("pix_fmt", out JsonElement px)
                 ? (px.GetString() ?? "")
                 : "",
-            null,
-            null,
-            null,
-            false,
-            0
+            ColorPrimaries: null,
+            ColorTransfer: null,
+            ColorSpace: null,
+            IsDefault: false,
+            BitRateKbps: 0
         );
 
     private static AudioStreamInfo ParseAudio(JsonElement stream)
@@ -247,19 +250,19 @@ public class DiscScanner(
         }
 
         return new(
-            stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
-            stream.TryGetProperty("codec_name", out JsonElement c)
+            Index: stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
+            Codec: stream.TryGetProperty("codec_name", out JsonElement c)
                 ? (c.GetString() ?? "")
                 : "",
-            stream.TryGetProperty("channels", out JsonElement ch) ? ch.GetInt32() : 0,
-            stream.TryGetProperty("sample_rate", out JsonElement sr)
+            Channels: stream.TryGetProperty("channels", out JsonElement ch) ? ch.GetInt32() : 0,
+            SampleRate: stream.TryGetProperty("sample_rate", out JsonElement sr)
             && int.TryParse(sr.GetString(), out int srInt)
                 ? srInt
                 : 0,
-            0,
-            language,
-            false,
-            false
+            BitRateKbps: 0,
+            Language: language,
+            IsDefault: false,
+            IsForced: false
         );
     }
 
@@ -275,13 +278,13 @@ public class DiscScanner(
         }
 
         return new(
-            stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
-            stream.TryGetProperty("codec_name", out JsonElement c)
+            Index: stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
+            Codec: stream.TryGetProperty("codec_name", out JsonElement c)
                 ? (c.GetString() ?? "")
                 : "",
-            language,
-            false,
-            false
+            Language: language,
+            IsDefault: false,
+            IsForced: false
         );
     }
 

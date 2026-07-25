@@ -66,7 +66,7 @@ public abstract class TwoPassStrategyBase(
             VideoOutputPlan video = plan.VideoOutputs[i];
             tasks.Add(
                 new(
-                    $"{groupTag}-pass1-{i}",
+                    TaskId: $"{groupTag}-pass1-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Pass1,
@@ -83,15 +83,15 @@ public abstract class TwoPassStrategyBase(
             VideoOutputPlan video = plan.VideoOutputs[i];
             tasks.Add(
                 new(
-                    $"{groupTag}-pass2-{i}",
-                    0,
-                    groupTag,
-                    EncodeTaskKind.Pass2,
-                    i,
-                    TaskResourceHelper.ForVideoOutput(video),
-                    EstimateVideoCost(video),
-                    null,
-                    $"pass2 {video.Width}p {video.EncoderName}"
+                    TaskId: $"{groupTag}-pass2-{i}",
+                    ParentJobId: 0,
+                    GroupTag: groupTag,
+                    Kind: EncodeTaskKind.Pass2,
+                    OutputIndex: i,
+                    Resources: TaskResourceHelper.ForVideoOutput(video),
+                    EstimatedCostUnits: EstimateVideoCost(video),
+                    StatsFilePath: null,
+                    Label: $"pass2 {video.Width}p {video.EncoderName}"
                 )
             );
         }
@@ -101,7 +101,7 @@ public abstract class TwoPassStrategyBase(
             AudioOutputPlan audio = plan.AudioOutputs[i];
             tasks.Add(
                 new(
-                    $"{groupTag}-audio-{i}",
+                    TaskId: $"{groupTag}-audio-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Audio,
@@ -118,7 +118,7 @@ public abstract class TwoPassStrategyBase(
             SubtitleOutputPlan sub = plan.SubtitleOutputs[i];
             tasks.Add(
                 new(
-                    $"{groupTag}-sub-{i}",
+                    TaskId: $"{groupTag}-sub-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Subtitle,
@@ -134,7 +134,7 @@ public abstract class TwoPassStrategyBase(
         {
             tasks.Add(
                 new(
-                    $"{groupTag}-thumbs",
+                    TaskId: $"{groupTag}-thumbs",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Thumbnails,
@@ -154,7 +154,7 @@ public abstract class TwoPassStrategyBase(
                 ChapterInfo chapter = plan.Chapters[i];
                 tasks.Add(
                     new(
-                        $"{groupTag}-chapter-{i}",
+                        TaskId: $"{groupTag}-chapter-{i}",
                         ParentJobId: 0,
                         GroupTag: groupTag,
                         Kind: EncodeTaskKind.Chapters,
@@ -221,7 +221,7 @@ public abstract class TwoPassStrategyBase(
                 DeletePartialOutput(
                     request.OutputDirectory,
                     effectiveStorage,
-                    true
+                    preserveCheckpoint: true
                 );
             }
 
@@ -236,7 +236,7 @@ public abstract class TwoPassStrategyBase(
             DeletePartialOutput(
                 request.OutputDirectory,
                 effectiveStorage,
-                false
+                preserveCheckpoint: false
             );
             throw;
         }
@@ -341,7 +341,7 @@ public abstract class TwoPassStrategyBase(
                 return;
 
             foreach (
-                StorageEntry entry in stor.List(outputDirectory, "*", true)
+                StorageEntry entry in stor.List(outputDirectory, "*", recursive: true)
                     .Where(e => !e.IsDirectory)
                     .Where(e =>
                         !preserveCheckpoint
@@ -400,7 +400,10 @@ public abstract class TwoPassStrategyBase(
             progress?.OnStageStarted("Pass 1 (resumed from checkpoint)");
             progress?.OnStageCompleted("Pass 1 (resumed from checkpoint)", TimeSpan.Zero);
             logger.LogInformation(
-                "Resuming 2-pass encode for {Input} — pass 1 already done at {Stats} ({Variants} variants)", [request.InputPath, statsFilePath, variantCount]
+                "Resuming 2-pass encode for {Input} — pass 1 already done at {Stats} ({Variants} variants)",
+                request.InputPath,
+                statsFilePath,
+                variantCount
             );
         }
         else
@@ -430,7 +433,10 @@ public abstract class TwoPassStrategyBase(
                 if (!pass1Result.Success)
                 {
                     logger.LogWarning(
-                        "Pass 1 variant {Index} failed for {Input}: {Message}", [variantIndex, request.InputPath, pass1Result.Error?.Message]
+                        "Pass 1 variant {Index} failed for {Input}: {Message}",
+                        variantIndex,
+                        request.InputPath,
+                        pass1Result.Error?.Message
                     );
                     return pass1Result;
                 }
@@ -455,7 +461,9 @@ public abstract class TwoPassStrategyBase(
         if (!pass2Result.Success)
         {
             logger.LogWarning(
-                "Pass 2 failed for {Input}: {Message}", [request.InputPath, pass2Result.Error?.Message]
+                "Pass 2 failed for {Input}: {Message}",
+                request.InputPath,
+                pass2Result.Error?.Message
             );
             return pass2Result;
         }
@@ -482,15 +490,15 @@ public abstract class TwoPassStrategyBase(
     )
     {
         JobCheckpoint checkpoint = new(
-            $"{Path.GetFileNameWithoutExtension(request.InputPath)}-2pass-{Format}",
-            request.InputPath,
-            request.OutputDirectory,
-            [],
-            DateTime.UtcNow,
-            statsFilePath,
-            true,
-            -1,
-            "TwoPass"
+            JobId: $"{Path.GetFileNameWithoutExtension(request.InputPath)}-2pass-{Format}",
+            InputPath: request.InputPath,
+            OutputDirectory: request.OutputDirectory,
+            CompletedGroupIndices: [],
+            LastUpdated: DateTime.UtcNow,
+            StatsFilePath: statsFilePath,
+            Pass1Completed: true,
+            LastCompletedSegment: -1,
+            EncodeMode: "TwoPass"
         );
         await checkpointStore.SaveAsync(checkpoint, ct);
     }
@@ -505,7 +513,7 @@ public abstract class TwoPassStrategyBase(
         // Covers every variant's output — x264 writes {base}_v{i}-0.log and
         // {base}_v{i}-0.log.mbtree. `{baseName}_v*` matches all of them.
         foreach (
-            string file in stor.List(dir, $"{baseName}_v*", false)
+            string file in stor.List(dir, $"{baseName}_v*", recursive: false)
                 .Where(e => !e.IsDirectory)
                 .Select(e => e.Path)
         )

@@ -49,8 +49,8 @@ public class CastPanelWakeLauncherTests
     }
 
     [Theory]
-    [InlineData([true, false])]
-    [InlineData([false, true])]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
     public void ShouldFireCastWake_ReflectsInverseOfTargetIsLive(bool targetIsLive, bool expected)
     {
         CastPanelWakeLauncher.ShouldFireCastWake(targetIsLive).Should().Be(expected);
@@ -63,10 +63,10 @@ public class CastPanelWakeLauncherTests
         bool resolveLaunchDataCalled = false;
 
         await launcher.LaunchIfColdAsync(
-            true,
-            TargetIp,
-            true,
-            () =>
+            targetIsLive: true,
+            targetIp: TargetIp,
+            useAndroidReceiver: true,
+            resolveLaunchData: () =>
             {
                 resolveLaunchDataCalled = true;
                 return Task.FromResult<LaunchCustomData?>(null);
@@ -95,10 +95,10 @@ public class CastPanelWakeLauncherTests
         chromeCast.Setup(c => c.FindReceiverNameByIpAsync(TargetIp)).ReturnsAsync(ReceiverName);
 
         await launcher.LaunchIfColdAsync(
-            false,
-            TargetIp,
-            apkOnline,
-            () => Task.FromResult<LaunchCustomData?>(launchData)
+            targetIsLive: false,
+            targetIp: TargetIp,
+            useAndroidReceiver: apkOnline,
+            resolveLaunchData: () => Task.FromResult<LaunchCustomData?>(launchData)
         );
 
         chromeCast.Verify(c => c.SelectChromecast(ReceiverName), Times.Once);
@@ -116,10 +116,10 @@ public class CastPanelWakeLauncherTests
         int resolveCallCount = 0;
 
         await launcher.LaunchIfColdAsync(
-            false,
-            TargetIp,
-            true,
-            () =>
+            targetIsLive: false,
+            targetIp: TargetIp,
+            useAndroidReceiver: true,
+            resolveLaunchData: () =>
             {
                 resolveCallCount++;
                 return Task.FromResult<LaunchCustomData?>(null);
@@ -136,10 +136,10 @@ public class CastPanelWakeLauncherTests
         chromeCast.Setup(c => c.FindReceiverNameByIpAsync(TargetIp)).ReturnsAsync((string?)null);
 
         await launcher.LaunchIfColdAsync(
-            false,
-            TargetIp,
-            true,
-            () => Task.FromResult<LaunchCustomData?>(null)
+            targetIsLive: false,
+            targetIp: TargetIp,
+            useAndroidReceiver: true,
+            resolveLaunchData: () => Task.FromResult<LaunchCustomData?>(null)
         );
 
         chromeCast.Verify(c => c.SelectChromecast(It.IsAny<string>()), Times.Never);

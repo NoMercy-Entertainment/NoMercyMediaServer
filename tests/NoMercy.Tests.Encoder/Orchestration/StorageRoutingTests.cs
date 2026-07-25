@@ -57,11 +57,11 @@ public class StorageRoutingTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out/file.mp4",
-                    TimeSpan.Zero,
-                    null,
-                    new(0, 0, 0, "libx264", null)
+                    Success: true,
+                    OutputPath: "/out/file.mp4",
+                    Duration: TimeSpan.Zero,
+                    Error: null,
+                    Metrics: new(0, 0, 0, "libx264", null)
                 )
             );
 
@@ -82,10 +82,10 @@ public class StorageRoutingTests
         BuildSuccessStrategy();
 
         EncodingRequest request = new(
-            "remote/show/episode.mkv",
+            InputPath: "remote/show/episode.mkv",
             OutputDirectory: "show/season01",
             Profile: new(
-                Ulid.NewUlid(),
+                Id: Ulid.NewUlid(),
                 Name: "MP4 720p",
                 Container: Container.Mp4,
                 Video: null,
@@ -128,10 +128,10 @@ public class StorageRoutingTests
         BuildSuccessStrategy();
 
         EncodingRequest request = new(
-            "local/show/episode.mkv",
+            InputPath: "local/show/episode.mkv",
             OutputDirectory: "show/season01",
             Profile: new(
-                Ulid.NewUlid(),
+                Id: Ulid.NewUlid(),
                 Name: "MP4 720p",
                 Container: Container.Mp4,
                 Video: null,
@@ -168,10 +168,10 @@ public class StorageRoutingTests
         BuildSuccessStrategy();
 
         EncodingRequest request = new(
-            "local/movie/film.mkv",
+            InputPath: "local/movie/film.mkv",
             OutputDirectory: "movie/Film (2020)",
             Profile: new(
-                Ulid.NewUlid(),
+                Id: Ulid.NewUlid(),
                 Name: "MP4 1080p",
                 Container: Container.Mp4,
                 Video: null,

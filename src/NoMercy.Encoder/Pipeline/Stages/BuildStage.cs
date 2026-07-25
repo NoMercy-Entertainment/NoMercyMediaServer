@@ -111,7 +111,7 @@ public class BuildStage(
                         new(
                             EncodingErrorKind.Unknown,
                             $"Pass1VariantIndex {input.Pass1VariantIndex} is out of range for "
-                                     + $"profile with {input.Plan.OutputPlan.VideoOutputs.Length} variants.",
+                                + $"profile with {input.Plan.OutputPlan.VideoOutputs.Length} variants.",
                             null,
                             Name,
                             false
@@ -151,7 +151,7 @@ public class BuildStage(
                         new(
                             EncodingErrorKind.Unknown,
                             $"Chapter index {chapterIndex} is out of range "
-                                     + $"(plan has {input.Plan.OutputPlan.Chapters.Count} chapters).",
+                                + $"(plan has {input.Plan.OutputPlan.Chapters.Count} chapters).",
                             null,
                             Name,
                             false
@@ -215,7 +215,14 @@ public class BuildStage(
                 );
                 input = input with { Plan = input.Plan with { OutputPlan = sliced } };
                 logger.LogInformation(
-                    "[{CorrelationId}] Sliced plan for {Kind} task #{Idx}: {V} video / {A} audio / {S} sub / thumbs={T}", [context.CorrelationId, taskFilter.Kind, taskFilter.OutputIndex, sliced.VideoOutputs.Length, sliced.AudioOutputs.Length, sliced.SubtitleOutputs.Length, sliced.Thumbnails is not null]
+                    "[{CorrelationId}] Sliced plan for {Kind} task #{Idx}: {V} video / {A} audio / {S} sub / thumbs={T}",
+                    context.CorrelationId,
+                    taskFilter.Kind,
+                    taskFilter.OutputIndex,
+                    sliced.VideoOutputs.Length,
+                    sliced.AudioOutputs.Length,
+                    sliced.SubtitleOutputs.Length,
+                    sliced.Thumbnails is not null
                 );
             }
 
@@ -246,12 +253,12 @@ public class BuildStage(
             builder.AddInput(
                 new(
                     input.InputPath,
-                    resumeSeek,
-                    input.DurationLimit,
-                    useGpuResident
+                    SeekTo: resumeSeek,
+                    Duration: input.DurationLimit,
+                    HwAccelDevice: useGpuResident
                         ? input.Plan.OutputPlan.GpuAccel!.HwAccelDevice
                         : null,
-                    useGpuResident
+                    HwAccelOutputFormat: useGpuResident
                         ? input.Plan.OutputPlan.GpuAccel!.HwAccelOutputFormat
                         : null
                 )
@@ -283,11 +290,11 @@ public class BuildStage(
             {
                 context.DecisionsOrNoOp.Add(
                     new(
-                        Name,
-                        EncoderRuleId.SubtitlesBurnInPermanent,
-                        "Subtitle stream will be burned permanently into video frames. "
+                        Stage: Name,
+                        Key: EncoderRuleId.SubtitlesBurnInPermanent,
+                        Message: "Subtitle stream will be burned permanently into video frames. "
                             + "The resulting output cannot be toggled off by the client.",
-                        new { burnInPlan.SourceIndex }
+                        Data: new { burnInPlan.SourceIndex }
                     )
                 );
             }
@@ -312,10 +319,10 @@ public class BuildStage(
                 // ffmpeg aborts on a pad mapped more than once.
                 bool pgsIncludesThumbnails = input.Plan.OutputPlan.Thumbnails is not null;
                 PgsBurnInFilterChain chain = pgsBurnInFilterBuilder!.Build(
-                    0,
-                    burnInPlan!.SourceIndex,
-                    input.Plan.OutputPlan.VideoOutputs.Length,
-                    pgsIncludesThumbnails
+                    videoStreamIndex: 0,
+                    subtitleStreamIndex: burnInPlan!.SourceIndex,
+                    videoOutputCount: input.Plan.OutputPlan.VideoOutputs.Length,
+                    includeThumbnails: pgsIncludesThumbnails
                 );
                 filterGraph = chain.FilterComplex;
                 pgsThumbnailLabel = chain.ThumbnailLabel;
@@ -358,7 +365,7 @@ public class BuildStage(
             {
                 string subFile = $"subtitles/{sub.Language}.acquired.{sub.Format}";
                 builder.AddOutput(
-                    new(subFile, SubtitleCodec: "copy", MapStreams: [$"{idx}:s:0"])
+                    new(FilePath: subFile, SubtitleCodec: "copy", MapStreams: [$"{idx}:s:0"])
                 );
             }
 
@@ -403,7 +410,7 @@ public class BuildStage(
                             .AddInput(new(input.InputPath))
                             .AddOutput(
                                 new(
-                                    $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
+                                    FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
                                     MapStreams: ["0:v:0"],
                                     ExtraFlags: new()
                                     {
@@ -432,7 +439,7 @@ public class BuildStage(
 
                     builder.AddOutput(
                         new(
-                            $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
+                            FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
                             MapStreams: [thumbnailMapLabel],
                             ExtraFlags: new()
                             {
@@ -487,7 +494,10 @@ public class BuildStage(
                 );
 
                 logger.LogInformation(
-                    "[{CorrelationId}] FFmpeg command: {Executable} {Args}", [context.CorrelationId, mainCommand.Executable, string.Join(" ", mainCommand.Arguments)]
+                    "[{CorrelationId}] FFmpeg command: {Executable} {Args}",
+                    context.CorrelationId,
+                    mainCommand.Executable,
+                    string.Join(" ", mainCommand.Arguments)
                 );
 
                 allCommands.Add(mainCommand);
@@ -595,7 +605,7 @@ public class BuildStage(
             // Fail the encode instead of silently downgrading to plaintext.
             throw new InvalidOperationException(
                 $"DRM was requested ({drm.Method}) but no matching processor is registered — "
-                         + "refusing to ship an unencrypted encode."
+                    + "refusing to ship an unencrypted encode."
             );
         }
 
@@ -708,10 +718,10 @@ public class BuildStage(
 
         return new FfmpegCommandBuilder()
             .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
-            .AddInput(new(inputPath, timestamp))
+            .AddInput(new(FilePath: inputPath, SeekTo: timestamp))
             .AddOutput(
                 new(
-                    outputFile,
+                    FilePath: outputFile,
                     VideoCodec: "libwebp",
                     ExtraFlags: new() { ["-frames:v"] = "1", ["-vf"] = "scale=240:-2" }
                 )

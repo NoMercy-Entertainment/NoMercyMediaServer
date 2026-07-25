@@ -51,7 +51,7 @@ public class VfrEdgeCaseTests
     [Fact]
     public async Task VfrNormalized_HlsOutput_EmitsFpsModeCfr()
     {
-        string[] args = await BuildArgs(OutputFormat.Hls, true);
+        string[] args = await BuildArgs(OutputFormat.Hls, normalizeCfr: true);
 
         int idx = Array.IndexOf(args, "-fps_mode");
         idx.Should()
@@ -62,7 +62,7 @@ public class VfrEdgeCaseTests
     [Fact]
     public async Task CfrSource_HlsOutput_NoFpsMode()
     {
-        string[] args = await BuildArgs(OutputFormat.Hls, false);
+        string[] args = await BuildArgs(OutputFormat.Hls, normalizeCfr: false);
 
         args.Should().NotContain("-fps_mode", "a constant-frame-rate source needs no reshaping");
     }
@@ -70,7 +70,7 @@ public class VfrEdgeCaseTests
     [Fact]
     public async Task VfrNormalized_DashOutput_EmitsFpsModeCfr()
     {
-        string[] args = await BuildArgs(OutputFormat.Dash, true);
+        string[] args = await BuildArgs(OutputFormat.Dash, normalizeCfr: true);
 
         int idx = Array.IndexOf(args, "-fps_mode");
         idx.Should()
@@ -81,14 +81,14 @@ public class VfrEdgeCaseTests
     [Fact]
     public void IsVariableFrameRate_TrueOnlyWhenRealAndAverageDiffer()
     {
-        BuildVideoStream(30.0, 24.0).IsVariableFrameRate.Should().BeTrue();
-        BuildVideoStream(24.0, 24.0).IsVariableFrameRate.Should().BeFalse();
+        BuildVideoStream(real: 30.0, avg: 24.0).IsVariableFrameRate.Should().BeTrue();
+        BuildVideoStream(real: 24.0, avg: 24.0).IsVariableFrameRate.Should().BeFalse();
     }
 
     private async Task<string[]> BuildArgs(OutputFormat format, bool normalizeCfr)
     {
         OutputPlan outputPlan = new(
-            format,
+            Format: format,
             VideoOutputs: [BuildVideoOutput(1280, 720, "[v0]")],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
@@ -107,76 +107,77 @@ public class VfrEdgeCaseTests
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
+            Groups:
             [
                 new(
-                    "group_0",
-                    [new("decode_0", OperationType.Decode, [], new())],
-                    null,
-                    0,
-                    4,
-                    false,
-                    1
+                    GroupId: "group_0",
+                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 4,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            outputPlan
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: outputPlan
         );
 
     private static VideoOutputPlan BuildVideoOutput(int width, int height, string mapLabel) =>
         new(
-            width,
-            height,
-            "libx264",
-            23,
-            4000,
-            "medium",
-            "high",
-            "4.1",
-            false,
-            "yuv420p",
-            mapLabel,
-            new()
+            Width: width,
+            Height: height,
+            EncoderName: "libx264",
+            Crf: 23,
+            BitrateKbps: 4000,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.1",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: mapLabel,
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>
         new(
-            "aac",
-            192,
-            2,
-            48000,
-            StreamAction.Transcode,
-            "en",
-            "0:a:0"
+            EncoderName: "aac",
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: "en",
+            MapLabel: "0:a:0"
         );
 
     private static VideoStreamInfo BuildVideoStream(double real, double avg) =>
         new(
-            0,
-            "h264",
-            1920,
-            1080,
-            real,
-            8,
-            "yuv420p",
-            null,
-            null,
-            null,
-            true,
-            6000,
-            avg,
-            real
+            Index: 0,
+            Codec: "h264",
+            Width: 1920,
+            Height: 1080,
+            FrameRate: real,
+            BitDepth: 8,
+            PixelFormat: "yuv420p",
+            ColorPrimaries: null,
+            ColorTransfer: null,
+            ColorSpace: null,
+            IsDefault: true,
+            BitRateKbps: 6000,
+            AverageFrameRate: avg,
+            RealFrameRate: real
         );
 
     private static MediaInfo BuildMediaInfo() =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
-            [BuildVideoStream(30.0, 24.0)],
-            [],
-            [],
-            []
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams: [BuildVideoStream(real: 30.0, avg: 24.0)],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 }

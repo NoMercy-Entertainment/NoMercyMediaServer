@@ -28,19 +28,19 @@ public class MezzanineConfigTests
     public void EncodingProfile_Mezzanine_DefaultsNull_AndIsSettable()
     {
         EncodingProfile noMezzanine = new(
-            Ulid.NewUlid(),
-            "p",
-            Container.HlsTs,
-            null,
-            [],
-            []
+            Id: Ulid.NewUlid(),
+            Name: "p",
+            Container: Container.HlsTs,
+            Video: null,
+            Audio: [],
+            Subtitles: []
         );
 
         noMezzanine.Mezzanine.Should().BeNull("default = no mezzanine, unchanged behaviour");
 
         EncodingProfile withMezzanine = noMezzanine with
         {
-            Mezzanine = new("ffv1", 0),
+            Mezzanine = new(Codec: "ffv1", Crf: 0),
         };
 
         withMezzanine.Mezzanine.Should().NotBeNull();

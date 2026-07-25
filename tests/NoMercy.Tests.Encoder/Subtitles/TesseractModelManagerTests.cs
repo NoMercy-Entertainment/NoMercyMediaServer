@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.Subtitles;
 
@@ -37,7 +38,7 @@ public class TesseractModelManagerTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+            Directory.Delete(_tempDir, recursive: true);
         GC.SuppressFinalize(this);
     }
 

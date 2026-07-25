@@ -47,11 +47,11 @@ public class TwoPassSplitTests : IDisposable
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out",
-                    TimeSpan.Zero,
-                    null,
-                    new(0, 0, 0, "test", null)
+                    Success: true,
+                    OutputPath: "/out",
+                    Duration: TimeSpan.Zero,
+                    Error: null,
+                    Metrics: new(0, 0, 0, "test", null)
                 )
             );
 
@@ -70,7 +70,7 @@ public class TwoPassSplitTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_outputDir))
-            Directory.Delete(_outputDir, true);
+            Directory.Delete(_outputDir, recursive: true);
         GC.SuppressFinalize(this);
     }
 
@@ -81,8 +81,8 @@ public class TwoPassSplitTests : IDisposable
 
         EncodingResult result = await _strategy.EncodeAsync(
             request,
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         result.Success.Should().BeTrue();
@@ -125,8 +125,8 @@ public class TwoPassSplitTests : IDisposable
 
         EncodingResult result = await _strategy.EncodeAsync(
             request,
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         result.Success.Should().BeTrue();
@@ -165,9 +165,9 @@ public class TwoPassSplitTests : IDisposable
     public async Task EncodeAsync_NullPass_CallsEncoderTwice()
     {
         // Legacy inline path (no explicit pass) must still run both passes.
-        EncodingRequest request = BuildRequest(null);
+        EncodingRequest request = BuildRequest(passOverride: null);
 
-        await _strategy.EncodeAsync(request, null, CancellationToken.None);
+        await _strategy.EncodeAsync(request, progress: null, ct: CancellationToken.None);
 
         _encoder.Verify(
             encoder =>
@@ -184,15 +184,15 @@ public class TwoPassSplitTests : IDisposable
     private EncodingRequest BuildRequest(EncodingPass? passOverride, string? statsFilePath = null)
     {
         return new(
-            Path.Combine(_outputDir, "input.mp4"),
+            InputPath: Path.Combine(_outputDir, "input.mp4"),
             OutputDirectory: _outputDir,
             Profile: new(
-                Ulid.NewUlid(),
-                "test",
-                NoMercy.Encoder.Profiles.Container.HlsTs,
-                null,
-                [],
-                []
+                Id: Ulid.NewUlid(),
+                Name: "test",
+                Container: NoMercy.Encoder.Profiles.Container.HlsTs,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             ),
             MediaTitle: "test",
             SourceStorage: TestStorageFactory.CreateLocal(),

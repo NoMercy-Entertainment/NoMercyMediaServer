@@ -42,7 +42,7 @@ public sealed class SmbStorageContractTests(StorageBackendsFixture fixture) : IS
         if (!string.IsNullOrEmpty(parent))
             seed.CreateDirectory(parent);
 
-        await using Stream w = seed.OpenWrite(normalized, true);
+        await using Stream w = seed.OpenWrite(normalized, overwrite: true);
         await w.WriteAsync(content);
     }
 
@@ -81,7 +81,7 @@ public sealed class SmbStorageContractTests(StorageBackendsFixture fixture) : IS
                 try
                 {
                     if (cleaner.DirectoryExists(entry))
-                        cleaner.DeleteDirectory(entry, true);
+                        cleaner.DeleteDirectory(entry, recursive: true);
                     else
                         cleaner.DeleteFile(entry);
                 }

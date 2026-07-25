@@ -80,11 +80,11 @@ public class ChapterThumbsTests : IDisposable
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out",
-                    TimeSpan.Zero,
-                    null,
-                    new(0, 0, 0, "test", null)
+                    Success: true,
+                    OutputPath: "/out",
+                    Duration: TimeSpan.Zero,
+                    Error: null,
+                    Metrics: new(0, 0, 0, "test", null)
                 )
             );
         return mock.Object;
@@ -112,23 +112,23 @@ public class ChapterThumbsTests : IDisposable
         VideoOutputPlan[] videos = Enumerable
             .Range(0, videoCount)
             .Select(i => new VideoOutputPlan(
-                1920,
-                1080,
-                "libx264",
-                23,
-                0,
-                "medium",
-                "main",
-                "4.0",
-                false,
-                "yuv420p",
-                $"[v{i}]",
-                []
+                Width: 1920,
+                Height: 1080,
+                EncoderName: "libx264",
+                Crf: 23,
+                BitrateKbps: 0,
+                Preset: "medium",
+                Profile: "main",
+                Level: "4.0",
+                TenBit: false,
+                PixelFormat: "yuv420p",
+                MapLabel: $"[v{i}]",
+                ExtraFlags: []
             ))
             .ToArray();
 
         return new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs: videos,
             AudioOutputs: [],
             SubtitleOutputs: [],
@@ -140,22 +140,24 @@ public class ChapterThumbsTests : IDisposable
 
     private static ExecutionPlan WrapInExecutionPlan(OutputPlan outputPlan) =>
         new(
+            Groups:
             [
                 new(
-                    "group_0",
+                    GroupId: "group_0",
+                    Nodes:
                     [
                         new("decode_0", OperationType.Decode, [], new()),
                         new("encode_0", OperationType.Encode, ["decode_0"], new()),
                     ],
-                    null,
-                    0,
-                    4,
-                    false,
-                    1
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 4,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            outputPlan
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: outputPlan
         );
 
     // ── Test 1: Decompose emits chapter tasks when flag is set ─────────────────
@@ -169,9 +171,9 @@ public class ChapterThumbsTests : IDisposable
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlanWithChapters(
-            5,
-            true,
-            1
+            chapterCount: 5,
+            generateChapterThumbs: true,
+            videoCount: 1
         );
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
@@ -207,9 +209,9 @@ public class ChapterThumbsTests : IDisposable
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlanWithChapters(
-            5,
-            false,
-            1
+            chapterCount: 5,
+            generateChapterThumbs: false,
+            videoCount: 1
         );
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
@@ -224,7 +226,7 @@ public class ChapterThumbsTests : IDisposable
     {
         IReadOnlyList<ChapterInfo> chapters = MakeChapters(3);
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs: [],
             AudioOutputs: [],
             SubtitleOutputs: [],
@@ -235,7 +237,7 @@ public class ChapterThumbsTests : IDisposable
 
         int targetChapter = 1;
         DecomposedTask chapterTask = new(
-            $"{GroupTag}-chapter-{targetChapter}",
+            TaskId: $"{GroupTag}-chapter-{targetChapter}",
             ParentJobId: 0,
             GroupTag: GroupTag,
             Kind: EncodeTaskKind.Chapters,
@@ -303,7 +305,7 @@ public class ChapterThumbsTests : IDisposable
             _tempDir,
             chapters,
             CancellationToken.None,
-            true
+            includeThumbUris: true
         );
 
         string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "chapters.vtt"));
@@ -323,7 +325,7 @@ public class ChapterThumbsTests : IDisposable
             _tempDir,
             chapters,
             CancellationToken.None,
-            false
+            includeThumbUris: false
         );
 
         string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "chapters.vtt"));

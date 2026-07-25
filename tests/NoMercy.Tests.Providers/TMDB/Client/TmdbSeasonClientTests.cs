@@ -130,7 +130,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
 
         // Act
-        TmdbSeasonDetails? result = await client.Details(true);
+        TmdbSeasonDetails? result = await client.Details(priority: true);
 
         // Assert
         result.Should().NotBeNull();
@@ -183,7 +183,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
 
         // Act
-        TmdbSeasonAppends? result = await client.WithAllAppends(true);
+        TmdbSeasonAppends? result = await client.WithAllAppends(priority: true);
 
         // Assert
         result.Should().NotBeNull();
@@ -226,7 +226,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
 
         // Act
-        TmdbSeasonAggregatedCredits? result = await client.AggregatedCredits(true);
+        TmdbSeasonAggregatedCredits? result = await client.AggregatedCredits(priority: true);
 
         // Assert
         result.Should().NotBeNull();
@@ -302,7 +302,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
 
         // Act
-        TmdbSeasonExternalIds? result = await client.ExternalIds(true);
+        TmdbSeasonExternalIds? result = await client.ExternalIds(priority: true);
 
         // Assert
         result.Should().NotBeNull();
@@ -383,7 +383,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
 
         // Act
-        TmdbSharedTranslations? result = await client.Translations(true);
+        TmdbSharedTranslations? result = await client.Translations(priority: true);
 
         // Assert
         result.Should().NotBeNull();
@@ -435,8 +435,8 @@ public class TmdbSeasonClientTests : TmdbTestBase
     #region Changes Tests
 
     [Theory]
-    [InlineData(["2023-01-01", "2023-12-31"])]
-    [InlineData(["2024-01-01", "2024-06-30"])]
+    [InlineData("2023-01-01", "2023-12-31")]
+    [InlineData("2024-01-01", "2024-06-30")]
     public async Task Changes_WithValidDateRange_ReturnsChanges(string startDate, string endDate)
     {
         // Arrange
@@ -479,7 +479,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         TmdbSeasonChanges? result = await client.Changes(
             "2024-01-01",
             "2024-06-30",
-            true
+            priority: true
         );
 
         // Assert - Changes endpoint may return null even for valid requests due to TMDB API limitations
@@ -541,7 +541,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         Task<TmdbSeasonExternalIds?> externalIdsTask = client.ExternalIds();
         Task<TmdbSeasonVideos?> videosTask = client.Videos();
 
-        await Task.WhenAll([detailsTask, creditsTask, imagesTask, externalIdsTask, videosTask]);
+        await Task.WhenAll(detailsTask, creditsTask, imagesTask, externalIdsTask, videosTask);
 
         TmdbSeasonDetails? details = await detailsTask;
         TmdbSeasonCredits? credits = await creditsTask;

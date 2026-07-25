@@ -240,7 +240,7 @@ public class Mp4ChapterTests : IDisposable
 
     private static OutputPlan CreatePlanWithChapters() =>
         new(
-            OutputFormat.Mp4,
+            Format: OutputFormat.Mp4,
             VideoOutputs:
             [
                 new(
@@ -266,7 +266,8 @@ public class Mp4ChapterTests : IDisposable
 
     private static OutputPlan CreatePlanWithoutChapters() =>
         new(
-            OutputFormat.Mp4,
+            Format: OutputFormat.Mp4,
+            VideoOutputs:
             [
                 new(
                     1920,
@@ -283,8 +284,8 @@ public class Mp4ChapterTests : IDisposable
                     new()
                 ),
             ],
-            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
-            [],
-            null
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 }

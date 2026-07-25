@@ -22,16 +22,16 @@ public class LiveSessionIdleReaperTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            "1080p",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     private static LiveStreamingService NewStreamingService()
@@ -177,7 +177,7 @@ public class LiveSessionIdleReaperTests
         LiveStreamingService service = NewStreamingService();
 
         LiveSession child = new(Ulid.NewUlid().ToString(), MakeQuality());
-        service.Register(child, targetSegmentDuration: TimeSpan.FromSeconds(4), isAudioRenditionChild: true);
+        service.Register(child, TimeSpan.FromSeconds(4), isAudioRenditionChild: true);
 
         // Idle far past the threshold — a non-selected language gets no hits, but
         // it must stay alive so a later switch to it works. The parent disposes it.

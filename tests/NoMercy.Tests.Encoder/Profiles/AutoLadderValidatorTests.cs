@@ -23,7 +23,7 @@ public class AutoLadderValidatorTests
 
     private static EncodingProfile ProfileWithAutoLadder(AutoLadderConfig config) =>
         new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "auto-ladder-test",
             Container: Container.HlsFmp4,
             Video: null,

@@ -51,13 +51,13 @@ public class RegisterRetryTests
         int callCount = 0;
 
         int attempts = await ExecuteWithRetry(
-            5,
-            _ =>
+            maxRetries: 5,
+            action: _ =>
             {
                 callCount++;
                 return Task.CompletedTask;
             },
-            attempt => BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)]
+            getDelay: attempt => BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)]
         );
 
         Assert.Equal(1, callCount);
@@ -71,15 +71,15 @@ public class RegisterRetryTests
         int succeedOnAttempt = 3;
 
         int attempts = await ExecuteWithRetry(
-            5,
-            attempt =>
+            maxRetries: 5,
+            action: attempt =>
             {
                 callCount++;
                 if (attempt < succeedOnAttempt)
                     throw new HttpRequestException("Network error");
                 return Task.CompletedTask;
             },
-            attempt => 1
+            getDelay: attempt => 1
         );
 
         Assert.Equal(succeedOnAttempt, callCount);
@@ -187,13 +187,13 @@ public class RegisterRetryTests
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
             await ExecuteWithRetry(
-                1,
-                _ =>
+                maxRetries: 1,
+                action: _ =>
                 {
                     callCount++;
                     throw new InvalidOperationException("Non-transient error");
                 },
-                _ => 1
+                getDelay: _ => 1
             );
         });
 

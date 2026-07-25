@@ -44,19 +44,20 @@ public class PixelFormatEdgeCaseTests
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
+            Groups:
             [
                 new(
-                    "group_0",
-                    [new("decode_0", OperationType.Decode, [], new())],
-                    null,
-                    0,
-                    4,
-                    false,
-                    1
+                    GroupId: "group_0",
+                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 4,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            outputPlan
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: outputPlan
         );
 
     private static VideoOutputPlan BuildVideoOutput(
@@ -68,85 +69,87 @@ public class PixelFormatEdgeCaseTests
         string pixelFormat = "yuv420p"
     ) =>
         new(
-            width,
-            height,
-            encoder,
-            23,
-            4000,
-            "medium",
-            tenBit ? "high10" : "high",
-            "4.1",
-            tenBit,
-            pixelFormat,
-            mapLabel,
-            new()
+            Width: width,
+            Height: height,
+            EncoderName: encoder,
+            Crf: 23,
+            BitrateKbps: 4000,
+            Preset: "medium",
+            Profile: tenBit ? "high10" : "high",
+            Level: "4.1",
+            TenBit: tenBit,
+            PixelFormat: pixelFormat,
+            MapLabel: mapLabel,
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>
         new(
-            "aac",
-            192,
-            2,
-            48000,
-            StreamAction.Transcode,
-            "en",
-            "0:a:0"
+            EncoderName: "aac",
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: "en",
+            MapLabel: "0:a:0"
         );
 
     private static MediaInfo Build10BitMediaInfo(int width = 3840, int height = 2160) =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            50000,
-            30_000_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 50000,
+            FileSizeBytes: 30_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "hevc",
-                    width,
-                    height,
-                    24.0,
-                    10,
-                    "yuv420p10le",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    45000
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 45000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static MediaInfo Build8BitMediaInfo(int width = 1920, int height = 1080) =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    width,
-                    height,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     [Fact]
@@ -157,16 +160,16 @@ public class PixelFormatEdgeCaseTests
             720,
             "[v0]",
             "libx264",
-            false,
-            "yuv420p"
+            tenBit: false,
+            pixelFormat: "yuv420p"
         );
 
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [output],
-            [BuildAudioOutput()],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [output],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -207,16 +210,16 @@ public class PixelFormatEdgeCaseTests
             719,
             "[v0]",
             "libx264",
-            false,
-            "yuv420p"
+            tenBit: false,
+            pixelFormat: "yuv420p"
         );
 
         OutputPlan outputPlan = new(
-            OutputFormat.Hls,
-            [output],
-            [BuildAudioOutput()],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [output],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);

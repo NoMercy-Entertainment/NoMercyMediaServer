@@ -14,9 +14,11 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.People;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 
 namespace NoMercy.Tests.Repositories;
@@ -61,7 +63,9 @@ public class PeopleRepositoryTests : IDisposable
         Ulid libraryId = Ulid.NewUlid();
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.AddRange([new User { Id = memberUserId, Email = "member@example.com" }, new User { Id = strangerUserId, Email = "stranger@example.com" }]
+        seedCtx.Users.AddRange(
+            new User { Id = memberUserId, Email = "member@example.com" },
+            new User { Id = strangerUserId, Email = "stranger@example.com" }
         );
         seedCtx.Libraries.Add(
             new()
@@ -142,20 +146,19 @@ public class PeopleRepositoryTests : IDisposable
         };
         seedCtx.People.Add(person);
         seedCtx.Casts.Add(new() { PersonId = person.Id, MovieId = movie.Id });
-        seedCtx.Translations.AddRange([
-                new Translation
-                {
-                    PersonId = person.Id,
-                    Iso6391 = "en",
-                    Biography = "English bio",
-                },
-                new Translation
-                {
-                    PersonId = person.Id,
-                    Iso6391 = "nl",
-                    Biography = "Dutch bio",
-                }
-            ]
+        seedCtx.Translations.AddRange(
+            new Translation
+            {
+                PersonId = person.Id,
+                Iso6391 = "en",
+                Biography = "English bio",
+            },
+            new Translation
+            {
+                PersonId = person.Id,
+                Iso6391 = "nl",
+                Biography = "Dutch bio",
+            }
         );
 
         await seedCtx.SaveChangesAsync();
@@ -221,8 +224,11 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "high id",
             Popularity = 5,
         };
-        seedCtx.People.AddRange([mostPopular, lowId, highId]);
-        seedCtx.Casts.AddRange([new Cast { PersonId = mostPopular.Id, MovieId = movie.Id }, new Cast { PersonId = lowId.Id, MovieId = movie.Id }, new Cast { PersonId = highId.Id, MovieId = movie.Id }]
+        seedCtx.People.AddRange(mostPopular, lowId, highId);
+        seedCtx.Casts.AddRange(
+            new Cast { PersonId = mostPopular.Id, MovieId = movie.Id },
+            new Cast { PersonId = lowId.Id, MovieId = movie.Id },
+            new Cast { PersonId = highId.Id, MovieId = movie.Id }
         );
 
         await seedCtx.SaveChangesAsync();
@@ -286,8 +292,8 @@ public class PeopleRepositoryTests : IDisposable
         await using MediaContext queryCtx = OpenContext();
         PeopleRepository repository = new(queryCtx);
 
-        List<Person> page0 = await repository.GetPeopleAsync(userId, "en", 2, 0);
-        List<Person> page1 = await repository.GetPeopleAsync(userId, "en", 2, 1);
+        List<Person> page0 = await repository.GetPeopleAsync(userId, "en", take: 2, page: 0);
+        List<Person> page1 = await repository.GetPeopleAsync(userId, "en", take: 2, page: 1);
 
         page0.Should().HaveCount(2);
         page1.Should().HaveCount(2);
@@ -337,7 +343,7 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "crew movie",
             LibraryId = libraryId,
         };
-        seedCtx.Movies.AddRange([castMovie, crewMovie]);
+        seedCtx.Movies.AddRange(castMovie, crewMovie);
 
         Person person = new()
         {

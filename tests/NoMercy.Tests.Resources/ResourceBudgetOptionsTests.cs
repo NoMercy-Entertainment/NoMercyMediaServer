@@ -83,9 +83,9 @@ public sealed class ResourceBudgetOptionsTests
     public void Constructor_ExplicitValues_AreAssignedToMatchingProperties()
     {
         ResourceBudgetOptions options = new(
-            42.5,
-            33.3,
-            2048
+            CpuHeadroomPercent: 42.5,
+            GpuHeadroomPercent: 33.3,
+            MinFreeMemoryMb: 2048
         );
 
         options.CpuHeadroomPercent.Should().Be(42.5);

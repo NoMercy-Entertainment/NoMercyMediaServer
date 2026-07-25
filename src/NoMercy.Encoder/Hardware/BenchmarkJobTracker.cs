@@ -57,14 +57,14 @@ public sealed class BenchmarkJobTracker(
         List<string> codecNames = codecs.Select(c => c.ToString()).ToList();
 
         BenchmarkJobStatus initial = new(
-            jobId,
-            "running",
-            DateTime.UtcNow,
-            null,
-            0,
-            codecNames,
-            resolutions.ToList(),
-            null
+            JobId: jobId,
+            Status: "running",
+            StartedAt: DateTime.UtcNow,
+            CompletedAt: null,
+            MeasurementCount: 0,
+            RequestedCodecs: codecNames,
+            RequestedResolutions: resolutions.ToList(),
+            Error: null
         );
 
         _jobs[jobId] = initial;
@@ -140,7 +140,9 @@ public sealed class BenchmarkJobTracker(
         try
         {
             logger.LogInformation(
-                "Benchmark job {JobId} started (requested codecs: [{Codecs}])", [jobId, string.Join(", ", codecNames.Count > 0 ? codecNames : ["all"])]
+                "Benchmark job {JobId} started (requested codecs: [{Codecs}])",
+                jobId,
+                string.Join(", ", codecNames.Count > 0 ? codecNames : ["all"])
             );
 
             SpeedIndex result = await benchmark.CalibrateAsync(shutdownToken);
@@ -153,7 +155,9 @@ public sealed class BenchmarkJobTracker(
             };
 
             logger.LogInformation(
-                "Benchmark job {JobId} completed — {Count} measurements", [jobId, result.Measurements.Count]
+                "Benchmark job {JobId} completed — {Count} measurements",
+                jobId,
+                result.Measurements.Count
             );
         }
         catch (OperationCanceledException)

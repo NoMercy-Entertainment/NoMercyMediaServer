@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Reflection;
+using System.Threading;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
 
@@ -24,16 +25,16 @@ public class LiveSessionSuspendResumeTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            "1080p",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -80,7 +81,7 @@ public class LiveSessionSuspendResumeTests
         session.SetState(LiveSessionState.Transcoding);
 
         TimeSpan reportedPosition = TimeSpan.FromSeconds(42);
-        session.ReportPlaybackPosition(reportedPosition, true);
+        session.ReportPlaybackPosition(reportedPosition, authoritative: true);
 
         TimeSpan? spawnedPosition = null;
         session.AttachRunnerFactory(
@@ -244,7 +245,7 @@ public class LiveSessionSuspendResumeTests
             .BeFalse("Suspend must wait for the in-progress Seek to release _seekLock");
 
         releaseSeek.Set();
-        await Task.WhenAll([seekTask, suspendTask]).WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.WhenAll(seekTask, suspendTask).WaitAsync(TimeSpan.FromSeconds(5));
 
         suspendTask.IsCompletedSuccessfully.Should().BeTrue();
     }
@@ -276,7 +277,7 @@ public class LiveSessionSuspendResumeTests
             .BeFalse("Resume must wait for the in-progress Seek to release _seekLock");
 
         releaseSeek.Set();
-        await Task.WhenAll([seekTask, resumeTask]).WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.WhenAll(seekTask, resumeTask).WaitAsync(TimeSpan.FromSeconds(5));
 
         resumeTask.IsCompletedSuccessfully.Should().BeTrue();
     }

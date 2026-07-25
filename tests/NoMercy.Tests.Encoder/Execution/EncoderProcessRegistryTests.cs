@@ -20,7 +20,7 @@ public class EncoderProcessRegistryTests
     [Fact]
     public void Register_UnknownJob_AddsProcessId()
     {
-        _registry.Register(42, 1234);
+        _registry.Register(jobId: 42, processId: 1234);
 
         Assert.Equal([1234], _registry.GetProcessIds(42));
         Assert.Contains(42, _registry.ActiveJobIds);
@@ -29,8 +29,8 @@ public class EncoderProcessRegistryTests
     [Fact]
     public void Register_SamePidTwice_Idempotent()
     {
-        _registry.Register(42, 1234);
-        _registry.Register(42, 1234);
+        _registry.Register(jobId: 42, processId: 1234);
+        _registry.Register(jobId: 42, processId: 1234);
 
         Assert.Single(_registry.GetProcessIds(42));
     }
@@ -38,8 +38,8 @@ public class EncoderProcessRegistryTests
     [Fact]
     public void Register_MultiplePidsForSameJob_AllTracked()
     {
-        _registry.Register(42, 1234);
-        _registry.Register(42, 5678);
+        _registry.Register(jobId: 42, processId: 1234);
+        _registry.Register(jobId: 42, processId: 5678);
 
         IReadOnlyCollection<int> pids = _registry.GetProcessIds(42);
         Assert.Equal(2, pids.Count);
@@ -50,8 +50,8 @@ public class EncoderProcessRegistryTests
     [Fact]
     public void Register_NonPositiveProcessId_Ignored()
     {
-        _registry.Register(42, 0);
-        _registry.Register(42, -1);
+        _registry.Register(jobId: 42, processId: 0);
+        _registry.Register(jobId: 42, processId: -1);
 
         Assert.Empty(_registry.GetProcessIds(42));
     }
@@ -59,8 +59,8 @@ public class EncoderProcessRegistryTests
     [Fact]
     public void Unregister_RemovesOnlyThatPid()
     {
-        _registry.Register(42, 1234);
-        _registry.Register(42, 5678);
+        _registry.Register(jobId: 42, processId: 1234);
+        _registry.Register(jobId: 42, processId: 5678);
 
         _registry.Unregister(42, 1234);
 
@@ -72,7 +72,7 @@ public class EncoderProcessRegistryTests
     [Fact]
     public void Unregister_LastPid_RemovesJobFromActive()
     {
-        _registry.Register(42, 1234);
+        _registry.Register(jobId: 42, processId: 1234);
 
         _registry.Unregister(42, 1234);
 
@@ -83,8 +83,8 @@ public class EncoderProcessRegistryTests
     [Fact]
     public void UnregisterJob_RemovesAllPids()
     {
-        _registry.Register(42, 1234);
-        _registry.Register(42, 5678);
+        _registry.Register(jobId: 42, processId: 1234);
+        _registry.Register(jobId: 42, processId: 5678);
 
         _registry.UnregisterJob(42);
 
@@ -100,8 +100,8 @@ public class EncoderProcessRegistryTests
     [Fact]
     public void DifferentJobs_TrackedIndependently()
     {
-        _registry.Register(1, 100);
-        _registry.Register(2, 200);
+        _registry.Register(jobId: 1, processId: 100);
+        _registry.Register(jobId: 2, processId: 200);
 
         Assert.Equal([100], _registry.GetProcessIds(1));
         Assert.Equal([200], _registry.GetProcessIds(2));
@@ -124,7 +124,7 @@ public class EncoderProcessRegistryTests
                     for (int i = 0; i < pidsPerTask; i++)
                     {
                         int pid = taskIndex * 1000 + i + 1;
-                        _registry.Register(1, pid);
+                        _registry.Register(jobId: 1, processId: pid);
                     }
                 })
             )

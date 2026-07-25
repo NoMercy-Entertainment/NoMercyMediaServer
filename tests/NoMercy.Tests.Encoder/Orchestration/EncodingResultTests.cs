@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Errors;
+using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 
 namespace NoMercy.Tests.Encoder.Orchestration;
@@ -20,11 +21,11 @@ public class EncodingResultTests
     public void Default_construction_has_success_status_and_empty_collections()
     {
         EncodingResult result = new(
-            true,
-            "/out/test",
-            TimeSpan.FromSeconds(10),
-            null,
-            null
+            Success: true,
+            OutputPath: "/out/test",
+            Duration: TimeSpan.FromSeconds(10),
+            Error: null,
+            Metrics: null
         );
 
         Assert.Equal("success", result.Status);
@@ -42,25 +43,25 @@ public class EncodingResultTests
     public void Failed_status_carries_error_shape_with_catalogued_id()
     {
         EncoderErrorShape shape = new(
-            EncoderRuleId.EncoderInitFailed,
-            "Encoder 'h264_nvenc' failed to initialise: no device found",
-            "Check ffmpeg capability probe.",
-            null
+            Id: EncoderRuleId.EncoderInitFailed,
+            Message: "Encoder 'h264_nvenc' failed to initialise: no device found",
+            Suggestion: "Check ffmpeg capability probe.",
+            Details: null
         );
         EncodingError legacyError = new(
-            EncodingErrorKind.Unknown,
-            shape.Message,
-            null,
-            "Test",
-            false
+            Kind: EncodingErrorKind.Unknown,
+            Message: shape.Message,
+            FfmpegStderr: null,
+            StageName: "Test",
+            Recoverable: false
         );
 
         EncodingResult result = new(
-            false,
-            string.Empty,
-            TimeSpan.Zero,
-            legacyError,
-            null
+            Success: false,
+            OutputPath: string.Empty,
+            Duration: TimeSpan.Zero,
+            Error: legacyError,
+            Metrics: null
         )
         {
             Status = "failed",
@@ -80,11 +81,11 @@ public class EncodingResultTests
     public void Cancelled_status_has_no_artifacts_or_stats()
     {
         EncodingResult result = new(
-            false,
-            string.Empty,
-            TimeSpan.FromSeconds(3),
-            null,
-            null
+            Success: false,
+            OutputPath: string.Empty,
+            Duration: TimeSpan.FromSeconds(3),
+            Error: null,
+            Metrics: null
         )
         {
             Status = "cancelled",
@@ -102,11 +103,11 @@ public class EncodingResultTests
     public void Status_round_trips_via_with_expression()
     {
         EncodingResult original = new(
-            true,
-            "/out/a",
-            TimeSpan.FromMinutes(1),
-            null,
-            null
+            Success: true,
+            OutputPath: "/out/a",
+            Duration: TimeSpan.FromMinutes(1),
+            Error: null,
+            Metrics: null
         )
         {
             Status = "success",
@@ -116,11 +117,11 @@ public class EncodingResultTests
         EncodingResult enriched = original with
         {
             Stats = new(
-                60.0,
-                30.0,
-                4000,
-                1_000_000_000L,
-                500_000_000L
+                DurationSeconds: 60.0,
+                AvgFps: 30.0,
+                OutputBitrateKbps: 4000,
+                SourceBytes: 1_000_000_000L,
+                OutputBytes: 500_000_000L
             ),
             Artifacts =
             [

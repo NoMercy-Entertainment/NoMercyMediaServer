@@ -90,7 +90,10 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                 catch (Exception ex)
                 {
                     Log.LogWarning(
-                        "Skipping preset '{Name}' ({Id}): resolve failed — {Message}", [preset.Name, preset.Id, ex.Message]
+                        "Skipping preset '{Name}' ({Id}): resolve failed — {Message}",
+                        preset.Name,
+                        preset.Id,
+                        ex.Message
                     );
                     continue;
                 }
@@ -126,7 +129,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                 );
 
                 EncodingRequest request = new(
-                    MediaFile.Path,
+                    InputPath: MediaFile.Path,
                     OutputDirectory: FolderMetaData.BasePath,
                     Profile: encodingProfile,
                     SourceStorage: folderStorage,
@@ -151,7 +154,11 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                 }
 
                 Log.LogInformation(
-                    "Encoded {Path} → {OutputPath} in {TotalSeconds:F1}s ({Unknown})", [MediaFile.Path, encodeResult.OutputPath, encodeResult.Duration.TotalSeconds, encodeResult.Metrics?.EncoderUsed ?? "unknown"]
+                    "Encoded {Path} → {OutputPath} in {TotalSeconds:F1}s ({Unknown})",
+                    MediaFile.Path,
+                    encodeResult.OutputPath,
+                    encodeResult.Duration.TotalSeconds,
+                    encodeResult.Metrics?.EncoderUsed ?? "unknown"
                 );
 
                 await AddRecording(folder);

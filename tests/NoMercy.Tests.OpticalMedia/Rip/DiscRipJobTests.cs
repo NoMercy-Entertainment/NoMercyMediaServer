@@ -33,21 +33,21 @@ public class DiscRipJobTests
 {
     private static RipRequest MakeRequest(string drivePath = "D:\\") =>
         new(
-            drivePath,
-            [1],
-            null,
-            new(
-                "Test Movie",
-                2024,
-                MediaType.Movie,
-                null
+            DrivePath: drivePath,
+            SelectedTitleIndices: [1],
+            MetadataId: null,
+            Custom: new(
+                Title: "Test Movie",
+                Year: 2024,
+                Type: MediaType.Movie,
+                PosterUrl: null
             ),
-            Ulid.NewUlid(),
-            Ulid.NewUlid(),
-            null,
-            [],
-            [],
-            RipMode.RipToRaw
+            LibraryId: Ulid.NewUlid(),
+            FolderId: Ulid.NewUlid(),
+            EncodingProfileId: null,
+            AudioTracks: [],
+            Subtitles: [],
+            Mode: RipMode.RipToRaw
         );
 
     private static DiscIdentificationService MakeIdentificationService() =>
@@ -63,11 +63,11 @@ public class DiscRipJobTests
     )
     {
         DiscRipJob job = new(
-            request,
-            Path.GetTempPath(),
-            null,
-            null,
-            null
+            request: request,
+            outputDir: Path.GetTempPath(),
+            targetFolderId: null,
+            targetLibraryId: null,
+            targetLibraryType: null
         );
 
         job.DiscRipper = ripper;
@@ -204,12 +204,12 @@ public class DiscRipJobTests
             )
             .ReturnsAsync([
                 new(
-                    1,
-                    Path.Combine(Path.GetTempPath(), "title_01.mkv"),
-                    true,
-                    TimeSpan.FromMinutes(90),
-                    1_000_000,
-                    null
+                    TitleIndex: 1,
+                    OutputPath: Path.Combine(Path.GetTempPath(), "title_01.mkv"),
+                    Success: true,
+                    Duration: TimeSpan.FromMinutes(90),
+                    OutputSizeBytes: 1_000_000,
+                    Error: null
                 ),
             ]);
 

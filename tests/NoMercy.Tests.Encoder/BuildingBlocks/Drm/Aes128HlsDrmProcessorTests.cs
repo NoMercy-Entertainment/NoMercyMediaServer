@@ -26,7 +26,7 @@ public class Aes128HlsDrmProcessorTests
         try
         {
             Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
-            DrmConfig config = new(DrmMethod.Aes128, "https://example/key/abc");
+            DrmConfig config = new(DrmMethod.Aes128, KeyUri: "https://example/key/abc");
 
             DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
             artifactDir = Path.GetDirectoryName(artifact.KeyFilePath);
@@ -41,9 +41,9 @@ public class Aes128HlsDrmProcessorTests
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
             if (!string.IsNullOrEmpty(artifactDir) && Directory.Exists(artifactDir))
-                Directory.Delete(artifactDir, true);
+                Directory.Delete(artifactDir, recursive: true);
         }
     }
 
@@ -54,7 +54,7 @@ public class Aes128HlsDrmProcessorTests
         try
         {
             Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
-            DrmConfig config = new(DrmMethod.Aes128, "https://example/key/no-leak");
+            DrmConfig config = new(DrmMethod.Aes128, KeyUri: "https://example/key/no-leak");
 
             DrmArtifact artifact = await sut.PrepareAsync(
                 outputDirectory,
@@ -75,11 +75,11 @@ public class Aes128HlsDrmProcessorTests
             string fullTempRoot = Path.GetFullPath(StoragePaths.TempRoot);
             fullArtifactDir.Should().StartWith(fullTempRoot);
 
-            Directory.Delete(fullArtifactDir, true);
+            Directory.Delete(fullArtifactDir, recursive: true);
         }
         finally
         {
-            Directory.Delete(outputDirectory, true);
+            Directory.Delete(outputDirectory, recursive: true);
         }
     }
 
@@ -91,7 +91,7 @@ public class Aes128HlsDrmProcessorTests
         {
             Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
             string keyUri = $"https://example/key/{Guid.NewGuid():N}";
-            DrmConfig config = new(DrmMethod.Aes128, keyUri);
+            DrmConfig config = new(DrmMethod.Aes128, KeyUri: keyUri);
 
             DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
 
@@ -108,11 +108,11 @@ public class Aes128HlsDrmProcessorTests
             stored!.Value.Key.Should().Equal(artifact.Key);
             stored.Value.Iv.Should().Equal(artifact.Iv);
 
-            Directory.Delete(Path.GetDirectoryName(artifact.KeyFilePath)!, true);
+            Directory.Delete(Path.GetDirectoryName(artifact.KeyFilePath)!, recursive: true);
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 
@@ -127,9 +127,9 @@ public class Aes128HlsDrmProcessorTests
             byte[] fixedIv = Enumerable.Range(16, 16).Select(i => (byte)i).ToArray();
             DrmConfig config = new(
                 DrmMethod.Aes128,
-                "https://example/k/42",
-                fixedKey,
-                fixedIv
+                KeyUri: "https://example/k/42",
+                Key: fixedKey,
+                Iv: fixedIv
             );
 
             DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
@@ -141,11 +141,11 @@ public class Aes128HlsDrmProcessorTests
             lines[1].Should().EndWith("/drm.key");
             lines[2].Should().Be(Convert.ToHexString(fixedIv).ToLowerInvariant());
 
-            Directory.Delete(Path.GetDirectoryName(artifact.KeyFilePath)!, true);
+            Directory.Delete(Path.GetDirectoryName(artifact.KeyFilePath)!, recursive: true);
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 
@@ -157,7 +157,7 @@ public class Aes128HlsDrmProcessorTests
         {
             Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
             byte[] key = Enumerable.Range(0, 16).Select(i => (byte)(0xA0 + i)).ToArray();
-            DrmConfig config = new(DrmMethod.Aes128, "http://k", key);
+            DrmConfig config = new(DrmMethod.Aes128, KeyUri: "http://k", Key: key);
 
             DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
 
@@ -165,11 +165,11 @@ public class Aes128HlsDrmProcessorTests
             byte[] onDisk = await File.ReadAllBytesAsync(artifact.KeyFilePath);
             onDisk.Should().Equal(key);
 
-            Directory.Delete(Path.GetDirectoryName(artifact.KeyFilePath)!, true);
+            Directory.Delete(Path.GetDirectoryName(artifact.KeyFilePath)!, recursive: true);
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 
@@ -182,8 +182,8 @@ public class Aes128HlsDrmProcessorTests
             Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
             DrmConfig config = new(
                 DrmMethod.Aes128,
-                "http://k",
-                new byte[8] // too short
+                KeyUri: "http://k",
+                Key: new byte[8] // too short
             );
 
             Func<Task> act = () => sut.PrepareAsync(dir, config, CancellationToken.None);
@@ -193,7 +193,7 @@ public class Aes128HlsDrmProcessorTests
         finally
         {
             if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+                Directory.Delete(dir, recursive: true);
         }
     }
 
@@ -204,7 +204,7 @@ public class Aes128HlsDrmProcessorTests
         try
         {
             Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
-            DrmConfig config = new(DrmMethod.None, "http://k");
+            DrmConfig config = new(DrmMethod.None, KeyUri: "http://k");
 
             Func<Task> act = () => sut.PrepareAsync(dir, config, CancellationToken.None);
 
@@ -213,7 +213,7 @@ public class Aes128HlsDrmProcessorTests
         finally
         {
             if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+                Directory.Delete(dir, recursive: true);
         }
     }
 
@@ -224,7 +224,7 @@ public class Aes128HlsDrmProcessorTests
         try
         {
             Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
-            DrmConfig config = new(DrmMethod.Aes128, "");
+            DrmConfig config = new(DrmMethod.Aes128, KeyUri: "");
 
             Func<Task> act = () => sut.PrepareAsync(dir, config, CancellationToken.None);
 
@@ -233,7 +233,7 @@ public class Aes128HlsDrmProcessorTests
         finally
         {
             if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+                Directory.Delete(dir, recursive: true);
         }
     }
 

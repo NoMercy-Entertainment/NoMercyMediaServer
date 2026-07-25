@@ -36,7 +36,7 @@ public class PlanStageCropTests
         Mock<ICropDetector> detector = new();
         PlanStage stage = BuildStage(detector.Object);
 
-        EncodingProfile profile = BuildProfile(false);
+        EncodingProfile profile = BuildProfile(autoDetectCrop: false);
         OutputPlan plan = await RunPlan(stage, profile);
 
         detector.Verify(
@@ -65,10 +65,10 @@ public class PlanStageCropTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new CropResult(1920, 800, 0, 140, true));
+            .ReturnsAsync(new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
 
         PlanStage stage = BuildStage(detector.Object);
-        EncodingProfile profile = BuildProfile(true);
+        EncodingProfile profile = BuildProfile(autoDetectCrop: true);
 
         OutputPlan plan = await RunPlan(stage, profile);
 
@@ -99,10 +99,10 @@ public class PlanStageCropTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new CropResult(0, 0, 0, 0, false));
+            .ReturnsAsync(new CropResult(0, 0, 0, 0, ShouldCrop: false));
 
         PlanStage stage = BuildStage(detector.Object);
-        EncodingProfile profile = BuildProfile(true);
+        EncodingProfile profile = BuildProfile(autoDetectCrop: true);
 
         OutputPlan plan = await RunPlan(stage, profile);
 
@@ -125,7 +125,7 @@ public class PlanStageCropTests
             .ThrowsAsync(new InvalidOperationException("boom"));
 
         PlanStage stage = BuildStage(detector.Object);
-        EncodingProfile profile = BuildProfile(true);
+        EncodingProfile profile = BuildProfile(autoDetectCrop: true);
 
         OutputPlan plan = await RunPlan(stage, profile);
 
@@ -148,10 +148,10 @@ public class PlanStageCropTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new CropResult(1920, 1000, 0, 40, true));
+            .ReturnsAsync(new CropResult(Width: 1920, Height: 1000, X: 0, Y: 40, ShouldCrop: true));
 
         PlanStage stage = BuildStage(detector.Object);
-        OutputPlan plan = await RunPlan(stage, BuildProfile(true));
+        OutputPlan plan = await RunPlan(stage, BuildProfile(autoDetectCrop: true));
 
         plan.VideoOutputs[0].CropFilter.Should().BeNull();
     }
@@ -173,11 +173,11 @@ public class PlanStageCropTests
                 )
             )
             .ReturnsAsync(
-                new CropResult(1700, 1080, 110, 0, true)
+                new CropResult(Width: 1700, Height: 1080, X: 110, Y: 0, ShouldCrop: true)
             );
 
         PlanStage stage = BuildStage(detector.Object);
-        OutputPlan plan = await RunPlan(stage, BuildProfile(true));
+        OutputPlan plan = await RunPlan(stage, BuildProfile(autoDetectCrop: true));
 
         plan.VideoOutputs[0].CropFilter.Should().Be("1700:1080:110:0");
     }
@@ -199,10 +199,10 @@ public class PlanStageCropTests
                 )
             )
             .Callback((string _, Guid? _, bool? isHdr, CancellationToken _) => capturedHdr = isHdr)
-            .ReturnsAsync(new CropResult(0, 0, 0, 0, false));
+            .ReturnsAsync(new CropResult(0, 0, 0, 0, ShouldCrop: false));
 
         PlanStage stage = BuildStage(detector.Object);
-        ValidateInput input = new(BuildHdrMedia(), BuildProfile(true));
+        ValidateInput input = new(BuildHdrMedia(), BuildProfile(autoDetectCrop: true));
         await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
 
         capturedHdr.Should().BeTrue();
@@ -228,23 +228,23 @@ public class PlanStageCropTests
             )
             .Returns(
                 new ResolvedCodec(
-                    "libx264",
-                    new(
-                        "libx264",
-                        null,
-                        ["medium"],
-                        ["high"],
-                        ["4.1"],
-                        new(0, 51, 23),
-                        [RateControlMode.Crf],
-                        false,
-                        false,
-                        int.MaxValue,
-                        "yuv420p10le",
-                        new()
+                    FfmpegEncoderName: "libx264",
+                    EncoderInfo: new(
+                        FfmpegName: "libx264",
+                        RequiredVendor: null,
+                        Presets: ["medium"],
+                        Profiles: ["high"],
+                        Levels: ["4.1"],
+                        QualityRange: new(0, 51, 23),
+                        SupportedRateControl: [RateControlMode.Crf],
+                        Supports10Bit: false,
+                        SupportsHdr: false,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new()
                     ),
-                    null,
-                    RateControlMode.Crf
+                    Device: null,
+                    DefaultRateControl: RateControlMode.Crf
                 )
             );
 
@@ -274,85 +274,87 @@ public class PlanStageCropTests
 
     private static MediaInfo BuildMedia() =>
         new(
-            "/media/test.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            8000,
-            4_000_000_000,
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static MediaInfo BuildHdrMedia() =>
         new(
-            "/media/test-hdr.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            40000,
-            20_000_000_000,
+            FilePath: "/media/test-hdr.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 40000,
+            FileSizeBytes: 20_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "hevc",
-                    3840,
-                    2160,
-                    24.0,
-                    10,
-                    "yuv420p10le",
-                    "bt2020",
-                    "smpte2084",
-                    "bt2020nc",
-                    true,
-                    35000
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: 3840,
+                    Height: 2160,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: "smpte2084",
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 35000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile BuildProfile(bool autoDetectCrop) =>
         new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "Crop Test",
             Container: Container.HlsTs,
             Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                "video/{label}",
-                "video/{label}/playlist"
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
             ),
             Audio: [],
             Subtitles: [],

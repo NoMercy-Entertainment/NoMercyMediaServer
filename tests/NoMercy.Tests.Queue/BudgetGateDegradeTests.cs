@@ -15,6 +15,7 @@ using NoMercy.Database.Models.Queue;
 using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 using NoMercyQueue.Core.Resources;
 using NoMercyQueue.Workers;
 using Xunit;
@@ -66,7 +67,7 @@ public class BudgetGateDegradeTests : IDisposable
         DegradableResourceRequirementJob job = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new("h264_amf", 1, 2),
+            ResourceRequirement = new("h264_amf", GpuSlots: 1, CpuThreads: 2),
         };
 
         QueueJob queueJob = new()
@@ -82,7 +83,7 @@ public class BudgetGateDegradeTests : IDisposable
 
         QueueWorker worker = new(
             _jobQueue,
-            name: "encoder-gpu",
+            "encoder-gpu",
             resourceBudget: budget.Object,
             resourceAwareQueues: new HashSet<string> { "encoder-gpu", "encoder-cpu" }
         );
@@ -130,7 +131,7 @@ public class BudgetGateDegradeTests : IDisposable
         DegradableResourceRequirementJob job = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new("test-gpu", 1, 2),
+            ResourceRequirement = new("test-gpu", GpuSlots: 1, CpuThreads: 2),
         };
 
         QueueJob queueJob = new()
@@ -146,7 +147,7 @@ public class BudgetGateDegradeTests : IDisposable
 
         QueueWorker worker = new(
             _jobQueue,
-            name: "encoder-gpu",
+            "encoder-gpu",
             resourceBudget: budget.Object,
             resourceAwareQueues: new HashSet<string> { "encoder-gpu", "encoder-cpu" }
         );

@@ -60,7 +60,7 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
             LastSeenAt = DateTime.UtcNow.AddMinutes(-1),
         };
 
-        ctx.IncompleteEncodes.AddRange([row1, row2]);
+        ctx.IncompleteEncodes.AddRange(row1, row2);
         await ctx.SaveChangesAsync();
 
         _rowId1 = row1.Id;
@@ -118,7 +118,7 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _authed.PostAsync(
             "/api/v1/dashboard/tasks/queue/incomplete/99999/retry",
-            null
+            content: null
         );
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -134,7 +134,7 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
         // real QueueRunner is present. Either outcome removes the quarantine row.
         HttpResponseMessage response = await _authed.PostAsync(
             $"/api/v1/dashboard/tasks/queue/incomplete/{_rowId1}/retry",
-            null
+            content: null
         );
 
         // Must be either 200 (enqueue succeeded) or 500 (no QueueRunner in test).

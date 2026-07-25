@@ -103,7 +103,7 @@ public class IStorageAdoptionTests
             logger.SizeOrZero(filePath).Should().Be(2);
 
             byte[] bytes = await logger.ReadAsync(filePath, CancellationToken.None);
-            bytes.Should().Equal([0xDE, 0xAD]);
+            bytes.Should().Equal(0xDE, 0xAD);
 
             await using LocalPathLease lease = logger.AcquireLocalPath(filePath);
             lease.Path.Should().Be(Path.GetFullPath(filePath));
@@ -122,7 +122,7 @@ public class IStorageAdoptionTests
             try
             {
                 if (Directory.Exists(tempRoot))
-                    Directory.Delete(tempRoot, true);
+                    Directory.Delete(tempRoot, recursive: true);
             }
             catch
             {

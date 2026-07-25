@@ -44,7 +44,7 @@ public sealed class LocalStorageRemainingMethodsTests : IDisposable
     {
         try
         {
-            Directory.Delete(_root, true);
+            Directory.Delete(_root, recursive: true);
         }
         catch
         {
@@ -80,7 +80,7 @@ public sealed class LocalStorageRemainingMethodsTests : IDisposable
         byte[] buffer = new byte[3];
         await stream.ReadExactlyAsync(buffer);
 
-        buffer.Should().Equal([1, 2, 3]);
+        buffer.Should().Equal(1, 2, 3);
     }
 
     [Fact]
@@ -111,16 +111,16 @@ public sealed class LocalStorageRemainingMethodsTests : IDisposable
         byte[] buffer = new byte[3];
         stream.ReadExactly(buffer);
 
-        buffer.Should().Equal([9, 8, 7]);
+        buffer.Should().Equal(9, 8, 7);
     }
 
     [Fact]
     public void OpenWrite_sync_creates_parent_directories_and_writes_real_bytes()
     {
-        using (Stream stream = _storage.OpenWrite("deep/nested/out.bin", true))
+        using (Stream stream = _storage.OpenWrite("deep/nested/out.bin", overwrite: true))
             stream.Write([4, 5, 6], 0, 3);
 
-        File.ReadAllBytes(Path.Combine(_root, "deep", "nested", "out.bin")).Should().Equal([4, 5, 6]);
+        File.ReadAllBytes(Path.Combine(_root, "deep", "nested", "out.bin")).Should().Equal(4, 5, 6);
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public sealed class LocalStorageRemainingMethodsTests : IDisposable
         StoragePathGuard guard = new([_root], driver.Object);
         LocalStorage storage = new(driver.Object, guard);
 
-        IReadOnlyList<StorageEntry> entries = storage.List("", null, false);
+        IReadOnlyList<StorageEntry> entries = storage.List("", null, recursive: false);
 
         entries.Should().ContainSingle();
         entries[0]

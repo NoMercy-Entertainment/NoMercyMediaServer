@@ -79,7 +79,9 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
             if (!firstWord.Equals(fullQuery, StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogInformation(
-                    "VideoDiscIdentifier fallback '{Query}' → '{FirstWord}'", [fullQuery, firstWord]
+                    "VideoDiscIdentifier fallback '{Query}' → '{FirstWord}'",
+                    fullQuery,
+                    firstWord
                 );
                 all.AddRange(await SearchAsync(firstWord, MediaType.Movie, ct, discDurationSec));
                 all.AddRange(await SearchAsync(firstWord, MediaType.TvShow, ct, discDurationSec));
@@ -127,15 +129,20 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         bool autoApply = topConfidence >= AutoApplyThreshold;
 
         logger.LogInformation(
-            "VideoDiscIdentifier '{Query}' (duration={Sec}s): {Count} candidates, topConfidence={Conf:F4}, autoApply={Auto}", [fullQuery, discDurationSec, ranked.Length, topConfidence, autoApply]
+            "VideoDiscIdentifier '{Query}' (duration={Sec}s): {Count} candidates, topConfidence={Conf:F4}, autoApply={Auto}",
+            fullQuery,
+            discDurationSec,
+            ranked.Length,
+            topConfidence,
+            autoApply
         );
 
         return new(
-            MediaKind.Movie,
-            ranked,
-            topConfidence,
-            autoApply,
-            false
+            Kind: MediaKind.Movie,
+            Candidates: ranked,
+            TopConfidence: topConfidence,
+            AutoApply: autoApply,
+            NeedsManualAssignment: false
         );
     }
 
@@ -159,7 +166,10 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         {
             logger.LogInformation(
                 ex,
-                "TMDB search failed for {Type} '{Query}': {Message}", [type, query, ex.Message]
+                "TMDB search failed for {Type} '{Query}': {Message}",
+                type,
+                query,
+                ex.Message
             );
             return [];
         }
@@ -182,8 +192,8 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         {
             return type switch
             {
-                MediaType.Movie => (await SearchMoviesAsync(query, 0)).ToArray(),
-                MediaType.TvShow => (await SearchTvShowsAsync(query, 0)).ToArray(),
+                MediaType.Movie => (await SearchMoviesAsync(query, discDurationSec: 0)).ToArray(),
+                MediaType.TvShow => (await SearchTvShowsAsync(query, discDurationSec: 0)).ToArray(),
                 _ => [],
             };
         }
@@ -191,7 +201,10 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         {
             logger.LogInformation(
                 ex,
-                "TMDB manual search failed for {Type} '{Query}': {Message}", [type, query, ex.Message]
+                "TMDB manual search failed for {Type} '{Query}': {Message}",
+                type,
+                query,
+                ex.Message
             );
             return [];
         }
@@ -221,14 +234,14 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
             );
             matches.Add(
                 new(
-                    "tmdb",
-                    movie.Id.ToString(CultureInfo.InvariantCulture),
-                    movie.Title ?? movie.OriginalTitle ?? string.Empty,
-                    ParseYear(movie.ReleaseDate),
-                    PosterUrl(movie.PosterPath),
-                    BackdropUrl(movie.BackdropPath),
-                    confidence,
-                    MediaType.Movie
+                    Source: "tmdb",
+                    StableId: movie.Id.ToString(CultureInfo.InvariantCulture),
+                    Title: movie.Title ?? movie.OriginalTitle ?? string.Empty,
+                    Year: ParseYear(movie.ReleaseDate),
+                    PosterUrl: PosterUrl(movie.PosterPath),
+                    BackdropUrl: BackdropUrl(movie.BackdropPath),
+                    Confidence: confidence,
+                    Type: MediaType.Movie
                 )
             );
             rank++;
@@ -260,14 +273,14 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
             );
             matches.Add(
                 new(
-                    "tmdb",
-                    show.Id.ToString(CultureInfo.InvariantCulture),
-                    show.Name ?? show.OriginalName ?? string.Empty,
-                    ParseYear(show.FirstAirDate),
-                    PosterUrl(show.PosterPath),
-                    BackdropUrl(show.BackdropPath),
-                    confidence,
-                    MediaType.TvShow
+                    Source: "tmdb",
+                    StableId: show.Id.ToString(CultureInfo.InvariantCulture),
+                    Title: show.Name ?? show.OriginalName ?? string.Empty,
+                    Year: ParseYear(show.FirstAirDate),
+                    PosterUrl: PosterUrl(show.PosterPath),
+                    BackdropUrl: BackdropUrl(show.BackdropPath),
+                    Confidence: confidence,
+                    Type: MediaType.TvShow
                 )
             );
             rank++;
@@ -349,7 +362,11 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
                 return candidate;
 
             logger.LogInformation(
-                "TV episode resolution for show {Id}: best match S{Season}, {Count} episode(s) on disc (delta={Delta:F1}s)", [showId, bestSeasonNumber, bestEpisodeCount, bestDelta]
+                "TV episode resolution for show {Id}: best match S{Season}, {Count} episode(s) on disc (delta={Delta:F1}s)",
+                showId,
+                bestSeasonNumber,
+                bestEpisodeCount,
+                bestDelta
             );
 
             // EpisodeNumber = 1 always (first episode on the disc);
@@ -364,7 +381,9 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         {
             logger.LogInformation(
                 ex,
-                "Episode resolution failed for show {Id}: {Message}", [showId, ex.Message]
+                "Episode resolution failed for show {Id}: {Message}",
+                showId,
+                ex.Message
             );
             return candidate;
         }
@@ -475,11 +494,11 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
 
     private static DiscIdentification NeedsManual() =>
         new(
-            MediaKind.Movie,
-            [],
-            0,
-            false,
-            true
+            Kind: MediaKind.Movie,
+            Candidates: [],
+            TopConfidence: 0,
+            AutoApply: false,
+            NeedsManualAssignment: true
         );
 
     [GeneratedRegex(@"\s+")]

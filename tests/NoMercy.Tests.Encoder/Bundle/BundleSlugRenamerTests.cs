@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Storage;
 
@@ -44,7 +45,7 @@ internal static class RenameTestHelpers
     public static MediaContext BuildInMemoryContext(string folderPath = "/fake/library")
     {
         DbContextOptions<MediaContext> opts = new DbContextOptionsBuilder<MediaContext>()
-            .UseInMemoryDatabase(Ulid.NewUlid().ToString())
+            .UseInMemoryDatabase(databaseName: Ulid.NewUlid().ToString())
             .Options;
 
         MediaContext ctx = new(opts);

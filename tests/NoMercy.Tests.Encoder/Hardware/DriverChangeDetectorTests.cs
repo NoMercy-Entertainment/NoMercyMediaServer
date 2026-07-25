@@ -22,10 +22,10 @@ public class DriverChangeDetectorTests
             new(
                 GpuVendor.Nvidia,
                 "RTX 4090",
-                24576,
-                8,
-                [VideoCodecType.H264, VideoCodecType.H265],
-                driver
+                VramMb: 24576,
+                MaxEncoderSessions: 8,
+                SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265],
+                DriverVersion: driver
             ),
         ];
 

@@ -60,7 +60,7 @@ public class AssBurnInFilterBuilderTests
     [Fact]
     public void Build_WithNullFontDirectory_OmitsFontsDirOption()
     {
-        string result = _builder.Build("/path/to/subtitle.ass", null);
+        string result = _builder.Build("/path/to/subtitle.ass", fontDirectory: null);
 
         Assert.DoesNotContain("fontsdir", result);
     }
@@ -68,7 +68,7 @@ public class AssBurnInFilterBuilderTests
     [Fact]
     public void Build_WithEmptyFontDirectory_OmitsFontsDirOption()
     {
-        string result = _builder.Build("/path/to/subtitle.ass", "");
+        string result = _builder.Build("/path/to/subtitle.ass", fontDirectory: "");
 
         Assert.DoesNotContain("fontsdir", result);
     }

@@ -12,6 +12,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Startup;
 
@@ -56,9 +57,9 @@ public class HardwareBenchmarkRecalibrationServiceBranchTests
             activityProbe.Object,
             new() { AutoCalibrate = false },
             NullLogger<HardwareBenchmarkRecalibrationService>.Instance,
-            TimeSpan.FromMilliseconds(1),
-            TimeSpan.FromMilliseconds(1),
-            TimeSpan.Zero
+            checkInterval: TimeSpan.FromMilliseconds(1),
+            busyRetryInterval: TimeSpan.FromMilliseconds(1),
+            maxDeferralWindow: TimeSpan.Zero
         );
 
         // Drive ExecuteAsync via StartAsync + StopAsync. The CT we pass to
@@ -90,10 +91,10 @@ public class HardwareBenchmarkRecalibrationServiceBranchTests
             .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 new DriverChangeResult(
-                    "x",
-                    "x",
-                    false,
-                    false
+                    CurrentHash: "x",
+                    PreviousHash: "x",
+                    Changed: false,
+                    IsFirstBoot: false
                 )
             );
 
@@ -190,10 +191,10 @@ public class HardwareBenchmarkRecalibrationServiceBranchTests
             .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 new DriverChangeResult(
-                    "x",
-                    "x",
-                    false,
-                    false
+                    CurrentHash: "x",
+                    PreviousHash: "x",
+                    Changed: false,
+                    IsFirstBoot: false
                 )
             );
 
@@ -230,10 +231,10 @@ public class HardwareBenchmarkRecalibrationServiceBranchTests
             .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 new DriverChangeResult(
-                    "x",
-                    "x",
-                    false,
-                    false
+                    CurrentHash: "x",
+                    PreviousHash: "x",
+                    Changed: false,
+                    IsFirstBoot: false
                 )
             );
 
@@ -271,10 +272,10 @@ public class HardwareBenchmarkRecalibrationServiceBranchTests
             .Setup(d => d.DetectAndPersistAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 new DriverChangeResult(
-                    "x",
-                    "x",
-                    false,
-                    false
+                    CurrentHash: "x",
+                    PreviousHash: "x",
+                    Changed: false,
+                    IsFirstBoot: false
                 )
             );
 
@@ -288,8 +289,8 @@ public class HardwareBenchmarkRecalibrationServiceBranchTests
             driverDetector.Object,
             store.Object,
             activityProbe.Object,
-            TimeSpan.FromSeconds(10), // long retry to force delay
-            TimeSpan.FromMinutes(10) // doesn't elapse
+            busyRetryInterval: TimeSpan.FromSeconds(10), // long retry to force delay
+            maxDeferralWindow: TimeSpan.FromMinutes(10) // doesn't elapse
         );
 
         CancellationTokenSource cts = new();
@@ -350,9 +351,9 @@ public class HardwareBenchmarkRecalibrationServiceBranchTests
             activityProbe,
             new() { AutoCalibrate = true },
             NullLogger<HardwareBenchmarkRecalibrationService>.Instance,
-            TimeSpan.FromMilliseconds(1),
-            busyRetryInterval ?? TimeSpan.FromMilliseconds(1),
-            maxDeferralWindow
+            checkInterval: TimeSpan.FromMilliseconds(1),
+            busyRetryInterval: busyRetryInterval ?? TimeSpan.FromMilliseconds(1),
+            maxDeferralWindow: maxDeferralWindow
                 ?? HardwareBenchmarkRecalibrationService.DefaultMaxDeferralWindow
         );
 }

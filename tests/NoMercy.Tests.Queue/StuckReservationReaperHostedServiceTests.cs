@@ -292,8 +292,8 @@ public class StuckReservationReaperHostedServiceTests
         StuckReservationReaperHostedService service = new(
             provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<StuckReservationReaperHostedService>.Instance,
-            TimeSpan.FromMilliseconds(30),
-            TestCutoff
+            interval: TimeSpan.FromMilliseconds(30),
+            cutoff: TestCutoff
         );
 
         QueueJobModel stuck = new()

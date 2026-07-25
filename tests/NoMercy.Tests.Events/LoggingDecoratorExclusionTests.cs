@@ -41,7 +41,7 @@ public class LoggingDecoratorExclusionTests
         LoggingEventBusDecorator decorator = new(
             inner,
             msg => logMessages.Add(msg),
-            ["HighFrequencyEvent"]
+            excludedEventTypes: ["HighFrequencyEvent"]
         );
 
         List<HighFrequencyEvent> received = [];
@@ -75,7 +75,7 @@ public class LoggingDecoratorExclusionTests
         LoggingEventBusDecorator decorator = new(
             inner,
             msg => logMessages.Add(msg),
-            ["HighFrequencyEvent"]
+            excludedEventTypes: ["HighFrequencyEvent"]
         );
 
         await decorator.PublishAsync(new HighFrequencyEvent { Tick = 99 });
@@ -94,7 +94,7 @@ public class LoggingDecoratorExclusionTests
         LoggingEventBusDecorator decorator = new(
             inner,
             msg => logMessages.Add(msg),
-            ["HighFrequencyEvent", "EncodingProgressUpdatedEvent"]
+            excludedEventTypes: ["HighFrequencyEvent", "EncodingProgressUpdatedEvent"]
         );
 
         await decorator.PublishAsync(new HighFrequencyEvent { Tick = 1 });
@@ -120,7 +120,7 @@ public class LoggingDecoratorExclusionTests
         LoggingEventBusDecorator decorator = new(
             inner,
             msg => logMessages.Add(msg),
-            []
+            excludedEventTypes: []
         );
 
         await decorator.PublishAsync(new HighFrequencyEvent { Tick = 1 });

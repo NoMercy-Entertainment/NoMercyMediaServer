@@ -15,16 +15,18 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
+using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Storage;
 using NoMercy.Tests.Encoder.Storage;
+using ContainerCompatibility = NoMercy.Encoder.Profiles.ContainerCompatibility;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
-using ContainerCompatibility = NoMercy.Encoder.Profiles.ContainerCompatibility;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
 using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 
@@ -80,78 +82,79 @@ public class ProfileToArgvInvariantTests
 
     private static MediaInfo FakeMediaInfo() =>
         new(
-            "/media/movie.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            10000,
-            1_000_000_000,
+            FilePath: "/media/movie.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 10000,
+            FileSizeBytes: 1_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    3840,
-                    2160,
-                    23.976,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    30000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 3840,
+                    Height: 2160,
+                    FrameRate: 23.976,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 30000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static ResolvedCodec SoftwareCodec(string ffmpegName) =>
         new(
-            ffmpegName,
-            new(
-                ffmpegName,
-                null,
-                ["slow", "medium", "fast"],
-                ["baseline", "main", "high"],
-                ["4.1"],
-                new(0, 51, 23),
-                [RateControlMode.Crf, RateControlMode.Vbr],
-                true,
-                false,
-                int.MaxValue,
-                "yuv420p10le",
-                new()
+            FfmpegEncoderName: ffmpegName,
+            EncoderInfo: new(
+                FfmpegName: ffmpegName,
+                RequiredVendor: null,
+                Presets: ["slow", "medium", "fast"],
+                Profiles: ["baseline", "main", "high"],
+                Levels: ["4.1"],
+                QualityRange: new(0, 51, 23),
+                SupportedRateControl: [RateControlMode.Crf, RateControlMode.Vbr],
+                Supports10Bit: true,
+                SupportsHdr: false,
+                MaxConcurrentSessions: int.MaxValue,
+                PixelFormat10Bit: "yuv420p10le",
+                VendorSpecificFlags: new()
             ),
-            null,
-            RateControlMode.Crf
+            Device: null,
+            DefaultRateControl: RateControlMode.Crf
         );
 
     private static ResolvedCodec HardwareCodec(string ffmpegName) =>
         new(
-            ffmpegName,
-            new(
-                ffmpegName,
-                null,
-                ["p1", "p4", "p7"],
-                ["main", "high"],
-                ["4.1"],
-                new(0, 51, 26),
-                [RateControlMode.Cq],
-                true,
-                false,
-                3,
-                "yuv420p10le",
-                new()
+            FfmpegEncoderName: ffmpegName,
+            EncoderInfo: new(
+                FfmpegName: ffmpegName,
+                RequiredVendor: null,
+                Presets: ["p1", "p4", "p7"],
+                Profiles: ["main", "high"],
+                Levels: ["4.1"],
+                QualityRange: new(0, 51, 26),
+                SupportedRateControl: [RateControlMode.Cq],
+                Supports10Bit: true,
+                SupportsHdr: false,
+                MaxConcurrentSessions: 3,
+                PixelFormat10Bit: "yuv420p10le",
+                VendorSpecificFlags: new()
             ),
-            new(
-                GpuVendor.Nvidia,
-                "TestGpu",
-                8192,
-                3,
-                [VideoCodecType.H264, VideoCodecType.H265]
+            Device: new(
+                Vendor: GpuVendor.Nvidia,
+                Name: "TestGpu",
+                VramMb: 8192,
+                MaxEncoderSessions: 3,
+                SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
             ),
-            RateControlMode.Cq
+            DefaultRateControl: RateControlMode.Cq
         );
 
     // Only H264/H265 have HW encoders modelled here; AV1/VP9 exercise the
@@ -245,34 +248,34 @@ public class ProfileToArgvInvariantTests
         PlanStage stage = BuildPlanStage(resolved);
 
         ValidateInput input = new(
-            FakeMediaInfo(),
-            new(
-                Ulid.NewUlid(),
-                "Grid",
-                container,
-                new(
-                    StreamPolicy.Transcode,
-                    codec,
-                    width,
-                    null,
-                    rc,
-                    crf,
-                    bitrate,
-                    null,
-                    null,
-                    "fast",
-                    CodecProfile.Auto,
-                    null,
-                    null,
-                    bitDepth,
-                    null,
-                    2,
-                    false,
-                    "video/:framesize:",
-                    "video/:framesize:/playlist"
+            Media: FakeMediaInfo(),
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "Grid",
+                Container: container,
+                Video: new(
+                    Policy: StreamPolicy.Transcode,
+                    Codec: codec,
+                    Width: width,
+                    Height: null,
+                    RateControl: rc,
+                    Crf: crf,
+                    BitrateKbps: bitrate,
+                    MaxBitrateKbps: null,
+                    BufferSizeKbps: null,
+                    Preset: "fast",
+                    CodecProfile: CodecProfile.Auto,
+                    Level: null,
+                    Tune: null,
+                    BitDepth: bitDepth,
+                    PixelFormat: null,
+                    KeyframeIntervalSeconds: 2,
+                    ConvertHdrToSdr: false,
+                    SegmentNameTemplate: "video/:framesize:",
+                    PlaylistNameTemplate: "video/:framesize:/playlist"
                 ),
-                [],
-                []
+                Audio: [],
+                Subtitles: []
             )
         );
 

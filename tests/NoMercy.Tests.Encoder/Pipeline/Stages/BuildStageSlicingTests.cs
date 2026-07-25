@@ -29,47 +29,47 @@ public class BuildStageSlicingTests
 
     private static VideoOutputPlan Video(int width, int height, int index = 0) =>
         new(
-            width,
-            height,
-            "libx264",
-            23,
-            0,
-            "medium",
-            "main",
-            "4.0",
-            false,
-            "yuv420p",
-            $"[v{index}]",
-            []
+            Width: width,
+            Height: height,
+            EncoderName: "libx264",
+            Crf: 23,
+            BitrateKbps: 0,
+            Preset: "medium",
+            Profile: "main",
+            Level: "4.0",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: $"[v{index}]",
+            ExtraFlags: []
         );
 
     private static AudioOutputPlan Audio(string language, int index = 0) =>
         new(
-            "aac",
-            128,
-            2,
-            48000,
-            StreamAction.Transcode,
-            language,
-            $"[a{index}]"
+            EncoderName: "aac",
+            BitrateKbps: 128,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: language,
+            MapLabel: $"[a{index}]"
         );
 
     private static SubtitleOutputPlan Subtitle(int sourceIndex) =>
         new(
-            SubtitleCodecType.WebVtt,
-            StreamAction.Transcode,
-            "eng",
-            sourceIndex,
-            null
+            OutputCodec: SubtitleCodecType.WebVtt,
+            Action: StreamAction.Transcode,
+            Language: "eng",
+            SourceIndex: sourceIndex,
+            MapLabel: null
         );
 
     private static OutputPlan FullPlan() =>
         new(
-            OutputFormat.Hls,
-            [Video(1920, 1080, 0), Video(1280, 720, 1)],
-            [Audio("eng", 0), Audio("fra", 1)],
-            [Subtitle(0), Subtitle(1)],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(1920, 1080, 0), Video(1280, 720, 1)],
+            AudioOutputs: [Audio("eng", 0), Audio("fra", 1)],
+            SubtitleOutputs: [Subtitle(0), Subtitle(1)],
+            Thumbnails: new(160, 90, 10)
         );
 
     private static DecomposedTask Task(
@@ -78,7 +78,7 @@ public class BuildStageSlicingTests
         int[]? sourceIndexes = null
     ) =>
         new(
-            "test",
+            TaskId: "test",
             ParentJobId: 0,
             GroupTag: "g",
             Kind: kind,
@@ -93,7 +93,7 @@ public class BuildStageSlicingTests
     public void SliceForTask_VideoTask_KeepsOnlyTheTargetVideo()
     {
         OutputPlan plan = FullPlan();
-        DecomposedTask task = Task(EncodeTaskKind.Video, 0);
+        DecomposedTask task = Task(EncodeTaskKind.Video, outputIndex: 0);
 
         OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
 
@@ -108,7 +108,7 @@ public class BuildStageSlicingTests
     public void SliceForTask_AudioTask_KeepsOnlyTheTargetAudio()
     {
         OutputPlan plan = FullPlan();
-        DecomposedTask task = Task(EncodeTaskKind.Audio, 1);
+        DecomposedTask task = Task(EncodeTaskKind.Audio, outputIndex: 1);
 
         OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
 
@@ -122,7 +122,7 @@ public class BuildStageSlicingTests
     public void SliceForTask_SubtitleTask_PreservesAcquiredSubtitlesPointer()
     {
         OutputPlan plan = FullPlan();
-        DecomposedTask task = Task(EncodeTaskKind.Subtitle, 0);
+        DecomposedTask task = Task(EncodeTaskKind.Subtitle, outputIndex: 0);
 
         OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
 
@@ -175,7 +175,7 @@ public class BuildStageSlicingTests
     public void SliceForTask_VideoTaskWithIndexOutOfRange_ReturnsEmpty()
     {
         OutputPlan plan = FullPlan();
-        DecomposedTask task = Task(EncodeTaskKind.Video, 99);
+        DecomposedTask task = Task(EncodeTaskKind.Video, outputIndex: 99);
 
         OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
 
@@ -188,7 +188,7 @@ public class BuildStageSlicingTests
     public void SliceForTask_VideoTask_PreservesBurnInSubtitleForFilterGraph()
     {
         SubtitleOutputPlan burnIn = new(
-            SubtitleCodecType.Ass,
+            OutputCodec: SubtitleCodecType.Ass,
             Action: StreamAction.Transcode,
             Language: "eng",
             SourceIndex: 0,
@@ -196,7 +196,7 @@ public class BuildStageSlicingTests
             Policy: SubtitlePolicy.BurnIn
         );
         OutputPlan plan = FullPlan() with { SubtitleOutputs = [burnIn] };
-        DecomposedTask task = Task(EncodeTaskKind.Video, 0);
+        DecomposedTask task = Task(EncodeTaskKind.Video, outputIndex: 0);
 
         OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
 
@@ -209,7 +209,7 @@ public class BuildStageSlicingTests
     public void SliceForTask_SubtitleTask_NeverClaimsABurnInEntry()
     {
         SubtitleOutputPlan burnIn = new(
-            SubtitleCodecType.Ass,
+            OutputCodec: SubtitleCodecType.Ass,
             Action: StreamAction.Transcode,
             Language: "eng",
             SourceIndex: 0,
@@ -217,7 +217,7 @@ public class BuildStageSlicingTests
             Policy: SubtitlePolicy.BurnIn
         );
         OutputPlan plan = FullPlan() with { SubtitleOutputs = [burnIn] };
-        DecomposedTask task = Task(EncodeTaskKind.Subtitle, 0);
+        DecomposedTask task = Task(EncodeTaskKind.Subtitle, outputIndex: 0);
 
         OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
 
@@ -225,8 +225,8 @@ public class BuildStageSlicingTests
             .SubtitleOutputs.Should()
             .BeEmpty(
                 "a burn-in subtitle is rendered by the Video task's filter graph, "
-                         + "never extracted standalone — claiming it here builds an ffmpeg "
-                         + "command with an input and no output"
+                    + "never extracted standalone — claiming it here builds an ffmpeg "
+                    + "command with an input and no output"
             );
     }
 
@@ -236,7 +236,7 @@ public class BuildStageSlicingTests
         // Regression guard on the fix above: a Subtitle task must still get
         // its normal (non-burn-in) entries — only burn-in is excluded.
         OutputPlan plan = FullPlan();
-        DecomposedTask task = Task(EncodeTaskKind.Subtitle, 1);
+        DecomposedTask task = Task(EncodeTaskKind.Subtitle, outputIndex: 1);
 
         OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
 
@@ -265,7 +265,7 @@ public class BuildStageSlicingTests
     {
         OutputPlan plan = FullPlan();
         DecomposedTask task = new(
-            "bundle",
+            TaskId: "bundle",
             ParentJobId: 0,
             GroupTag: "g",
             Kind: EncodeTaskKind.Whole,
@@ -285,7 +285,7 @@ public class BuildStageSlicingTests
     {
         OutputPlan plan = FullPlan();
         DecomposedTask task = new(
-            "bundle",
+            TaskId: "bundle",
             ParentJobId: 0,
             GroupTag: "g",
             Kind: EncodeTaskKind.Whole,
@@ -305,7 +305,7 @@ public class BuildStageSlicingTests
     {
         OutputPlan plan = FullPlan();
         DecomposedTask task = new(
-            "bundle",
+            TaskId: "bundle",
             ParentJobId: 0,
             GroupTag: "g",
             Kind: EncodeTaskKind.Whole,

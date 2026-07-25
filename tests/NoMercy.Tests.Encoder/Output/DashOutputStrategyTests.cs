@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Text;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
@@ -252,7 +253,7 @@ public class DashOutputStrategyTests
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 
@@ -286,13 +287,14 @@ public class DashOutputStrategyTests
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 
     private static OutputPlan CreatePlan() =>
         new(
-            OutputFormat.Dash,
+            Format: OutputFormat.Dash,
+            VideoOutputs:
             [
                 new(
                     1920,
@@ -309,8 +311,8 @@ public class DashOutputStrategyTests
                     new()
                 ),
             ],
-            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
-            [],
-            null
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 }

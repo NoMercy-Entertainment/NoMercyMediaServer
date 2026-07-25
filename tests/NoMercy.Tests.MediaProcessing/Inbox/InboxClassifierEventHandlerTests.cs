@@ -20,6 +20,7 @@ using NoMercy.Events.FileWatcher;
 using NoMercy.Events.Inbox;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
+using NoMercy.MediaProcessing.Jobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -451,7 +452,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         {
             try
             {
-                Directory.Delete(tempRoot, true);
+                Directory.Delete(tempRoot, recursive: true);
             }
             catch
             {

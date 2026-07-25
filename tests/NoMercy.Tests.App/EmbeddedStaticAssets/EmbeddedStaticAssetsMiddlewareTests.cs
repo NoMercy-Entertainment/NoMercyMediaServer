@@ -87,7 +87,7 @@ public sealed class EmbeddedStaticAssetsMiddlewareTests
     public async Task InvokeAsync_NonGetNonHeadMethod_CallsNextWithoutServing()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, bool[] nextCalled) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/index.html", "POST");
+        DefaultHttpContext context = CreateContext("/index.html", method: "POST");
 
         await middleware.InvokeAsync(context);
 
@@ -280,7 +280,7 @@ public sealed class EmbeddedStaticAssetsMiddlewareTests
     public async Task InvokeAsync_HeadRequest_SetsHeadersButWritesNoBody()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/index.html", "HEAD");
+        DefaultHttpContext context = CreateContext("/index.html", method: "HEAD");
 
         await middleware.InvokeAsync(context);
 

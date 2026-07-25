@@ -73,7 +73,7 @@ public sealed class CloudflareTunnelStrategyTests
         ConnectivityStatus status = new() { CloudflareTunnelToken = null };
         CloudflareTunnelStrategy strategy = BuildStrategy(
             status,
-            () =>
+            checkAvailability: () =>
             {
                 called = true;
                 return Task.CompletedTask;
@@ -186,7 +186,7 @@ public sealed class CloudflareTunnelStrategyTests
         ConnectivityStatus status = new() { CloudflareTunnelToken = "token" };
         CloudflareTunnelStrategy strategy = BuildStrategy(
             status,
-            () => throw new InvalidOperationException("gate check failed")
+            checkAvailability: () => throw new InvalidOperationException("gate check failed")
         );
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>

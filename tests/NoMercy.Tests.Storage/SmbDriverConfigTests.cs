@@ -178,12 +178,12 @@ public sealed class SmbDriverConfigTests
         SmbDriverConfig config = SmbDriverConfig.For(
             "nas.local",
             "/media/",
-            "alice",
-            "secret",
-            "WORKGROUP",
-            @"\movies\",
-            139,
-            15
+            username: "alice",
+            password: "secret",
+            domain: "WORKGROUP",
+            basePath: @"\movies\",
+            port: 139,
+            timeoutSeconds: 15
         );
 
         config.Host.Should().Be("nas.local");

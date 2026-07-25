@@ -99,7 +99,7 @@ public sealed class FileManagerFindFilesTests
 
         // No Movie is resolvable for this id, so FileManager.Paths() has no
         // folder to look under and the scan never finds a candidate file.
-        bool hasCandidates = await manager.FindFiles(999_999, library);
+        bool hasCandidates = await manager.FindFiles(id: 999_999, library);
 
         hasCandidates.Should().BeFalse();
     }
@@ -122,7 +122,7 @@ public sealed class FileManagerFindFilesTests
             FileManager manager = BuildManager(repoMock);
             Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.MovieMediaType };
 
-            await manager.FindFiles(42, library);
+            await manager.FindFiles(id: 42, library);
 
             captured
                 .Should()
@@ -173,7 +173,7 @@ public sealed class FileManagerFindFilesTests
             // The scan id (42) intentionally differs from Show.Id (1399) so the
             // assertion proves the published key uses Show.Id, mirroring the
             // existing `Show?.Id ?? id` usage elsewhere in this method.
-            await manager.FindFiles(42, library);
+            await manager.FindFiles(id: 42, library);
 
             captured
                 .Should()
@@ -221,7 +221,7 @@ public sealed class FileManagerFindFilesTests
             FileManager manager = BuildManager(repoMock);
             Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.AnimeMediaType };
 
-            await manager.FindFiles(42, library);
+            await manager.FindFiles(id: 42, library);
 
             captured
                 .Should()

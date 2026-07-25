@@ -22,11 +22,11 @@ public class MezzaninePlannerTests
     {
         MezzaninePlanner
             .ShouldUseMezzanine(
-                100,
-                true,
-                3,
-                5,
-                Threshold
+                totalCost: 100,
+                distributedEncodingEnabled: true,
+                workerCount: 3,
+                rungCount: 5,
+                threshold: Threshold
             )
             .Should()
             .BeTrue();
@@ -36,7 +36,7 @@ public class MezzaninePlannerTests
     public void NotDistributed_NeverUsesMezzanine()
     {
         MezzaninePlanner
-            .ShouldUseMezzanine(1000, false, 8, 6, Threshold)
+            .ShouldUseMezzanine(1000, distributedEncodingEnabled: false, 8, 6, Threshold)
             .Should()
             .BeFalse("single-box jobs derive in-process — no extra full-res write");
     }

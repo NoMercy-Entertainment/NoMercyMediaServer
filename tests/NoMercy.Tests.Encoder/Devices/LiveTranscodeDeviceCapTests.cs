@@ -25,28 +25,28 @@ public class LiveTranscodeDeviceCapTests
 
     private static ClientCapabilities MakeHiFiClient() =>
         new(
-            [VideoCodecType.H264, VideoCodecType.H265],
-            [],
-            [],
-            3840,
-            2160,
-            true,
-            true,
-            20000,
-            8
+            SupportedVideoCodecs: [VideoCodecType.H264, VideoCodecType.H265],
+            SupportedAudioCodecs: [],
+            SupportedContainers: [],
+            MaxWidth: 3840,
+            MaxHeight: 2160,
+            SupportsHdr: true,
+            Supports10Bit: true,
+            MaxBitrateKbps: 20000,
+            MaxAudioChannels: 8
         );
 
     private static ClientCapabilities MakeStereoClient() =>
         new(
-            [VideoCodecType.H264],
-            [],
-            [],
-            1920,
-            1080,
-            false,
-            false,
-            6000,
-            2
+            SupportedVideoCodecs: [VideoCodecType.H264],
+            SupportedAudioCodecs: [],
+            SupportedContainers: [],
+            MaxWidth: 1920,
+            MaxHeight: 1080,
+            SupportsHdr: false,
+            Supports10Bit: false,
+            MaxBitrateKbps: 6000,
+            MaxAudioChannels: 2
         );
 
     // ──────────────────────────────────────────────────────────────────────────

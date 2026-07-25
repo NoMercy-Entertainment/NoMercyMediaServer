@@ -36,41 +36,41 @@ public class LadderGeneratorTests
 
     private static VideoOutput Reference(VideoCodecType codec = VideoCodecType.H264) =>
         new(
-            StreamPolicy.Transcode,
-            codec,
-            1920,
-            1080,
-            NoMercy.Encoder.Profiles.RateControlMode.Cbr,
-            0,
-            0,
-            null,
-            null,
-            "medium",
-            CodecProfile.Main,
-            "4.0",
-            null,
-            8,
-            "yuv420p",
-            2,
-            false,
-            "v/{label}",
-            "v/{label}/p"
+            Policy: StreamPolicy.Transcode,
+            Codec: codec,
+            Width: 1920,
+            Height: 1080,
+            RateControl: NoMercy.Encoder.Profiles.RateControlMode.Cbr,
+            Crf: 0,
+            BitrateKbps: 0,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
+            Preset: "medium",
+            CodecProfile: CodecProfile.Main,
+            Level: "4.0",
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: "yuv420p",
+            KeyframeIntervalSeconds: 2,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: "v/{label}",
+            PlaylistNameTemplate: "v/{label}/p"
         );
 
     private static VideoStreamInfo Source(int width, int height) =>
         new(
-            0,
-            "h264",
-            width,
-            height,
-            24.0,
-            8,
-            "yuv420p",
-            null,
-            null,
-            null,
-            true,
-            8000
+            Index: 0,
+            Codec: "h264",
+            Width: width,
+            Height: height,
+            FrameRate: 24.0,
+            BitDepth: 8,
+            PixelFormat: "yuv420p",
+            ColorPrimaries: null,
+            ColorTransfer: null,
+            ColorSpace: null,
+            IsDefault: true,
+            BitRateKbps: 8000
         );
 
     // ── user-supplied rungs ────────────────────────────────────────────────
@@ -122,7 +122,7 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
             Reference(),
             Source(1920, 1080),
-            [],
+            userRungs: [],
             log
         );
 
@@ -142,7 +142,7 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
             Reference(),
             Source(1280, 720),
-            null,
+            userRungs: null,
             log
         );
 
@@ -159,7 +159,7 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
             Reference(),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             log
         );
 
@@ -181,7 +181,7 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> hevcOutputs = _generator.Generate(
             Reference(VideoCodecType.H265),
             Source(1920, 1080),
-            null,
+            userRungs: null,
             log
         );
 
@@ -199,7 +199,7 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> av1Outputs = _generator.Generate(
             Reference(VideoCodecType.Av1),
             Source(1920, 1080),
-            null,
+            userRungs: null,
             log
         );
 
@@ -217,7 +217,7 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> vp9Outputs = _generator.Generate(
             Reference(VideoCodecType.Vp9),
             Source(1920, 1080),
-            null,
+            userRungs: null,
             log
         );
 
@@ -236,7 +236,7 @@ public class LadderGeneratorTests
         _ = _generator.Generate(
             Reference(VideoCodecType.Av1),
             Source(1920, 1080),
-            null,
+            userRungs: null,
             log
         );
 
@@ -251,7 +251,7 @@ public class LadderGeneratorTests
         _ = _generator.Generate(
             Reference(VideoCodecType.Vp9),
             Source(1920, 1080),
-            null,
+            userRungs: null,
             log
         );
 
@@ -268,14 +268,14 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> h264Outputs = _generator.Generate(
             Reference(VideoCodecType.H264),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             h264Log
         );
 
         IReadOnlyList<VideoOutput> av1Outputs = _generator.Generate(
             Reference(VideoCodecType.Av1),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             av1Log
         );
 
@@ -298,14 +298,14 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> h264Outputs = _generator.Generate(
             Reference(VideoCodecType.H264),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             h264Log
         );
 
         IReadOnlyList<VideoOutput> vp9Outputs = _generator.Generate(
             Reference(VideoCodecType.Vp9),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             vp9Log
         );
 
@@ -329,21 +329,21 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> h264Outputs = _generator.Generate(
             Reference(VideoCodecType.H264),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             h264Log
         );
 
         IReadOnlyList<VideoOutput> vp9Outputs = _generator.Generate(
             Reference(VideoCodecType.Vp9),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             vp9Log
         );
 
         IReadOnlyList<VideoOutput> av1Outputs = _generator.Generate(
             Reference(VideoCodecType.Av1),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             av1Log
         );
 
@@ -364,7 +364,7 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
             Reference(VideoCodecType.H264),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             log
         );
 
@@ -396,7 +396,7 @@ public class LadderGeneratorTests
             IReadOnlyList<VideoOutput> outputs = _generator.Generate(
                 Reference(codec),
                 Source(3840, 2160),
-                null,
+                userRungs: null,
                 log
             );
 
@@ -426,9 +426,9 @@ public class LadderGeneratorTests
         _ = _generator.Generate(
             Reference(),
             Source(1920, 1080),
-            null,
+            userRungs: null,
             log,
-            ComplexityHint.Auto
+            complexity: ComplexityHint.Auto
         );
 
         log.Snapshot().Should().Contain(d => d.Key == "plan.ladder_complexity_unknown");
@@ -444,9 +444,9 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
             Reference(),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             log,
-            ComplexityHint.Animated
+            complexity: ComplexityHint.Animated
         );
 
         outputs.Select(o => o.Height).Should().BeEquivalentTo(new int?[] { 2160, 1080, 480 });
@@ -461,9 +461,9 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
             Reference(),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             log,
-            ComplexityHint.Grainy
+            complexity: ComplexityHint.Grainy
         );
 
         // All six default rungs fit a 4K source.
@@ -480,9 +480,9 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
             Reference(),
             Source(3840, 2160),
-            null,
+            userRungs: null,
             log,
-            ComplexityHint.LiveAction
+            complexity: ComplexityHint.LiveAction
         );
 
         outputs.Should().HaveCount(6);
@@ -499,9 +499,9 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
             Reference(),
             Source(2560, 1440),
-            null,
+            userRungs: null,
             log,
-            ComplexityHint.LiveAction
+            complexity: ComplexityHint.LiveAction
         );
 
         outputs[0].Width.Should().Be(2560);
@@ -520,9 +520,9 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
             Reference(),
             Source(7680, 4320),
-            null,
+            userRungs: null,
             log,
-            ComplexityHint.LiveAction
+            complexity: ComplexityHint.LiveAction
         );
 
         outputs[0].Width.Should().Be(7680);
@@ -540,7 +540,7 @@ public class LadderGeneratorTests
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
             reference,
             Source(1920, 1080),
-            null,
+            userRungs: null,
             log
         );
 

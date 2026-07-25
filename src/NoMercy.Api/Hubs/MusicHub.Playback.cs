@@ -41,7 +41,11 @@ public partial class MusicHub
         if (string.IsNullOrEmpty(type) || listId is null || trackId is null)
         {
             _logger.LogWarning(
-                "{Name}: [MusicHub.StartPlaybackCommand] ignored — null arg (type='{Null}', listId={Null2}, trackId={Null3})", [user.Name, type ?? "<null>", listId?.ToString() ?? "<null>", trackId?.ToString() ?? "<null>"]
+                "{Name}: [MusicHub.StartPlaybackCommand] ignored — null arg (type='{Null}', listId={Null2}, trackId={Null3})",
+                user.Name,
+                type ?? "<null>",
+                listId?.ToString() ?? "<null>",
+                trackId?.ToString() ?? "<null>"
             );
             return;
         }
@@ -83,7 +87,10 @@ public partial class MusicHub
             long playlistFetchedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             _logger.Log(
                 playlistStopwatch.ElapsedMilliseconds > 1000 ? LogLevel.Warning : LogLevel.Debug,
-                "[MusicHub.StartPlaybackCommand] GetPlaylist({Type}) took {ElapsedMilliseconds}ms ({Count} tracks)", [type, playlistStopwatch.ElapsedMilliseconds, playlist.Count]
+                "[MusicHub.StartPlaybackCommand] GetPlaylist({Type}) took {ElapsedMilliseconds}ms ({Count} tracks)",
+                type,
+                playlistStopwatch.ElapsedMilliseconds,
+                playlist.Count
             );
 
             await HandlePlaybackState(user, type, listId.Value, item, playlist);
@@ -94,7 +101,18 @@ public partial class MusicHub
             // connected device for this user actually completed).
             long broadcastMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             _logger.LogInformation(
-                "{Name}: [MusicHub.StartPlaybackCommand] type={Type} entryMs={EntryMs} lockAcquiredMs={LockAcquiredMs} (+{LockWaitMs}ms) playlistFetchedMs={PlaylistFetchedMs} (+{PlaylistMs}ms) broadcastMs={BroadcastMs} (+{BroadcastDeltaMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount}", [user.Name, type, entryMs, lockAcquiredMs, lockAcquiredMs - entryMs, playlistFetchedMs, playlistFetchedMs - lockAcquiredMs, broadcastMs, broadcastMs - playlistFetchedMs, broadcastMs - entryMs, playlist.Count]
+                "{Name}: [MusicHub.StartPlaybackCommand] type={Type} entryMs={EntryMs} lockAcquiredMs={LockAcquiredMs} (+{LockWaitMs}ms) playlistFetchedMs={PlaylistFetchedMs} (+{PlaylistMs}ms) broadcastMs={BroadcastMs} (+{BroadcastDeltaMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount}",
+                user.Name,
+                type,
+                entryMs,
+                lockAcquiredMs,
+                lockAcquiredMs - entryMs,
+                playlistFetchedMs,
+                playlistFetchedMs - lockAcquiredMs,
+                broadcastMs,
+                broadcastMs - playlistFetchedMs,
+                broadcastMs - entryMs,
+                playlist.Count
             );
         }
         catch (ArgumentException ex)
@@ -109,8 +127,8 @@ public partial class MusicHub
                     "failure.playback_start",
                     user.Id,
                     deviceId2,
-                    ex.GetType().Name,
-                    ex.Message
+                    errorCode: ex.GetType().Name,
+                    message: ex.Message
                 );
             }
             catch (Exception logEx)
@@ -133,8 +151,8 @@ public partial class MusicHub
                     "failure.playback_start",
                     user.Id,
                     deviceId2,
-                    ex.GetType().Name,
-                    ex.Message
+                    errorCode: ex.GetType().Name,
+                    message: ex.Message
                 );
             }
             catch (Exception logEx)
@@ -554,7 +572,20 @@ public partial class MusicHub
             long broadcastMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
             _logger.LogInformation(
-                "{Name}: [MusicHub.PlaybackCommand] cmd={Command} entryMs={EntryMs} lockAcquiredMs={LockAcquiredMs} (+{LockWaitMs}ms) handlerDoneMs={HandlerDoneMs} (+{HandlerMs}ms) broadcastMs={BroadcastMs} (+{BroadcastDeltaMs}ms) totalMs={TotalMs}ms debounced={Debounced} playlist={PlaylistCount} backlog={BacklogCount}", [user.Name, command, entryMs, lockAcquiredMs, lockAcquiredMs - entryMs, handlerDoneMs, handlerDoneMs - lockAcquiredMs, broadcastMs, broadcastMs - handlerDoneMs, broadcastMs - entryMs, isSkipCommand, state.Playlist.Count, state.Backlog.Count]
+                "{Name}: [MusicHub.PlaybackCommand] cmd={Command} entryMs={EntryMs} lockAcquiredMs={LockAcquiredMs} (+{LockWaitMs}ms) handlerDoneMs={HandlerDoneMs} (+{HandlerMs}ms) broadcastMs={BroadcastMs} (+{BroadcastDeltaMs}ms) totalMs={TotalMs}ms debounced={Debounced} playlist={PlaylistCount} backlog={BacklogCount}",
+                user.Name,
+                command,
+                entryMs,
+                lockAcquiredMs,
+                lockAcquiredMs - entryMs,
+                handlerDoneMs,
+                handlerDoneMs - lockAcquiredMs,
+                broadcastMs,
+                broadcastMs - handlerDoneMs,
+                broadcastMs - entryMs,
+                isSkipCommand,
+                state.Playlist.Count,
+                state.Backlog.Count
             );
         }
         finally

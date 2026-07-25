@@ -30,10 +30,10 @@ public class DiscIdAlgorithmTests
     public void Compute_CanonicalSpecFixture_ReturnsExpectedDiscId()
     {
         DiscToc toc = new(
-            1,
-            6,
-            95462,
-            [150, 15363, 32314, 46592, 63414, 80489]
+            FirstTrack: 1,
+            LastTrack: 6,
+            LeadOutOffsetSectors: 95462,
+            TrackOffsetsSectors: [150, 15363, 32314, 46592, 63414, 80489]
         );
 
         string discId = MusicBrainzDiscId.Compute(toc);
@@ -45,27 +45,27 @@ public class DiscIdAlgorithmTests
     public void Compute_AlwaysProduces28CharSubstitutedId()
     {
         DiscToc toc = new(
-            1,
-            6,
-            95462,
-            [150, 15363, 32314, 46592, 63414, 80489]
+            FirstTrack: 1,
+            LastTrack: 6,
+            LeadOutOffsetSectors: 95462,
+            TrackOffsetsSectors: [150, 15363, 32314, 46592, 63414, 80489]
         );
 
         string discId = MusicBrainzDiscId.Compute(toc);
 
         discId.Should().HaveLength(28, "MusicBrainz disc IDs are always 28 chars");
         discId.Should().MatchRegex(@"^[A-Za-z0-9._-]+$", "base64url-like alphabet only");
-        discId.Should().NotContainAny(["+", "/", "="]);
+        discId.Should().NotContainAny("+", "/", "=");
     }
 
     [Fact]
     public void Compute_SameToc_IsDeterministic()
     {
         DiscToc toc = new(
-            1,
-            3,
-            60150,
-            [150, 15150, 30150]
+            FirstTrack: 1,
+            LastTrack: 3,
+            LeadOutOffsetSectors: 60150,
+            TrackOffsetsSectors: [150, 15150, 30150]
         );
 
         MusicBrainzDiscId.Compute(toc).Should().Be(MusicBrainzDiscId.Compute(toc));
@@ -84,10 +84,10 @@ public class DiscIdAlgorithmTests
     public void Compute_MismatchedTrackCount_Throws()
     {
         DiscToc toc = new(
-            1,
-            3,
-            60150,
-            [150, 15150]
+            FirstTrack: 1,
+            LastTrack: 3,
+            LeadOutOffsetSectors: 60150,
+            TrackOffsetsSectors: [150, 15150]
         );
 
         Action act = () => MusicBrainzDiscId.Compute(toc);

@@ -32,13 +32,13 @@ public class NfsConcurrencyTests
 {
     private static NfsDriverConfig BuildConfig() =>
         new(
-            "test.local",
-            "/export",
-            4,
-            null,
-            null,
-            2049,
-            null
+            Server: "test.local",
+            Export: "/export",
+            Version: 4,
+            Uid: null,
+            Gid: null,
+            Port: 2049,
+            MountPort: null
         );
 
     private static (NfsStorageDriver driver, FaultyLibNfs lib) BuildDriverWithLatency(
@@ -188,7 +188,7 @@ public class NfsConcurrencyTests
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        using Stream s = driver.OpenWrite($"/w_{i}.bin", true);
+                        using Stream s = driver.OpenWrite($"/w_{i}.bin", overwrite: true);
                         s.Write([(byte)i], 0, 1);
                     }
                 }
@@ -209,7 +209,7 @@ public class NfsConcurrencyTests
                     Interlocked.Increment(ref errors);
                 }
             });
-            await Task.WhenAll([readTask, writeTask, statTask]);
+            await Task.WhenAll(readTask, writeTask, statTask);
 
             errors.Should().Be(0, "no operation should fail under mixed concurrency");
             lib.MaxConcurrentCalls.Should().Be(1);

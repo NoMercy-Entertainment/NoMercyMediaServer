@@ -321,21 +321,31 @@ public class NetworkDiscovery : INetworkDiscovery
         catch (OperationCanceledException)
         {
             _logger.LogTrace(
-                "Timeout checking {ExternalIp}:{ExternalServerPort} after {TimeoutMilliseconds}ms.", [ExternalIp, RuntimeServerSettings.Current.ExternalServerPort, timeoutMilliseconds]
+                "Timeout checking {ExternalIp}:{ExternalServerPort} after {TimeoutMilliseconds}ms.",
+                ExternalIp,
+                RuntimeServerSettings.Current.ExternalServerPort,
+                timeoutMilliseconds
             );
             return false;
         }
         catch (SocketException ex)
         {
             _logger.LogDebug(
-                "SocketException checking {ExternalIp}:{ExternalServerPort}: {SocketErrorCode} ({Message})", [ExternalIp, RuntimeServerSettings.Current.ExternalServerPort, ex.SocketErrorCode, ex.Message]
+                "SocketException checking {ExternalIp}:{ExternalServerPort}: {SocketErrorCode} ({Message})",
+                ExternalIp,
+                RuntimeServerSettings.Current.ExternalServerPort,
+                ex.SocketErrorCode,
+                ex.Message
             );
             return false;
         }
         catch (Exception ex)
         {
             _logger.LogDebug(
-                "Exception checking {ExternalIp}:{ExternalServerPort}: {Message}", [ExternalIp, RuntimeServerSettings.Current.ExternalServerPort, ex.Message]
+                "Exception checking {ExternalIp}:{ExternalServerPort}: {Message}",
+                ExternalIp,
+                RuntimeServerSettings.Current.ExternalServerPort,
+                ex.Message
             );
             return false;
         }
@@ -360,10 +370,10 @@ public class NetworkDiscovery : INetworkDiscovery
             _containerIpWarned = true;
             _logger.LogError(
                 "Internal IP resolved to {Resolved}, a container-internal address that LAN clients "
-                         + "cannot route to, so the server will advertise an unreachable address. Set "
-                         + "NOMERCY_INTERNAL_IP (or --internal-ip) to this host's LAN IP; with the "
-                         + "supplied compose files, export HOST_IP=$(hostname -I | awk '{{print $1}}') "
-                         + "before 'docker compose up'.",
+                    + "cannot route to, so the server will advertise an unreachable address. Set "
+                    + "NOMERCY_INTERNAL_IP (or --internal-ip) to this host's LAN IP; with the "
+                    + "supplied compose files, export HOST_IP=$(hostname -I | awk '{{print $1}}') "
+                    + "before 'docker compose up'.",
                 resolved
             );
         }
@@ -637,7 +647,7 @@ public class NetworkDiscovery : INetworkDiscovery
                         try
                         {
                             await socket.ConnectAsync(context.DnsEndPoint, ct);
-                            return new NetworkStream(socket, true);
+                            return new NetworkStream(socket, ownsSocket: true);
                         }
                         catch
                         {
@@ -690,7 +700,7 @@ public class NetworkDiscovery : INetworkDiscovery
                             try
                             {
                                 await socket.ConnectAsync(context.DnsEndPoint, ct);
-                                return new NetworkStream(socket, true);
+                                return new NetworkStream(socket, ownsSocket: true);
                             }
                             catch
                             {
@@ -722,8 +732,8 @@ public class NetworkDiscovery : INetworkDiscovery
     {
         try
         {
-            using Stream stream = _driver.OpenWrite(ExternalIpCacheFile, true);
-            using StreamWriter writer = new(stream, encoding: Encoding.UTF8, leaveOpen: true);
+            using Stream stream = _driver.OpenWrite(ExternalIpCacheFile, overwrite: true);
+            using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
             writer.Write(ip);
         }
         catch (Exception e)

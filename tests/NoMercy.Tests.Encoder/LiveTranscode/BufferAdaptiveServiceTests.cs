@@ -23,81 +23,83 @@ public class BufferAdaptiveServiceTests
 {
     private static LiveQuality MakeQuality(string id = "1080p", int bitrateKbps = 8000) =>
         new(
-            id,
-            id,
-            1920,
-            1080,
-            VideoCodecType.H264,
-            bitrateKbps,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: id,
+            Label: id,
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: bitrateKbps,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     private static LiveQuality MakeLowQuality() =>
         new(
-            "720p",
-            "720p",
-            1280,
-            720,
-            VideoCodecType.H264,
-            3000,
-            "libx264",
-            false,
-            3.0,
-            true
+            Id: "720p",
+            Label: "720p",
+            Width: 1280,
+            Height: 720,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 3000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 3.0,
+            CanRealtime: true
         );
 
     private static MediaInfo MakeMediaInfo() =>
         new(
-            "/media/test.mkv",
-            "matroska,webm",
-            TimeSpan.FromMinutes(90),
-            10000,
-            1_000_000_000L,
+            FilePath: "/media/test.mkv",
+            Format: "matroska,webm",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 10000,
+            FileSizeBytes: 1_000_000_000L,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    8000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 8000
                 ),
             ],
+            AudioStreams:
             [
                 new(
-                    1,
-                    "aac",
-                    2,
-                    48000,
-                    192,
-                    "eng",
-                    true,
-                    false
+                    Index: 1,
+                    Codec: "aac",
+                    Channels: 2,
+                    SampleRate: 48000,
+                    BitRateKbps: 192,
+                    Language: "eng",
+                    IsDefault: true,
+                    IsForced: false
                 ),
             ],
-            [],
-            []
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static ClientCapabilities MakeClientCapabilities() =>
         new(
-            [VideoCodecType.H264],
-            [AudioCodecType.Aac],
-            ["mkv", "mp4"],
-            1920,
-            1080,
-            false,
-            false,
-            0
+            SupportedVideoCodecs: [VideoCodecType.H264],
+            SupportedAudioCodecs: [AudioCodecType.Aac],
+            SupportedContainers: ["mkv", "mp4"],
+            MaxWidth: 1920,
+            MaxHeight: 1080,
+            SupportsHdr: false,
+            Supports10Bit: false,
+            MaxBitrateKbps: 0
         );
 
     private static LiveStreamingService NewStreamingService()

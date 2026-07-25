@@ -33,7 +33,7 @@ public class WorkersController_Routes_Test
     private static IEnumerable<string> ActionRoutes(Type controller, Type httpVerb) =>
         controller
             .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .SelectMany(m => m.GetCustomAttributes(httpVerb, false))
+            .SelectMany(m => m.GetCustomAttributes(httpVerb, inherit: false))
             .Cast<HttpMethodAttribute>()
             .Select(a => a.Template ?? string.Empty);
 

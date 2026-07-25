@@ -17,6 +17,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.Setup.Dto;
 using NoMercy.Setup.Server;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Setup;
 
@@ -83,9 +84,9 @@ public class TesseractModelDownloaderTests
     {
         // Release exists but carries no manifest.json asset at all.
         GithubReleaseResponse release = BuildRelease(
-            "https://example.com/eng.traineddata",
-            null,
-            null
+            assetUrl: "https://example.com/eng.traineddata",
+            manifestUrl: null,
+            manifestSigUrl: null
         );
 
         CountingFakeHandler handler = new();
@@ -123,9 +124,9 @@ public class TesseractModelDownloaderTests
         };
 
         GithubReleaseResponse release = BuildRelease(
-            "https://example.com/eng.traineddata",
-            manifestUrl,
-            null
+            assetUrl: "https://example.com/eng.traineddata",
+            manifestUrl: manifestUrl,
+            manifestSigUrl: null
         );
 
         CountingFakeHandler handler = new();
@@ -164,9 +165,9 @@ public class TesseractModelDownloaderTests
         };
 
         GithubReleaseResponse release = BuildRelease(
-            "https://example.com/eng.traineddata",
-            manifestUrl,
-            sigUrl
+            assetUrl: "https://example.com/eng.traineddata",
+            manifestUrl: manifestUrl,
+            manifestSigUrl: sigUrl
         );
 
         CountingFakeHandler handler = new();
@@ -221,11 +222,11 @@ public class TesseractModelDownloaderTests
         };
 
         GithubReleaseResponse release = BuildRelease(
-            "https://example.com/eng.traineddata",
-            manifestUrl,
-            sigUrl,
-            "jpn.traineddata",
-            "https://example.com/jpn.traineddata"
+            assetUrl: "https://example.com/eng.traineddata",
+            manifestUrl: manifestUrl,
+            manifestSigUrl: sigUrl,
+            extraAssetName: "jpn.traineddata",
+            extraAssetUrl: "https://example.com/jpn.traineddata"
         );
 
         CountingFakeHandler handler = new();

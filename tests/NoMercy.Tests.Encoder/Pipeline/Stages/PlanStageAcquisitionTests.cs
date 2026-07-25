@@ -38,7 +38,7 @@ public class PlanStageAcquisitionTests
     public async Task AcquisitionDisabled_ServiceNotCalled_AcquiredSubtitlesEmpty()
     {
         Mock<ISubtitleAcquisitionService> svc = new();
-        PlanStage stage = BuildStage(svc.Object);
+        PlanStage stage = BuildStage(acquisitionService: svc.Object);
 
         EncodingProfile profile = BuildProfile(
             new() { Enabled = false, Languages = ["en"] }
@@ -58,13 +58,13 @@ public class PlanStageAcquisitionTests
     public async Task AcquisitionEnabled_ServiceCalled_ResultsInOutputPlan()
     {
         AcquiredSubtitle acquired = new(
-            "en",
-            "/tmp/subs/en.srt",
-            "OpenSubtitles",
-            true,
-            8.0,
-            1000,
-            "srt"
+            Language: "en",
+            LocalPath: "/tmp/subs/en.srt",
+            Provider: "OpenSubtitles",
+            IsExactMatch: true,
+            Rating: 8.0,
+            Downloads: 1000,
+            Format: "srt"
         );
 
         Mock<ISubtitleAcquisitionService> svc = new();
@@ -73,7 +73,7 @@ public class PlanStageAcquisitionTests
             )
             .ReturnsAsync([acquired]);
 
-        PlanStage stage = BuildStage(svc.Object);
+        PlanStage stage = BuildStage(acquisitionService: svc.Object);
         EncodingProfile profile = BuildProfile(
             new()
             {
@@ -104,7 +104,7 @@ public class PlanStageAcquisitionTests
             )
             .ThrowsAsync(new InvalidOperationException("provider down"));
 
-        PlanStage stage = BuildStage(svc.Object);
+        PlanStage stage = BuildStage(acquisitionService: svc.Object);
         EncodingProfile profile = BuildProfile(
             new()
             {
@@ -141,37 +141,37 @@ public class PlanStageAcquisitionTests
             )
             .Returns(
                 new ResolvedCodec(
-                    "libx264",
-                    new(
-                        "libx264",
-                        null,
-                        ["medium"],
-                        ["high"],
-                        ["4.1"],
-                        new(0, 51, 23),
-                        [EncoderRateControlMode.Crf],
-                        false,
-                        false,
-                        int.MaxValue,
-                        "yuv420p10le",
-                        new()
+                    FfmpegEncoderName: "libx264",
+                    EncoderInfo: new(
+                        FfmpegName: "libx264",
+                        RequiredVendor: null,
+                        Presets: ["medium"],
+                        Profiles: ["high"],
+                        Levels: ["4.1"],
+                        QualityRange: new(0, 51, 23),
+                        SupportedRateControl: [EncoderRateControlMode.Crf],
+                        Supports10Bit: false,
+                        SupportsHdr: false,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new()
                     ),
-                    null,
-                    EncoderRateControlMode.Crf
+                    Device: null,
+                    DefaultRateControl: EncoderRateControlMode.Crf
                 )
             );
 
         return new(
             new(),
-            groupingStrategy: new(),
-            costEstimator: new(),
-            codecResolver: codecResolver.Object,
-            hardware: hardware.Object,
-            tonemapSelector: new TonemapSelector(),
-            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
-            abrLadderGenerator: new AbrLadderGenerator(),
-            cropDetector: new Mock<ICropDetector>().Object,
-            logger: NullLogger<PlanStage>.Instance,
+            new(),
+            new(),
+            codecResolver.Object,
+            hardware.Object,
+            new TonemapSelector(),
+            new Mock<IFfmpegCapabilities>().Object,
+            new AbrLadderGenerator(),
+            new Mock<ICropDetector>().Object,
+            NullLogger<PlanStage>.Instance,
             subtitleAcquisitionService: acquisitionService
         );
     }
@@ -192,68 +192,70 @@ public class PlanStageAcquisitionTests
 
     private static MediaInfo BuildMedia() =>
         new(
-            "/media/test.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            8000,
-            4_000_000_000,
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile BuildProfile(SubtitleAcquisitionConfig? acquisition = null)
     {
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
-            "Acquisition Test",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                "video/{label}",
-                "video/{label}/playlist"
+            Id: Ulid.NewUlid(),
+            Name: "Acquisition Test",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
             ),
-            [],
+            Audio: [],
+            Subtitles:
             [
                 new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    ["en"],
-                    false,
-                    null,
-                    "subtitles/:filename:.:language:.:variant:"
+                    Policy: SubtitlePolicy.Extract,
+                    Codec: SubtitleCodecType.WebVtt,
+                    AllowedLanguages: ["en"],
+                    IncludeForced: false,
+                    OcrLanguage: null,
+                    PlaylistNameTemplate: "subtitles/:filename:.:language:.:variant:"
                 ),
             ]
         );

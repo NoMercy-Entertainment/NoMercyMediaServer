@@ -41,8 +41,8 @@ public class BundleGarbageCollector(
 
         IReadOnlyList<StorageEntry> allFiles = storage.List(
             libraryRoot,
-            null,
-            true
+            pattern: null,
+            recursive: true
         );
 
         if (allFiles.Count == 0)
@@ -83,12 +83,12 @@ public class BundleGarbageCollector(
 
                 orphans.Add(
                     new(
-                        string.IsNullOrEmpty(encode.OutputLocation)
+                        Path: string.IsNullOrEmpty(encode.OutputLocation)
                             ? mediaFolder
                             : encode.OutputLocation,
-                        encode.PresetSlug,
-                        encode.PresetId,
-                        "preset deleted"
+                        PresetSlug: encode.PresetSlug,
+                        PresetId: encode.PresetId,
+                        Reason: "preset deleted"
                     )
                 );
             }
@@ -107,7 +107,9 @@ public class BundleGarbageCollector(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(
-                "Could not read blueprint at {Path}: {Message} — skipping", [path, ex.Message]
+                "Could not read blueprint at {Path}: {Message} — skipping",
+                path,
+                ex.Message
             );
             return null;
         }

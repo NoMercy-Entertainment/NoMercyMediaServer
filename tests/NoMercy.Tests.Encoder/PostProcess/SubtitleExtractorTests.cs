@@ -123,11 +123,11 @@ public class SubtitleExtractorTests
     {
         SubtitleOutputPlan plan = MakePlan(0, "eng") with { Variant = "sign" };
         SubtitleStreamInfo stream = new(
-            0,
-            "subrip",
-            "eng",
-            false,
-            true
+            Index: 0,
+            Codec: "subrip",
+            Language: "eng",
+            IsDefault: false,
+            IsForced: true
         );
 
         SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
@@ -205,22 +205,22 @@ public class SubtitleExtractorTests
     private static SubtitleOutputPlan MakePlan(int sourceIndex, string language)
     {
         return new(
-            SubtitleCodecType.WebVtt,
-            StreamAction.Extract,
-            language,
-            sourceIndex,
-            $"0:s:{sourceIndex}"
+            OutputCodec: SubtitleCodecType.WebVtt,
+            Action: StreamAction.Extract,
+            Language: language,
+            SourceIndex: sourceIndex,
+            MapLabel: $"0:s:{sourceIndex}"
         );
     }
 
     private static SubtitleStreamInfo MakeStream(int index, string codec, string language)
     {
         return new(
-            index,
-            codec,
-            language,
-            index == 0,
-            false
+            Index: index,
+            Codec: codec,
+            Language: language,
+            IsDefault: index == 0,
+            IsForced: false
         );
     }
 }

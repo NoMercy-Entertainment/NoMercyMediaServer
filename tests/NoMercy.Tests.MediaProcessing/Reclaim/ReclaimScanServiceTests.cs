@@ -214,8 +214,8 @@ public class ReclaimScanServiceTests
                     folderId,
                     HostFolder,
                     "movie.NoMercy.m3u8",
-                    1,
-                    "Protected Movie"
+                    movieId: 1,
+                    movieTitle: "Protected Movie"
                 )
         );
         using SqliteConnection _ = connection;
@@ -253,8 +253,8 @@ public class ReclaimScanServiceTests
                     folderId,
                     HostFolder,
                     "movie.mkv",
-                    2,
-                    "Reclaimable Movie"
+                    movieId: 2,
+                    movieTitle: "Reclaimable Movie"
                 )
         );
         using SqliteConnection _ = connection;
@@ -305,8 +305,8 @@ public class ReclaimScanServiceTests
                     folderId,
                     HostFolder,
                     "movie.mkv",
-                    3,
-                    "Partial Movie"
+                    movieId: 3,
+                    movieTitle: "Partial Movie"
                 )
         );
         using SqliteConnection _ = connection;
@@ -347,8 +347,8 @@ public class ReclaimScanServiceTests
                     folderId,
                     HostFolder,
                     "movie.mkv",
-                    4,
-                    "Untouched Movie"
+                    movieId: 4,
+                    movieTitle: "Untouched Movie"
                 )
         );
         using SqliteConnection _ = connection;
@@ -383,8 +383,8 @@ public class ReclaimScanServiceTests
                     folderId,
                     HostFolder,
                     "movie.mkv",
-                    5,
-                    "Gated Movie"
+                    movieId: 5,
+                    movieTitle: "Gated Movie"
                 )
         );
         using SqliteConnection _ = connection;
@@ -429,8 +429,8 @@ public class ReclaimScanServiceTests
                     folderId,
                     HostFolder,
                     "movie.mkv",
-                    6,
-                    "Recent Partial Movie"
+                    movieId: 6,
+                    movieTitle: "Recent Partial Movie"
                 )
         );
         using SqliteConnection _ = connection;
@@ -472,10 +472,10 @@ public class ReclaimScanServiceTests
                     folderId,
                     HostFolder,
                     "episode.mkv",
-                    42,
-                    "Some Show",
-                    1,
-                    3
+                    episodeId: 42,
+                    showTitle: "Some Show",
+                    seasonNumber: 1,
+                    episodeNumber: 3
                 )
         );
         using SqliteConnection _ = connection;

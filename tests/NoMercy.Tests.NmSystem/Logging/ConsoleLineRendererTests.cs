@@ -36,7 +36,7 @@ public class ConsoleLineRendererTests
             "Fetching \"Inception\"",
             null,
             NoMercyConsoleTheme.Dark,
-            false
+            color: false
         );
 
         line.Should().Be("14:23:07       TheMovieDB │ Fetching \"Inception\"");
@@ -52,7 +52,7 @@ public class ConsoleLineRendererTests
             "x",
             null,
             NoMercyConsoleTheme.Dark,
-            false
+            color: false
         );
         string warn = ConsoleLineRenderer.Render(
             At,
@@ -61,7 +61,7 @@ public class ConsoleLineRendererTests
             "x",
             null,
             NoMercyConsoleTheme.Dark,
-            false
+            color: false
         );
 
         warn.Should().Contain("!");
@@ -80,7 +80,7 @@ public class ConsoleLineRendererTests
             "first\nsecond",
             null,
             NoMercyConsoleTheme.Dark,
-            false
+            color: false
         );
 
         string[] lines = block.Split('\n');
@@ -98,7 +98,7 @@ public class ConsoleLineRendererTests
             "Rate limit 429",
             null,
             NoMercyConsoleTheme.Dark,
-            false
+            color: false
         );
         string coloured = ConsoleLineRenderer.Render(
             At,
@@ -107,7 +107,7 @@ public class ConsoleLineRendererTests
             "Rate limit 429",
             null,
             NoMercyConsoleTheme.Dark,
-            true
+            color: true
         );
 
         DisplayWidth.Of(coloured).Should().Be(DisplayWidth.Of(plain));

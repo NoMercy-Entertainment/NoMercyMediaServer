@@ -81,7 +81,7 @@ public class TonemapSelectorTests
     {
         // FfmpegCapabilities hasn't been probed yet — can't know what's
         // available. Safe default is CPU zscale which always works.
-        TonemapStrategy result = _selector.SelectBest(NullHardware(), null);
+        TonemapStrategy result = _selector.SelectBest(NullHardware(), ffmpeg: null);
 
         result.Method.Should().Be(TonemapMethod.ZscaleTonemap);
         result.IsGpuAccelerated.Should().BeFalse();
@@ -103,7 +103,7 @@ public class TonemapSelectorTests
 
         TonemapStrategy placeboResult = _selector.SelectBest(NullHardware(), libplacebo.Object);
         TonemapStrategy openclResult = _selector.SelectBest(NullHardware(), opencl.Object);
-        TonemapStrategy zscaleResult = _selector.SelectBest(NullHardware(), null);
+        TonemapStrategy zscaleResult = _selector.SelectBest(NullHardware(), ffmpeg: null);
 
         placeboResult.FfmpegFilterChain.Should().Contain("format=yuv420p");
         // OpenCL uses nv12 (GPU-native) not yuv420p — check it ends in nv12.

@@ -9,9 +9,12 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -------- -----------------------------------------------------------------------
 
+using System.Globalization;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
+using NoMercy.Encoder.Pipeline;
 
 namespace NoMercy.Tests.Encoder.Output;
 
@@ -51,7 +54,7 @@ public class PlaylistGeneratorChapterTests
     public void GenerateMasterPlaylist_NoChapters_OmitsDaterRanges()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
@@ -74,7 +77,7 @@ public class PlaylistGeneratorChapterTests
     public void GenerateMasterPlaylist_WithChapters_EmitsDaterRanges()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
@@ -103,7 +106,7 @@ public class PlaylistGeneratorChapterTests
     public void GenerateMasterPlaylist_ChapterDates_ArIso8601()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
@@ -129,7 +132,7 @@ public class PlaylistGeneratorChapterTests
     public void GenerateMasterPlaylist_ChapterDuration_Correct()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
@@ -156,7 +159,7 @@ public class PlaylistGeneratorChapterTests
     public void GenerateMasterPlaylist_ChapterTitle_EscapesQuotes()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
@@ -183,7 +186,7 @@ public class PlaylistGeneratorChapterTests
     public void GenerateMasterPlaylist_MultipleChapters_SequentialIds()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
@@ -216,7 +219,7 @@ public class PlaylistGeneratorChapterTests
     public void GenerateMasterPlaylist_EmptyChapterTitle_GeneratesDefault()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
@@ -242,7 +245,7 @@ public class PlaylistGeneratorChapterTests
     public void GenerateMasterPlaylist_ChaptersWithoutChaptersOption_Ignored()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
@@ -265,7 +268,7 @@ public class PlaylistGeneratorChapterTests
     public void GenerateMasterPlaylist_ChapterDurationUsingNextChapterStart()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(

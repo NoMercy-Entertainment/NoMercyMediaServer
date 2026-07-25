@@ -48,17 +48,17 @@ public class EventBusProgressObserverTests
         {
             SetInstance(null);
 
-            EventBusProgressObserver observer = new(1, "Test Movie");
+            EventBusProgressObserver observer = new(jobId: 1, title: "Test Movie");
 
             EncodingProgress progress = new(
-                "test-id",
-                50.0,
-                TimeSpan.FromSeconds(10),
-                TimeSpan.FromSeconds(10),
-                30.0,
-                1.0,
-                "video",
-                "encode"
+                CorrelationId: "test-id",
+                PercentComplete: 50.0,
+                Elapsed: TimeSpan.FromSeconds(10),
+                EstimatedRemaining: TimeSpan.FromSeconds(10),
+                CurrentFps: 30.0,
+                CurrentSpeed: 1.0,
+                CurrentStage: "video",
+                CurrentOperation: "encode"
             );
 
             Exception? ex = Record.Exception(() => observer.OnProgress(progress));
@@ -92,7 +92,7 @@ public class EventBusProgressObserverTests
 
             EventBusProvider.Configure(mockBus.Object);
 
-            EventBusProgressObserver observer = new(42, "Action Movie");
+            EventBusProgressObserver observer = new(jobId: 42, title: "Action Movie");
             observer.OnStageStarted("VideoEncode");
 
             mockBus.Verify(
@@ -138,13 +138,13 @@ public class EventBusProgressObserverTests
 
             EventBusProvider.Configure(mockBus.Object);
 
-            EventBusProgressObserver observer = new(7, "Documentary");
+            EventBusProgressObserver observer = new(jobId: 7, title: "Documentary");
             EncodingError error = new(
-                EncodingErrorKind.ProcessCrashed,
-                "FFmpeg crashed",
-                null,
-                "VideoEncode",
-                false
+                Kind: EncodingErrorKind.ProcessCrashed,
+                Message: "FFmpeg crashed",
+                FfmpegStderr: null,
+                StageName: "VideoEncode",
+                Recoverable: false
             );
             observer.OnError(error);
 
@@ -173,10 +173,10 @@ public class EventBusProgressObserverTests
     public void OnProgress_WithRegistry_RegistersFirstSeenPid()
     {
         EncoderProcessRegistry registry = new();
-        EventBusProgressObserver observer = new(42, title: "Test", registry: registry);
+        EventBusProgressObserver observer = new(jobId: 42, title: "Test", registry: registry);
 
         EncodingProgress progress = new(
-            "c",
+            CorrelationId: "c",
             PercentComplete: 10.0,
             Elapsed: TimeSpan.FromSeconds(1),
             EstimatedRemaining: null,
@@ -196,10 +196,10 @@ public class EventBusProgressObserverTests
     public void OnProgress_IdempotentForSamePid_DoesNotGrowRegistry()
     {
         EncoderProcessRegistry registry = new();
-        EventBusProgressObserver observer = new(42, title: "Test", registry: registry);
+        EventBusProgressObserver observer = new(jobId: 42, title: "Test", registry: registry);
 
         EncodingProgress progress = new(
-            "c",
+            CorrelationId: "c",
             PercentComplete: 10.0,
             Elapsed: TimeSpan.FromSeconds(1),
             EstimatedRemaining: null,
@@ -223,7 +223,7 @@ public class EventBusProgressObserverTests
         EncoderProcessRegistry registry = new();
         registry.Register(42, 9876);
 
-        EventBusProgressObserver observer = new(42, title: "Test", registry: registry);
+        EventBusProgressObserver observer = new(jobId: 42, title: "Test", registry: registry);
         observer.OnCompleted();
 
         Assert.Empty(registry.GetProcessIds(42));
@@ -235,13 +235,13 @@ public class EventBusProgressObserverTests
         EncoderProcessRegistry registry = new();
         registry.Register(42, 9876);
 
-        EventBusProgressObserver observer = new(42, title: "Test", registry: registry);
+        EventBusProgressObserver observer = new(jobId: 42, title: "Test", registry: registry);
         EncodingError error = new(
-            EncodingErrorKind.ProcessCrashed,
-            "boom",
-            null,
-            "Execute",
-            false
+            Kind: EncodingErrorKind.ProcessCrashed,
+            Message: "boom",
+            FfmpegStderr: null,
+            StageName: "Execute",
+            Recoverable: false
         );
         observer.OnError(error);
 

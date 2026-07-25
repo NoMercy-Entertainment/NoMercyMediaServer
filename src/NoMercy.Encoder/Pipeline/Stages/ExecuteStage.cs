@@ -40,7 +40,9 @@ public class ExecuteStage(
     )
     {
         logger.LogInformation(
-            "[{CorrelationId}] Executing {Count} command(s)", [context.CorrelationId, input.Commands.Length]
+            "[{CorrelationId}] Executing {Count} command(s)",
+            context.CorrelationId,
+            input.Commands.Length
         );
 
         List<ExecutionResult> results = [];
@@ -74,9 +76,9 @@ public class ExecuteStage(
                 ExecutionResult result = await executor.ExecuteAsync(
                     cmd,
                     input.InputDuration,
-                    onProgress,
-                    context.CorrelationId,
-                    ct
+                    onProgress: onProgress,
+                    correlationId: context.CorrelationId,
+                    ct: ct
                 );
 
                 results.Add(result);
@@ -104,7 +106,10 @@ public class ExecuteStage(
                     }
 
                     logger.LogWarning(
-                        "[{CorrelationId}] Post-process command {Index} failed (non-fatal): exit={ExitCode}", [context.CorrelationId, i, result.ExitCode]
+                        "[{CorrelationId}] Post-process command {Index} failed (non-fatal): exit={ExitCode}",
+                        context.CorrelationId,
+                        i,
+                        result.ExitCode
                     );
                 }
             }
@@ -146,13 +151,15 @@ public class ExecuteStage(
             try
             {
                 if (Directory.Exists(fullTempDir))
-                    Directory.Delete(fullTempDir, true);
+                    Directory.Delete(fullTempDir, recursive: true);
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
                     ex,
-                    "[{CorrelationId}] Failed to delete DRM key temp directory {Directory}", [correlationId, fullTempDir]
+                    "[{CorrelationId}] Failed to delete DRM key temp directory {Directory}",
+                    correlationId,
+                    fullTempDir
                 );
             }
         }
@@ -171,7 +178,7 @@ public class ExecuteStage(
         try
         {
             JobCheckpoint checkpoint = new(
-                context.CorrelationId,
+                JobId: context.CorrelationId,
                 InputPath: context.InputPath ?? string.Empty,
                 OutputDirectory: context.OutputDirectory,
                 CompletedGroupIndices: [],
@@ -184,7 +191,10 @@ public class ExecuteStage(
             await checkpointStore.SaveAsync(checkpoint, ct);
 
             logger.LogWarning(
-                "[{CorrelationId}] Crash checkpoint saved at {OutputDirectory} — LastProgressMs={Ms}", [context.CorrelationId, context.OutputDirectory, lastProgressMs]
+                "[{CorrelationId}] Crash checkpoint saved at {OutputDirectory} — LastProgressMs={Ms}",
+                context.CorrelationId,
+                context.OutputDirectory,
+                lastProgressMs
             );
         }
         catch (Exception ex)

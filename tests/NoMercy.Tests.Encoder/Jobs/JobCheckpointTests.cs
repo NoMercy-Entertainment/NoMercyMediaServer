@@ -22,11 +22,11 @@ public class JobCheckpointTests
     public void JobCheckpoint_RoundTrips_ThroughJson()
     {
         JobCheckpoint checkpoint = new(
-            "job-abc-123",
-            "/media/source/movie.mkv",
-            "/output/movie",
-            [0, 1, 2],
-            new(2026, 1, 15, 10, 30, 0, DateTimeKind.Utc)
+            JobId: "job-abc-123",
+            InputPath: "/media/source/movie.mkv",
+            OutputDirectory: "/output/movie",
+            CompletedGroupIndices: [0, 1, 2],
+            LastUpdated: new(2026, 1, 15, 10, 30, 0, DateTimeKind.Utc)
         );
 
         string json = JsonConvert.SerializeObject(checkpoint);
@@ -44,11 +44,11 @@ public class JobCheckpointTests
     public void JobCheckpoint_WithNoCompletedGroups_IsValid()
     {
         JobCheckpoint checkpoint = new(
-            "fresh-job",
-            "/media/source/show.mkv",
-            "/output/show",
-            [],
-            DateTime.UtcNow
+            JobId: "fresh-job",
+            InputPath: "/media/source/show.mkv",
+            OutputDirectory: "/output/show",
+            CompletedGroupIndices: [],
+            LastUpdated: DateTime.UtcNow
         );
 
         checkpoint.CompletedGroupIndices.Should().BeEmpty();
@@ -61,11 +61,11 @@ public class JobCheckpointTests
         int[] indices = [3, 7, 12, 15];
 
         JobCheckpoint checkpoint = new(
-            "partial-job",
-            "/media/source/film.mkv",
-            "/output/film",
-            indices,
-            DateTime.UtcNow
+            JobId: "partial-job",
+            InputPath: "/media/source/film.mkv",
+            OutputDirectory: "/output/film",
+            CompletedGroupIndices: indices,
+            LastUpdated: DateTime.UtcNow
         );
 
         string json = JsonConvert.SerializeObject(checkpoint);
@@ -80,21 +80,21 @@ public class JobCheckpointTests
         Ulid profileId = Ulid.NewUlid();
 
         EncodingProfile profile = new(
-            profileId,
-            "HLS 1080p",
-            Container.HlsTs,
-            null,
-            [],
-            []
+            Id: profileId,
+            Name: "HLS 1080p",
+            Container: Container.HlsTs,
+            Video: null,
+            Audio: [],
+            Subtitles: []
         );
 
         EncodingJob job = new(
-            "encode-xyz-789",
-            "/media/source/movie.mkv",
-            "/output/hls/movie",
-            profile,
-            null,
-            DateTime.UtcNow
+            JobId: "encode-xyz-789",
+            InputPath: "/media/source/movie.mkv",
+            OutputDirectory: "/output/hls/movie",
+            Profile: profile,
+            Checkpoint: null,
+            CreatedAtUtc: DateTime.UtcNow
         );
 
         string json = JsonConvert.SerializeObject(job);
@@ -112,29 +112,29 @@ public class JobCheckpointTests
     public void EncodingJob_WithCheckpoint_RoundTrips_ThroughJson()
     {
         JobCheckpoint checkpoint = new(
-            "encode-xyz-789",
-            "/media/source/movie.mkv",
-            "/output/hls/movie",
-            [0],
-            new(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc)
+            JobId: "encode-xyz-789",
+            InputPath: "/media/source/movie.mkv",
+            OutputDirectory: "/output/hls/movie",
+            CompletedGroupIndices: [0],
+            LastUpdated: new(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc)
         );
 
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
-            "HLS 1080p",
-            Container.HlsTs,
-            null,
-            [],
-            []
+            Id: Ulid.NewUlid(),
+            Name: "HLS 1080p",
+            Container: Container.HlsTs,
+            Video: null,
+            Audio: [],
+            Subtitles: []
         );
 
         EncodingJob job = new(
-            "encode-xyz-789",
-            "/media/source/movie.mkv",
-            "/output/hls/movie",
-            profile,
-            checkpoint,
-            DateTime.UtcNow
+            JobId: "encode-xyz-789",
+            InputPath: "/media/source/movie.mkv",
+            OutputDirectory: "/output/hls/movie",
+            Profile: profile,
+            Checkpoint: checkpoint,
+            CreatedAtUtc: DateTime.UtcNow
         );
 
         string json = JsonConvert.SerializeObject(job);
@@ -155,11 +155,11 @@ public class JobCheckpointTests
     public void JobCheckpoint_NewFields_DefaultToSafeValues()
     {
         JobCheckpoint cp = new(
-            "j-1",
-            "/in/source.mkv",
-            "/out/j-1",
-            [],
-            DateTime.UtcNow
+            JobId: "j-1",
+            InputPath: "/in/source.mkv",
+            OutputDirectory: "/out/j-1",
+            CompletedGroupIndices: [],
+            LastUpdated: DateTime.UtcNow
         );
 
         cp.VariantId.Should().BeEmpty();
@@ -173,7 +173,7 @@ public class JobCheckpointTests
     {
         DateTime failedAt = new(2026, 4, 25, 12, 34, 56, DateTimeKind.Utc);
         JobCheckpoint original = new(
-            "j-1",
+            JobId: "j-1",
             InputPath: "/in/source.mkv",
             OutputDirectory: "/out/j-1",
             CompletedGroupIndices: [0, 1, 2],

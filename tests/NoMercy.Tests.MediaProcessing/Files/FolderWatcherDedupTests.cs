@@ -12,6 +12,7 @@
 using Moq;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.Storage;
+using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing.Files;
 
@@ -55,7 +56,7 @@ public class FolderWatcherDedupTests
         finally
         {
             watcher.Dispose();
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 }

@@ -50,7 +50,9 @@ public class HttpSourceFetcher(
         if (string.IsNullOrWhiteSpace(options.CoordinatorUrl))
         {
             logger.LogWarning(
-                "Task {TaskId} source {Path} is missing locally and no CoordinatorUrl configured", [task.TaskId, task.InputPath]
+                "Task {TaskId} source {Path} is missing locally and no CoordinatorUrl configured",
+                task.TaskId,
+                task.InputPath
             );
             return task.InputPath;
         }
@@ -63,7 +65,9 @@ public class HttpSourceFetcher(
         if (storage.Exists(cachedPath) && storage.SizeOrZero(cachedPath) > 0)
         {
             logger.LogInformation(
-                "Task {TaskId} reusing cached source at {Path}", [task.TaskId, cachedPath]
+                "Task {TaskId} reusing cached source at {Path}",
+                task.TaskId,
+                cachedPath
             );
             return cachedPath;
         }
@@ -100,7 +104,10 @@ public class HttpSourceFetcher(
         {
             string body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             logger.LogError(
-                "Coordinator returned {Status} fetching source for task {TaskId}: {Body}", [(int)response.StatusCode, task.TaskId, body.Length > 500 ? body[..500] : body]
+                "Coordinator returned {Status} fetching source for task {TaskId}: {Body}",
+                (int)response.StatusCode,
+                task.TaskId,
+                body.Length > 500 ? body[..500] : body
             );
             throw new InvalidOperationException(
                 $"Source fetch failed: HTTP {(int)response.StatusCode}"
@@ -110,13 +117,16 @@ public class HttpSourceFetcher(
         await using (
             Stream source = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false)
         )
-        await using (Stream target = await storage.OpenWriteAsync(cachedPath, true, ct))
+        await using (Stream target = await storage.OpenWriteAsync(cachedPath, overwrite: true, ct))
         {
             await source.CopyToAsync(target, ct).ConfigureAwait(false);
         }
 
         logger.LogInformation(
-            "Task {TaskId} source fetched to {Path} ({Bytes} bytes)", [task.TaskId, cachedPath, storage.SizeOrZero(cachedPath)]
+            "Task {TaskId} source fetched to {Path} ({Bytes} bytes)",
+            task.TaskId,
+            cachedPath,
+            storage.SizeOrZero(cachedPath)
         );
 
         return cachedPath;

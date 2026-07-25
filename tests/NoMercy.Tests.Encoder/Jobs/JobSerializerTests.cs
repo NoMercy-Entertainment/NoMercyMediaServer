@@ -140,56 +140,57 @@ public class JobSerializerTests
     private static EncodingJob CreateTestJob()
     {
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
-            "test-profile",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                23,
-                0,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.0",
-                null,
-                8,
-                null,
-                0,
-                false,
-                ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-                ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            Id: Ulid.NewUlid(),
+            Name: "test-profile",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 0,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.0",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 0,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
             ),
+            Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                    ":type:_:language:_:codec:/:type:_:language:_:codec:"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            [],
-            null
+            Subtitles: [],
+            Thumbnails: null
         );
 
         return new(
-            "job-123",
-            "/media/video.mkv",
-            "/output/encoded",
-            profile,
-            null,
-            DateTime.UtcNow
+            JobId: "job-123",
+            InputPath: "/media/video.mkv",
+            OutputDirectory: "/output/encoded",
+            Profile: profile,
+            Checkpoint: null,
+            CreatedAtUtc: DateTime.UtcNow
         );
     }
 }

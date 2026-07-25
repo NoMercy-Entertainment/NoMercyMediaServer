@@ -71,11 +71,11 @@ public class DashSinglePassStrategyTests
         // the actual ffmpeg invocation. Verify pass-through arguments.
         Mock<IEncoder> encoder = new();
         EncodingResult expected = new(
-            true,
-            "/out",
-            TimeSpan.FromSeconds(1),
-            null,
-            new(1024, 2.0, 24.0, "libx264", null)
+            Success: true,
+            OutputPath: "/out",
+            Duration: TimeSpan.FromSeconds(1),
+            Error: null,
+            Metrics: new(1024, 2.0, 24.0, "libx264", null)
         );
         encoder
             .Setup(e =>
@@ -94,22 +94,22 @@ public class DashSinglePassStrategyTests
         );
 
         EncodingRequest request = new(
-            "/media/test.mkv",
-            "/out",
-            new(
-                Ulid.NewUlid(),
-                "DASH 1080p",
-                Container.Dash,
-                null,
-                [],
-                []
+            InputPath: "/media/test.mkv",
+            OutputDirectory: "/out",
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "DASH 1080p",
+                Container: Container.Dash,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 
         EncodingResult result = await strategy.EncodeAsync(
             request,
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         result.Should().BeSameAs(expected);
@@ -127,15 +127,15 @@ public class DashSinglePassStrategyTests
     // ── EstimateVideoCost banding (private — tested via Decompose) ───────────
 
     [Theory]
-    [InlineData([3840, 8])] // 4K → 8 units
-    [InlineData([4096, 8])] // 4K DCI → 8 units (>= 3840)
-    [InlineData([1920, 4])] // 1080p → 4 units
-    [InlineData([2560, 4])] // 1440p → 4 units (>= 1920, <3840)
-    [InlineData([1280, 2])] // 720p → 2 units
-    [InlineData([1600, 2])] // 900p → 2 units (>= 1280, <1920)
-    [InlineData([854, 1])] // 480p → 1 unit
-    [InlineData([640, 1])] // 360p → 1 unit
-    [InlineData([0, 1])] // degenerate → 1 unit (default branch)
+    [InlineData(3840, 8)] // 4K → 8 units
+    [InlineData(4096, 8)] // 4K DCI → 8 units (>= 3840)
+    [InlineData(1920, 4)] // 1080p → 4 units
+    [InlineData(2560, 4)] // 1440p → 4 units (>= 1920, <3840)
+    [InlineData(1280, 2)] // 720p → 2 units
+    [InlineData(1600, 2)] // 900p → 2 units (>= 1280, <1920)
+    [InlineData(854, 1)] // 480p → 1 unit
+    [InlineData(640, 1)] // 360p → 1 unit
+    [InlineData(0, 1)] // degenerate → 1 unit (default branch)
     public void Decompose_video_cost_banding_matches_width(int width, int expectedCost)
     {
         // Cost units gate dispatcher concurrency — wrong banding = wrong bundle
@@ -147,11 +147,11 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
-            [Video(width, Math.Max(180, width * 9 / 16))],
-            [],
-            [],
-            null
+            Format: OutputFormat.Dash,
+            VideoOutputs: [Video(width: width, height: Math.Max(180, width * 9 / 16))],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask video = strategy
@@ -173,11 +173,11 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
-            [Video(1920, height: 1080, convertHdrToSdr: true)],
-            [],
-            [],
-            null
+            Format: OutputFormat.Dash,
+            VideoOutputs: [Video(width: 1920, height: 1080, convertHdrToSdr: true)],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask video = strategy
@@ -199,15 +199,16 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
+            Format: OutputFormat.Dash,
+            VideoOutputs:
             [
-                Video(1920, 1080, "libx264"),
-                Video(1280, 720, "libx264"),
-                Video(854, 480, "libx264"),
+                Video(width: 1920, height: 1080, encoderName: "libx264"),
+                Video(width: 1280, height: 720, encoderName: "libx264"),
+                Video(width: 854, height: 480, encoderName: "libx264"),
             ],
-            [],
-            [],
-            null
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] videoTasks = strategy
@@ -232,21 +233,22 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
-            [],
+            Format: OutputFormat.Dash,
+            VideoOutputs: [],
+            AudioOutputs:
             [
                 new(
-                    "aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    "fre",
-                    "[a0]"
+                    EncoderName: "aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: "fre",
+                    MapLabel: "[a0]"
                 ),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask audio = strategy
@@ -268,21 +270,22 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
-            [],
+            Format: OutputFormat.Dash,
+            VideoOutputs: [],
+            AudioOutputs:
             [
                 new(
-                    "aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    null,
-                    "[a0]"
+                    EncoderName: "aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: null,
+                    MapLabel: "[a0]"
                 ),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask audio = strategy
@@ -301,19 +304,20 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
-            [],
-            [],
+            Format: OutputFormat.Dash,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs:
             [
                 new(
-                    SubtitleCodecType.WebVtt,
-                    StreamAction.Transcode,
-                    null,
-                    0,
-                    "[s0]"
+                    OutputCodec: SubtitleCodecType.WebVtt,
+                    Action: StreamAction.Transcode,
+                    Language: null,
+                    SourceIndex: 0,
+                    MapLabel: "[s0]"
                 ),
             ],
-            null
+            Thumbnails: null
         );
 
         DecomposedTask sub = strategy
@@ -333,11 +337,11 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
-            [],
-            [],
-            [Subtitle("eng", 0), Subtitle("fre", 1), Subtitle("ger", 2)],
-            null
+            Format: OutputFormat.Dash,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [Subtitle("eng", 0), Subtitle("fre", 1), Subtitle("ger", 2)],
+            Thumbnails: null
         );
 
         DecomposedTask[] subs = strategy
@@ -346,8 +350,8 @@ public class DashSinglePassStrategyTests
             .ToArray();
 
         subs.Should().HaveCount(3);
-        subs.Select(s => s.TaskId).Should().Equal(["g-sub-0", "g-sub-1", "g-sub-2"]);
-        subs.Select(s => s.Label).Should().Equal(["sub eng", "sub fre", "sub ger"]);
+        subs.Select(s => s.TaskId).Should().Equal("g-sub-0", "g-sub-1", "g-sub-2");
+        subs.Select(s => s.Label).Should().Equal("sub eng", "sub fre", "sub ger");
     }
 
     // ── Chapter thumbs branch ────────────────────────────────────────────────
@@ -363,7 +367,7 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
+            Format: OutputFormat.Dash,
             VideoOutputs: [Video()],
             AudioOutputs: [],
             SubtitleOutputs: [],
@@ -400,7 +404,7 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
+            Format: OutputFormat.Dash,
             VideoOutputs: [Video()],
             AudioOutputs: [],
             SubtitleOutputs: [],
@@ -428,7 +432,7 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
+            Format: OutputFormat.Dash,
             VideoOutputs: [Video()],
             AudioOutputs: [],
             SubtitleOutputs: [],
@@ -455,7 +459,7 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
+            Format: OutputFormat.Dash,
             VideoOutputs: [Video()],
             AudioOutputs: [],
             SubtitleOutputs: [],
@@ -485,11 +489,11 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
-            [],
-            [],
-            [],
-            null
+            Format: OutputFormat.Dash,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] tasks = strategy.Decompose(plan, "g");
@@ -509,18 +513,18 @@ public class DashSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Dash,
+            Format: OutputFormat.Dash,
             VideoOutputs: [Video()],
             AudioOutputs:
             [
                 new(
-                    "aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    "eng",
-                    "[a0]"
+                    EncoderName: "aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: "eng",
+                    MapLabel: "[a0]"
                 ),
             ],
             SubtitleOutputs: [Subtitle("eng", 0)],
@@ -535,7 +539,11 @@ public class DashSinglePassStrategyTests
         tasks
             .Select(t => t.Kind)
             .Should()
-            .Equal([EncodeTaskKind.Video, EncodeTaskKind.Audio, EncodeTaskKind.Subtitle, EncodeTaskKind.Chapters]
+            .Equal(
+                EncodeTaskKind.Video,
+                EncodeTaskKind.Audio,
+                EncodeTaskKind.Subtitle,
+                EncodeTaskKind.Chapters
             );
     }
 
@@ -548,18 +556,18 @@ public class DashSinglePassStrategyTests
         bool convertHdrToSdr = false
     ) =>
         new(
-            width,
-            height,
-            encoderName,
-            23,
-            0,
-            "medium",
-            "high",
-            "4.0",
-            false,
-            "yuv420p",
-            "[v0]",
-            []
+            Width: width,
+            Height: height,
+            EncoderName: encoderName,
+            Crf: 23,
+            BitrateKbps: 0,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.0",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "[v0]",
+            ExtraFlags: []
         )
         {
             ConvertHdrToSdr = convertHdrToSdr,
@@ -567,10 +575,10 @@ public class DashSinglePassStrategyTests
 
     private static SubtitleOutputPlan Subtitle(string? language, int sourceIndex) =>
         new(
-            SubtitleCodecType.WebVtt,
-            StreamAction.Transcode,
-            language,
-            sourceIndex,
-            $"[s{sourceIndex}]"
+            OutputCodec: SubtitleCodecType.WebVtt,
+            Action: StreamAction.Transcode,
+            Language: language,
+            SourceIndex: sourceIndex,
+            MapLabel: $"[s{sourceIndex}]"
         );
 }

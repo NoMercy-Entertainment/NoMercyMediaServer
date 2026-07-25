@@ -67,7 +67,7 @@ public class WhisperTranscriberTests
 
         await transcriber
             .Invoking(t =>
-                t.TranscribeAsync(InputPath, 0, "eng", null, null, default)
+                t.TranscribeAsync(InputPath, 0, "eng", options_: null, progress: null, ct: default)
             )
             .Should()
             .ThrowAsync<InvalidOperationException>()
@@ -94,7 +94,7 @@ public class WhisperTranscriberTests
 
         await transcriber
             .Invoking(t =>
-                t.TranscribeAsync(InputPath, 0, "eng", null, null, default)
+                t.TranscribeAsync(InputPath, 0, "eng", options_: null, progress: null, ct: default)
             )
             .Should()
             .ThrowAsync<FileNotFoundException>()
@@ -113,7 +113,7 @@ public class WhisperTranscriberTests
         };
         Mock<IStorage> storage = StorageMock(overridePath);
         Mock<IProcessRunner> processRunner = SuccessProcess();
-        InMemoryStream(storage, GetExpectedOutputPath("eng"), "");
+        InMemoryStream(storage, GetExpectedOutputPath("eng"), srtContent: "");
 
         WhisperTranscriber transcriber = new(
             options,
@@ -126,9 +126,9 @@ public class WhisperTranscriberTests
             InputPath,
             0,
             "eng",
-            new(overridePath),
-            null,
-            default
+            options_: new(ModelPath: overridePath),
+            progress: null,
+            ct: default
         );
 
         // Verify Exists was called with the OVERRIDE, not the default path.
@@ -150,7 +150,7 @@ public class WhisperTranscriberTests
         InMemoryStream(
             storage,
             GetExpectedOutputPath("eng"),
-            "1\n00:00:01,000 --> 00:00:02,000\nhi\n"
+            srtContent: "1\n00:00:01,000 --> 00:00:02,000\nhi\n"
         );
 
         string[]? capturedArgs = null;
@@ -168,7 +168,7 @@ public class WhisperTranscriberTests
                 (_, args, _, _) => capturedArgs = args
             )
             .ReturnsAsync(
-                new ProcessResult(0, "", "", TimeSpan.Zero)
+                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         WhisperTranscriber transcriber = new(
@@ -182,16 +182,16 @@ public class WhisperTranscriberTests
             InputPath,
             3,
             "fre",
-            null,
-            null,
-            default
+            options_: null,
+            progress: null,
+            ct: default
         );
 
         capturedArgs.Should().NotBeNull();
-        capturedArgs!.Should().ContainInOrder(["-i", InputPath]);
-        capturedArgs.Should().ContainInOrder(["-map", "0:a:3"]); // streamIndex 3
+        capturedArgs!.Should().ContainInOrder("-i", InputPath);
+        capturedArgs.Should().ContainInOrder("-map", "0:a:3"); // streamIndex 3
         capturedArgs.Should().Contain("-vn"); // discard video
-        capturedArgs.Should().ContainInOrder(["-f", "null"]); // discard ffmpeg's own output
+        capturedArgs.Should().ContainInOrder("-f", "null"); // discard ffmpeg's own output
         int afIndex = Array.IndexOf(capturedArgs, "-af");
         afIndex.Should().BeGreaterThan(-1);
         string filter = capturedArgs[afIndex + 1];
@@ -211,7 +211,7 @@ public class WhisperTranscriberTests
             WhisperModelPath = ModelPath,
         };
         Mock<IStorage> storage = StorageMock(ModelPath);
-        InMemoryStream(storage, GetExpectedOutputPath("jpn"), "");
+        InMemoryStream(storage, GetExpectedOutputPath("jpn"), srtContent: "");
 
         string[]? capturedArgs = null;
         Mock<IProcessRunner> processRunner = new();
@@ -228,7 +228,7 @@ public class WhisperTranscriberTests
                 (_, args, _, _) => capturedArgs = args
             )
             .ReturnsAsync(
-                new ProcessResult(0, "", "", TimeSpan.Zero)
+                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         WhisperTranscriber transcriber = new(
@@ -242,9 +242,9 @@ public class WhisperTranscriberTests
             InputPath,
             0,
             "jpn",
-            new(ModelPath, TranslateToEnglish: true),
-            null,
-            default
+            options_: new(ModelPath: ModelPath, TranslateToEnglish: true),
+            progress: null,
+            ct: default
         );
 
         int afIndex = Array.IndexOf(capturedArgs!, "-af");
@@ -266,7 +266,7 @@ public class WhisperTranscriberTests
             WhisperModelPath = windowsModelPath,
         };
         Mock<IStorage> storage = StorageMock(windowsModelPath);
-        InMemoryStream(storage, GetExpectedOutputPath("eng"), "");
+        InMemoryStream(storage, GetExpectedOutputPath("eng"), srtContent: "");
 
         string[]? capturedArgs = null;
         Mock<IProcessRunner> processRunner = new();
@@ -283,7 +283,7 @@ public class WhisperTranscriberTests
                 (_, args, _, _) => capturedArgs = args
             )
             .ReturnsAsync(
-                new ProcessResult(0, "", "", TimeSpan.Zero)
+                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         WhisperTranscriber transcriber = new(
@@ -297,9 +297,9 @@ public class WhisperTranscriberTests
             InputPath,
             0,
             "eng",
-            null,
-            null,
-            default
+            options_: null,
+            progress: null,
+            ct: default
         );
 
         int afIndex = Array.IndexOf(capturedArgs!, "-af");
@@ -320,7 +320,7 @@ public class WhisperTranscriberTests
             WhisperModelPath = windowsModelPath,
         };
         Mock<IStorage> storage = StorageMock(windowsModelPath);
-        InMemoryStream(storage, GetExpectedOutputPath("eng"), "");
+        InMemoryStream(storage, GetExpectedOutputPath("eng"), srtContent: "");
 
         string[]? capturedArgs = null;
         Mock<IProcessRunner> processRunner = new();
@@ -337,7 +337,7 @@ public class WhisperTranscriberTests
                 (_, args, _, _) => capturedArgs = args
             )
             .ReturnsAsync(
-                new ProcessResult(0, "", "", TimeSpan.Zero)
+                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         WhisperTranscriber transcriber = new(
@@ -351,9 +351,9 @@ public class WhisperTranscriberTests
             InputPath,
             0,
             "eng",
-            null,
-            null,
-            default
+            options_: null,
+            progress: null,
+            ct: default
         );
 
         int afIndex = Array.IndexOf(capturedArgs!, "-af");
@@ -384,10 +384,10 @@ public class WhisperTranscriberTests
             )
             .ReturnsAsync(
                 new ProcessResult(
-                    137,
-                    "",
-                    "killed",
-                    TimeSpan.Zero
+                    ExitCode: 137,
+                    StdOut: "",
+                    StdErr: "killed",
+                    Duration: TimeSpan.Zero
                 )
             );
 
@@ -400,7 +400,7 @@ public class WhisperTranscriberTests
 
         await transcriber
             .Invoking(t =>
-                t.TranscribeAsync(InputPath, 0, "eng", null, null, default)
+                t.TranscribeAsync(InputPath, 0, "eng", options_: null, progress: null, ct: default)
             )
             .Should()
             .ThrowAsync<InvalidOperationException>()
@@ -435,7 +435,7 @@ public class WhisperTranscriberTests
 
         await transcriber
             .Invoking(t =>
-                t.TranscribeAsync(InputPath, 0, "eng", null, null, default)
+                t.TranscribeAsync(InputPath, 0, "eng", options_: null, progress: null, ct: default)
             )
             .Should()
             .ThrowAsync<InvalidOperationException>()
@@ -469,7 +469,7 @@ public class WhisperTranscriberTests
             WhisperModelPath = ModelPath,
         };
         Mock<IStorage> storage = StorageMock(ModelPath);
-        InMemoryStream(storage, outputPath, srt);
+        InMemoryStream(storage, outputPath, srtContent: srt);
         Mock<IProcessRunner> processRunner = SuccessProcess();
 
         WhisperTranscriber transcriber = new(
@@ -483,9 +483,9 @@ public class WhisperTranscriberTests
             InputPath,
             0,
             "eng",
-            null,
-            null,
-            default
+            options_: null,
+            progress: null,
+            ct: default
         );
 
         track.FilePath.Should().Be(outputPath);
@@ -506,7 +506,7 @@ public class WhisperTranscriberTests
             WhisperModelPath = ModelPath,
         };
         Mock<IStorage> storage = StorageMock(ModelPath);
-        InMemoryStream(storage, outputPath, emptySrt);
+        InMemoryStream(storage, outputPath, srtContent: emptySrt);
         Mock<IProcessRunner> processRunner = SuccessProcess();
 
         WhisperTranscriber transcriber = new(
@@ -520,9 +520,9 @@ public class WhisperTranscriberTests
             InputPath,
             0,
             "eng",
-            null,
-            null,
-            default
+            options_: null,
+            progress: null,
+            ct: default
         );
 
         track.CueCount.Should().Be(0);
@@ -539,7 +539,7 @@ public class WhisperTranscriberTests
             WhisperModelPath = ModelPath,
         };
         Mock<IStorage> storage = StorageMock(ModelPath);
-        InMemoryStream(storage, GetExpectedOutputPath("eng"), "");
+        InMemoryStream(storage, GetExpectedOutputPath("eng"), srtContent: "");
         Mock<IProcessRunner> processRunner = SuccessProcess();
         Mock<IProgressObserver> progress = new();
 
@@ -554,9 +554,9 @@ public class WhisperTranscriberTests
             InputPath,
             0,
             "eng",
-            null,
-            progress.Object,
-            default
+            options_: null,
+            progress: progress.Object,
+            ct: default
         );
 
         progress.Verify(
@@ -603,7 +603,7 @@ public class WhisperTranscriberTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(0, "", "", TimeSpan.Zero)
+                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
         return processRunner;
     }

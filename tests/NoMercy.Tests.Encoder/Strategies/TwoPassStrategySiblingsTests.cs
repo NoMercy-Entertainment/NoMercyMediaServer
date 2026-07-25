@@ -46,7 +46,7 @@ public class TwoPassStrategySiblingsTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_outputDir))
-            Directory.Delete(_outputDir, true);
+            Directory.Delete(_outputDir, recursive: true);
         GC.SuppressFinalize(this);
     }
 
@@ -110,8 +110,8 @@ public class TwoPassStrategySiblingsTests : IDisposable
         IEncodingStrategy strategy = Build(format);
         EncodingResult result = await strategy.EncodeAsync(
             BuildRequest(format),
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         Assert.True(result.Success);
@@ -170,11 +170,11 @@ public class TwoPassStrategySiblingsTests : IDisposable
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out",
-                    TimeSpan.FromSeconds(1),
-                    null,
-                    new(1024, 2.0, 24.0, "libx264", null)
+                    Success: true,
+                    OutputPath: "/out",
+                    Duration: TimeSpan.FromSeconds(1),
+                    Error: null,
+                    Metrics: new(1024, 2.0, 24.0, "libx264", null)
                 )
             );
     }
@@ -209,10 +209,10 @@ public class TwoPassStrategySiblingsTests : IDisposable
 
     private EncodingRequest BuildRequest(OutputFormat format) =>
         new(
-            "/media/src.mkv",
-            _outputDir,
-            new(
-                Ulid.NewUlid(),
+            InputPath: "/media/src.mkv",
+            OutputDirectory: _outputDir,
+            Profile: new(
+                Id: Ulid.NewUlid(),
                 Name: $"{format} 2-pass",
                 Container: ToContainer(format),
                 Video: null,

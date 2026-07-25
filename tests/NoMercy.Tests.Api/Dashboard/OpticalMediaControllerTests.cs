@@ -48,16 +48,16 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
 
     private static LiveQuality MakeQuality() =>
         new(
-            "1080p",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "libx264",
-            false,
-            1.0,
-            true
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 1.0,
+            CanRealtime: true
         );
 
     private static Mock<ILiveSession> MakeSession(string sessionId = "test-session-id")
@@ -237,7 +237,7 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task PlayMedia_NoDisc_Returns400()
     {
         Mock<IDriveMonitor> driveMonitorMock = new();
-        driveMonitorMock.Setup(m => m.GetDrives()).Returns([MakeDrive(@"D:\", false)]);
+        driveMonitorMock.Setup(m => m.GetDrives()).Returns([MakeDrive(@"D:\", hasDisc: false)]);
 
         Mock<ILiveDiscSession> liveDiscSessionMock = new();
         Mock<ILiveStreamingService> liveStreamingServiceMock = new();

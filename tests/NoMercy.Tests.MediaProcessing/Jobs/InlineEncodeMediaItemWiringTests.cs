@@ -117,7 +117,7 @@ public class InlineEncodeMediaItemWiringTests
         );
         methodStart.Should().BeGreaterThan(0, "RunSinglePresetEncodeAsync must exist");
 
-        string window = ExtractMethodWindow(source, methodStart, 8000);
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 8000);
 
         int requestStart = window.IndexOf(
             "EncodingRequest request = new(",
@@ -139,8 +139,8 @@ public class InlineEncodeMediaItemWiringTests
             .Contain(
                 "MediaItem:",
                 "the request that reaches RunInlineAsync (and DecomposeAsync) must carry "
-                         + "MediaItem so the inline Whole-task path resolves a BundleLayout and "
-                         + "writes manifest.json/reconstruction.json"
+                    + "MediaItem so the inline Whole-task path resolves a BundleLayout and "
+                    + "writes manifest.json/reconstruction.json"
             );
 
         requestConstruction
@@ -148,7 +148,7 @@ public class InlineEncodeMediaItemWiringTests
             .NotContain(
                 "Options:",
                 "this request must NOT set EncodingOptions.EnableMetadataInjection — "
-                         + "attaching MediaItem here must never change the emitted ffmpeg command"
+                    + "attaching MediaItem here must never change the emitted ffmpeg command"
             );
     }
 
@@ -168,7 +168,7 @@ public class InlineEncodeMediaItemWiringTests
         );
         methodStart.Should().BeGreaterThan(0, "RunMergedEncodeAsync must exist");
 
-        string window = ExtractMethodWindow(source, methodStart, 4000);
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 4000);
 
         int requestStart = window.IndexOf("new EncodingRequest(", StringComparison.Ordinal);
         requestStart
@@ -185,7 +185,7 @@ public class InlineEncodeMediaItemWiringTests
             .Contain(
                 "MediaItem:",
                 "every request in a merged run must carry MediaItem so DecomposeMergedAsync's "
-                         + "plans resolve a BundleLayout the same way a single-preset run does"
+                    + "plans resolve a BundleLayout the same way a single-preset run does"
             );
     }
 
@@ -203,7 +203,7 @@ public class InlineEncodeMediaItemWiringTests
         );
         methodStart.Should().BeGreaterThan(0, "HandleFinalizeAsync must exist");
 
-        string window = ExtractMethodWindow(source, methodStart, 8000);
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 8000);
 
         window
             .Should()

@@ -162,7 +162,7 @@ public class TonemapSelectorOptionsTests
         // callers that don't have IStorage available still get a usable plan.
         HdrOptions options = new("hable", 100, "C:/luts/film.cube");
 
-        TonemapPlan plan = await _selector.BuildAsync(options, null, _decisions, null);
+        TonemapPlan plan = await _selector.BuildAsync(options, null, _decisions, storage: null);
 
         plan.LutFilterChain.Should().BeNull();
         plan.FilterStringFragment.Should().Contain("tonemap=hable");

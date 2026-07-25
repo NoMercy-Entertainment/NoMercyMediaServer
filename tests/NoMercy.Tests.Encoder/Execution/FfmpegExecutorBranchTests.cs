@@ -53,14 +53,18 @@ public class FfmpegExecutorBranchTests
     // ── ClassifyError keyword table ──────────────────────────────────────────
 
     [Theory]
-    [InlineData(["No such file or directory", EncodingErrorKind.InputNotFound, false])]
-    [InlineData(["Invalid data found when processing input", EncodingErrorKind.InputCorrupt, false])]
-    [InlineData(["Codec not currently supported in container", EncodingErrorKind.CodecUnavailable, false])]
-    [InlineData(["Encoder libx265 not found", EncodingErrorKind.CodecUnavailable, false])]
-    [InlineData(["Device 'cuda' cannot allocate", EncodingErrorKind.HardwareFailure, true])]
-    [InlineData(["No space left on device", EncodingErrorKind.DiskFull, false])]
-    [InlineData(["Out of memory", EncodingErrorKind.HardwareFailure, true])]
-    [InlineData(["Something we have never seen", EncodingErrorKind.ProcessCrashed, true])]
+    [InlineData("No such file or directory", EncodingErrorKind.InputNotFound, false)]
+    [InlineData("Invalid data found when processing input", EncodingErrorKind.InputCorrupt, false)]
+    [InlineData(
+        "Codec not currently supported in container",
+        EncodingErrorKind.CodecUnavailable,
+        false
+    )]
+    [InlineData("Encoder libx265 not found", EncodingErrorKind.CodecUnavailable, false)]
+    [InlineData("Device 'cuda' cannot allocate", EncodingErrorKind.HardwareFailure, true)]
+    [InlineData("No space left on device", EncodingErrorKind.DiskFull, false)]
+    [InlineData("Out of memory", EncodingErrorKind.HardwareFailure, true)]
+    [InlineData("Something we have never seen", EncodingErrorKind.ProcessCrashed, true)]
     public async Task Classify_error_per_keyword_table(
         string stderr,
         EncodingErrorKind expectedKind,
@@ -304,7 +308,7 @@ public class FfmpegExecutorBranchTests
             _executor.ExecuteAsync(
                 BuildSimpleCommand(),
                 TimeSpan.FromSeconds(60),
-                null
+                onProgress: null
             );
         await act.Should().NotThrowAsync();
     }
@@ -352,8 +356,8 @@ public class FfmpegExecutorBranchTests
 
         await _executor.ExecuteAsync(
             BuildSimpleCommand(),
-            TimeSpan.FromSeconds(1),
-            p => lastProgress = p
+            inputDuration: TimeSpan.FromSeconds(1),
+            onProgress: p => lastProgress = p
         );
 
         lastProgress.Should().NotBeNull();
@@ -401,8 +405,8 @@ public class FfmpegExecutorBranchTests
 
         await _executor.ExecuteAsync(
             BuildSimpleCommand(),
-            TimeSpan.Zero,
-            p => lastProgress = p
+            inputDuration: TimeSpan.Zero,
+            onProgress: p => lastProgress = p
         );
 
         lastProgress.Should().NotBeNull();
@@ -454,7 +458,7 @@ public class FfmpegExecutorBranchTests
         await _executor.ExecuteAsync(
             BuildSimpleCommand(),
             TimeSpan.FromMinutes(1),
-            p => lastProgress = p
+            onProgress: p => lastProgress = p
         );
 
         lastProgress!.Bitrate.Should().Be("N/A");

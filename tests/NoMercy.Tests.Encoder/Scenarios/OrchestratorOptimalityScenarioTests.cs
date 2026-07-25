@@ -56,21 +56,21 @@ public class OrchestratorOptimalityScenarioTests
 
     private static EncodingRequest BuildRequest(string presetName, Container container) =>
         new(
-            "/media/test.mkv",
-            "out",
-            new(
-                Ulid.NewUlid(),
-                presetName,
-                container,
-                null,
-                [],
-                []
+            InputPath: "/media/test.mkv",
+            OutputDirectory: "out",
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: presetName,
+                Container: container,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 
     private static VideoOutputPlan CopyVideo(int index = 0) =>
         new(
-            1920,
+            Width: 1920,
             Height: 1080,
             EncoderName: "copy",
             Crf: 0,
@@ -93,7 +93,7 @@ public class OrchestratorOptimalityScenarioTests
         string tonemapFilterChain = ""
     ) =>
         new(
-            width,
+            Width: width,
             Height: height,
             EncoderName: "libx265",
             Crf: 23,
@@ -112,22 +112,22 @@ public class OrchestratorOptimalityScenarioTests
 
     private static AudioOutputPlan MakeAudio(string language, string encoderName = "aac") =>
         new(
-            encoderName,
-            128,
-            2,
-            48000,
-            StreamAction.Transcode,
-            language,
-            "[a0]"
+            EncoderName: encoderName,
+            BitrateKbps: 128,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: language,
+            MapLabel: "[a0]"
         );
 
     private static SubtitleOutputPlan MakeSubtitle(string language) =>
         new(
-            SubtitleCodecType.WebVtt,
-            StreamAction.Extract,
-            language,
-            0,
-            null
+            OutputCodec: SubtitleCodecType.WebVtt,
+            Action: StreamAction.Extract,
+            Language: language,
+            SourceIndex: 0,
+            MapLabel: null
         );
 
     private static ThumbnailOutputPlan MakeThumbnails(
@@ -144,11 +144,11 @@ public class OrchestratorOptimalityScenarioTests
         ThumbnailOutputPlan? thumbnails = null
     ) =>
         new(
-            format,
-            videos,
-            audios ?? [],
-            subtitles ?? [],
-            thumbnails
+            Format: format,
+            VideoOutputs: videos,
+            AudioOutputs: audios ?? [],
+            SubtitleOutputs: subtitles ?? [],
+            Thumbnails: thumbnails
         );
 
     // ================================================================
@@ -166,11 +166,11 @@ public class OrchestratorOptimalityScenarioTests
             OutputFormat.Hls,
             [
                 TranscodeVideo(
-                    3840,
-                    2160,
-                    true,
-                    false,
-                    ""
+                    width: 3840,
+                    height: 2160,
+                    isHdrOutput: true,
+                    convertHdrToSdr: false,
+                    tonemapFilterChain: ""
                 ),
             ],
             [MakeAudio("eng")],
@@ -182,11 +182,11 @@ public class OrchestratorOptimalityScenarioTests
             OutputFormat.Hls,
             [
                 TranscodeVideo(
-                    1920,
-                    1080,
-                    false,
-                    true,
-                    "zscale=m=in_color_matrix=bt2020:min=bt709:dither=error_diffusion,tonemap=tonemap_algo=libplacebo:desat=0"
+                    width: 1920,
+                    height: 1080,
+                    isHdrOutput: false,
+                    convertHdrToSdr: true,
+                    tonemapFilterChain: "zscale=m=in_color_matrix=bt2020:min=bt709:dither=error_diffusion,tonemap=tonemap_algo=libplacebo:desat=0"
                 ),
             ],
             [MakeAudio("eng")],
@@ -234,7 +234,7 @@ public class OrchestratorOptimalityScenarioTests
 
         OutputPlan fourKPlan = MakePlan(
             OutputFormat.Hls,
-            [TranscodeVideo(3840, 2160, true)],
+            [TranscodeVideo(3840, 2160, isHdrOutput: true)],
             [MakeAudio("eng", "aac")],
             [MakeSubtitle("eng")],
             MakeThumbnails()
@@ -242,7 +242,7 @@ public class OrchestratorOptimalityScenarioTests
 
         OutputPlan sdrPlan = MakePlan(
             OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, false)],
+            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
             [MakeAudio("eng", "aac")],
             [MakeSubtitle("eng")],
             null
@@ -287,7 +287,7 @@ public class OrchestratorOptimalityScenarioTests
 
         OutputPlan eac3Plan = MakePlan(
             OutputFormat.Hls,
-            [TranscodeVideo(3840, 2160, true)],
+            [TranscodeVideo(3840, 2160, isHdrOutput: true)],
             [MakeAudio("eng", "eac3")],
             [],
             MakeThumbnails()
@@ -295,7 +295,7 @@ public class OrchestratorOptimalityScenarioTests
 
         OutputPlan aacPlan = MakePlan(
             OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, false)],
+            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
             [MakeAudio("eng", "aac")],
             [],
             null
@@ -341,7 +341,7 @@ public class OrchestratorOptimalityScenarioTests
         EncodingRequest request = BuildRequest("Solo", Container.HlsTs);
         OutputPlan plan = MakePlan(
             OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, false)],
+            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
             [MakeAudio("eng")],
             [MakeSubtitle("eng")],
             MakeThumbnails()
@@ -360,20 +360,20 @@ public class OrchestratorOptimalityScenarioTests
                 (OutputPlan p, string tag) =>
                     [
                         new DecomposedTask(
-                            $"{tag}-video-0",
-                            0,
-                            tag,
-                            EncodeTaskKind.Video,
-                            0,
-                            null
+                            TaskId: $"{tag}-video-0",
+                            ParentJobId: 0,
+                            GroupTag: tag,
+                            Kind: EncodeTaskKind.Video,
+                            OutputIndex: 0,
+                            Resources: null
                         ),
                         new DecomposedTask(
-                            $"{tag}-audio-0",
-                            0,
-                            tag,
-                            EncodeTaskKind.Audio,
-                            0,
-                            null
+                            TaskId: $"{tag}-audio-0",
+                            ParentJobId: 0,
+                            GroupTag: tag,
+                            Kind: EncodeTaskKind.Audio,
+                            OutputIndex: 0,
+                            Resources: null
                         ),
                     ]
             );
@@ -403,7 +403,7 @@ public class OrchestratorOptimalityScenarioTests
 
         OutputPlan fourKPlan = MakePlan(
             OutputFormat.Hls,
-            [TranscodeVideo(3840, 2160, true)],
+            [TranscodeVideo(3840, 2160, isHdrOutput: true)],
             [MakeAudio("eng")],
             [MakeSubtitle("eng")],
             MakeThumbnails()
@@ -411,7 +411,7 @@ public class OrchestratorOptimalityScenarioTests
 
         OutputPlan sdrPlan = MakePlan(
             OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, false)],
+            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
             [MakeAudio("eng")],
             [MakeSubtitle("eng")],
             null
@@ -447,20 +447,20 @@ public class OrchestratorOptimalityScenarioTests
                     return
                     [
                         new DecomposedTask(
-                            $"{tag}-video-0",
-                            0,
-                            tag,
-                            EncodeTaskKind.Video,
-                            0,
-                            null
+                            TaskId: $"{tag}-video-0",
+                            ParentJobId: 0,
+                            GroupTag: tag,
+                            Kind: EncodeTaskKind.Video,
+                            OutputIndex: 0,
+                            Resources: null
                         ),
                         new DecomposedTask(
-                            $"{tag}-video-1",
-                            0,
-                            tag,
-                            EncodeTaskKind.Video,
-                            1,
-                            null
+                            TaskId: $"{tag}-video-1",
+                            ParentJobId: 0,
+                            GroupTag: tag,
+                            Kind: EncodeTaskKind.Video,
+                            OutputIndex: 1,
+                            Resources: null
                         ),
                     ];
                 }
@@ -499,7 +499,7 @@ public class OrchestratorOptimalityScenarioTests
         DecomposedTask[] tasks =
         [
             new(
-                $"{GroupTag}-video-0",
+                TaskId: $"{GroupTag}-video-0",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -509,7 +509,7 @@ public class OrchestratorOptimalityScenarioTests
                 VideoEncoderName: "libx265"
             ),
             new(
-                $"{GroupTag}-video-1",
+                TaskId: $"{GroupTag}-video-1",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -523,17 +523,17 @@ public class OrchestratorOptimalityScenarioTests
         VideoOutputPlan hdrTranscode = TranscodeVideo(
             3840,
             2160,
-            true,
-            false,
-            ""
+            isHdrOutput: true,
+            convertHdrToSdr: false,
+            tonemapFilterChain: ""
         );
 
         VideoOutputPlan sdrTonemap = TranscodeVideo(
             1920,
             1080,
-            false,
-            true,
-            "zscale=m=in_color_matrix=bt2020:min=bt709:dither=error_diffusion"
+            isHdrOutput: false,
+            convertHdrToSdr: true,
+            tonemapFilterChain: "zscale=m=in_color_matrix=bt2020:min=bt709:dither=error_diffusion"
         );
 
         OutputPlan plan = MakePlan(
@@ -570,7 +570,7 @@ public class OrchestratorOptimalityScenarioTests
         DecomposedTask[] tasks =
         [
             new(
-                $"{GroupTag}-video-0",
+                TaskId: $"{GroupTag}-video-0",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -580,7 +580,7 @@ public class OrchestratorOptimalityScenarioTests
                 VideoEncoderName: "copy"
             ),
             new(
-                $"{GroupTag}-video-1",
+                TaskId: $"{GroupTag}-video-1",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -592,7 +592,7 @@ public class OrchestratorOptimalityScenarioTests
         ];
 
         VideoOutputPlan copyVideo = CopyVideo(0);
-        VideoOutputPlan transcodeVideo = TranscodeVideo(1920, 1080, false);
+        VideoOutputPlan transcodeVideo = TranscodeVideo(1920, 1080, isHdrOutput: false);
 
         OutputPlan plan = MakePlan(
             OutputFormat.Hls,
@@ -630,7 +630,7 @@ public class OrchestratorOptimalityScenarioTests
         DecomposedTask[] tasks =
         [
             new(
-                $"{GroupTag}-video-0",
+                TaskId: $"{GroupTag}-video-0",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -640,7 +640,7 @@ public class OrchestratorOptimalityScenarioTests
                 VideoEncoderName: "libx265"
             ),
             new(
-                $"{GroupTag}-video-1",
+                TaskId: $"{GroupTag}-video-1",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -650,7 +650,7 @@ public class OrchestratorOptimalityScenarioTests
                 VideoEncoderName: "libx265"
             ),
             new(
-                $"{GroupTag}-video-2",
+                TaskId: $"{GroupTag}-video-2",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -664,9 +664,9 @@ public class OrchestratorOptimalityScenarioTests
         OutputPlan plan = MakePlan(
             OutputFormat.Hls,
             [
-                TranscodeVideo(3840, 2160, true),
-                TranscodeVideo(1920, 1080, true),
-                TranscodeVideo(1280, 720, true),
+                TranscodeVideo(3840, 2160, isHdrOutput: true),
+                TranscodeVideo(1920, 1080, isHdrOutput: true),
+                TranscodeVideo(1280, 720, isHdrOutput: true),
             ],
             [MakeAudio("eng")],
             [MakeSubtitle("eng")],
@@ -785,7 +785,7 @@ public class OrchestratorOptimalityScenarioTests
         DecomposedTask[] tasks =
         [
             new(
-                $"{GroupTag}-video-0",
+                TaskId: $"{GroupTag}-video-0",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -795,7 +795,7 @@ public class OrchestratorOptimalityScenarioTests
                 VideoEncoderName: "libx265"
             ),
             new(
-                $"{GroupTag}-video-1",
+                TaskId: $"{GroupTag}-video-1",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -806,13 +806,13 @@ public class OrchestratorOptimalityScenarioTests
             ),
         ];
 
-        VideoOutputPlan hdrTranscode = TranscodeVideo(3840, 2160, true);
+        VideoOutputPlan hdrTranscode = TranscodeVideo(3840, 2160, isHdrOutput: true);
         VideoOutputPlan sdrTonemap = TranscodeVideo(
             1920,
             1080,
-            false,
-            true,
-            "zscale=m=in_color_matrix=bt2020:min=bt709"
+            isHdrOutput: false,
+            convertHdrToSdr: true,
+            tonemapFilterChain: "zscale=m=in_color_matrix=bt2020:min=bt709"
         );
 
         OutputPlan plan = MakePlan(
@@ -850,12 +850,12 @@ public class OrchestratorOptimalityScenarioTests
     [Fact]
     public void GroupByDecodeClass_GpuResourceRoutingTaggedOnNvencTask()
     {
-        ResourceRequirement gpuResource = new("gpu0", 1, 2);
+        ResourceRequirement gpuResource = new("gpu0", GpuSlots: 1, CpuThreads: 2);
 
         DecomposedTask[] tasks =
         [
             new(
-                $"{GroupTag}-video-0",
+                TaskId: $"{GroupTag}-video-0",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -868,7 +868,7 @@ public class OrchestratorOptimalityScenarioTests
 
         OutputPlan plan = MakePlan(
             OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, false)],
+            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
             [MakeAudio("eng")],
             [MakeSubtitle("eng")],
             MakeThumbnails()
@@ -896,7 +896,7 @@ public class OrchestratorOptimalityScenarioTests
         DecomposedTask[] tasks =
         [
             new(
-                $"{GroupTag}-video-0",
+                TaskId: $"{GroupTag}-video-0",
                 ParentJobId: 0,
                 GroupTag: GroupTag,
                 Kind: EncodeTaskKind.Video,
@@ -906,12 +906,12 @@ public class OrchestratorOptimalityScenarioTests
                 VideoEncoderName: "copy"
             ),
             new(
-                $"{GroupTag}-audio-0",
-                0,
-                GroupTag,
-                EncodeTaskKind.Audio,
-                0,
-                null
+                TaskId: $"{GroupTag}-audio-0",
+                ParentJobId: 0,
+                GroupTag: GroupTag,
+                Kind: EncodeTaskKind.Audio,
+                OutputIndex: 0,
+                Resources: null
             ),
         ];
 
@@ -946,7 +946,7 @@ public class OrchestratorOptimalityScenarioTests
 
         OutputPlan workingPlan = MakePlan(
             OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, false)],
+            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
             [MakeAudio("eng")],
             [MakeSubtitle("eng")],
             MakeThumbnails()

@@ -139,7 +139,7 @@ public class Av1CapabilityProbeTests
     {
         // nvidia-smi unavailable (exit != 0): default to allow so the probe-
         // and-log fallback at benchmark time gets a chance to surface failure.
-        IProcessRunner runner = BuildRunner(127, "");
+        IProcessRunner runner = BuildRunner(exitCode: 127, stdout: "");
         bool result = await BuildProbe(runner).SupportsAsync(GpuVendor.Nvidia, "GeForce");
         result.Should().BeTrue();
     }
@@ -147,7 +147,7 @@ public class Av1CapabilityProbeTests
     [Fact]
     public async Task SupportsAsync_NvidiaSmiEmptyOutput_DefaultsAllow()
     {
-        IProcessRunner runner = BuildRunner(0, "");
+        IProcessRunner runner = BuildRunner(exitCode: 0, stdout: "");
         bool result = await BuildProbe(runner).SupportsAsync(GpuVendor.Nvidia, "GeForce");
         result.Should().BeTrue();
     }
@@ -170,7 +170,7 @@ public class Av1CapabilityProbeTests
     }
 
     private static IProcessRunner BuildRunnerEmitting(string stdout) =>
-        BuildRunner(0, stdout);
+        BuildRunner(exitCode: 0, stdout: stdout);
 
     private static IProcessRunner BuildRunner(int exitCode, string stdout)
     {

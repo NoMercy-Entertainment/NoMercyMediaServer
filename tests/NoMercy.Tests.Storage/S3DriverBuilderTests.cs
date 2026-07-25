@@ -39,7 +39,7 @@ public sealed class S3DriverBuilderTests
     {
         S3DriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(FolderId, "s3", json, "");
+        Action act = () => builder.Build(FolderId, "s3", json, subPath: "");
 
         act.Should().Throw<ArgumentException>().WithMessage("*driver_config*");
     }
@@ -49,7 +49,7 @@ public sealed class S3DriverBuilderTests
     {
         S3DriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(FolderId, "s3", "{not json", "");
+        Action act = () => builder.Build(FolderId, "s3", "{not json", subPath: "");
 
         act.Should()
             .Throw<ArgumentException>()
@@ -61,7 +61,7 @@ public sealed class S3DriverBuilderTests
     {
         S3DriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(FolderId, "s3", "null", "");
+        Action act = () => builder.Build(FolderId, "s3", "null", subPath: "");
 
         act.Should().Throw<ArgumentException>().WithMessage("*null*");
     }
@@ -71,7 +71,7 @@ public sealed class S3DriverBuilderTests
     {
         S3DriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(FolderId, "s3", """{"region":"us-east-1"}""", "");
+        Action act = () => builder.Build(FolderId, "s3", """{"region":"us-east-1"}""", subPath: "");
 
         act.Should().Throw<ArgumentException>().WithMessage("*bucket*");
     }
@@ -81,7 +81,7 @@ public sealed class S3DriverBuilderTests
     {
         S3DriverBuilder builder = new(NullLogger.Instance);
 
-        Action act = () => builder.Build(FolderId, "s3", """{"bucket":"media"}""", "");
+        Action act = () => builder.Build(FolderId, "s3", """{"bucket":"media"}""", subPath: "");
 
         act.Should().Throw<ArgumentException>().WithMessage("*region*");
     }
@@ -99,7 +99,7 @@ public sealed class S3DriverBuilderTests
                 FolderId,
                 "r2",
                 """{"bucket":"media","region":"auto"}""",
-                ""
+                subPath: ""
             );
 
         act.Should()
@@ -113,14 +113,14 @@ public sealed class S3DriverBuilderTests
         // With no resolver at all, accessKey/secretKey stay null and the
         // "no credentials configured" guard must fire — the driver must
         // NEVER silently fall through to the AWS default credential chain.
-        S3DriverBuilder builder = new(NullLogger.Instance, null);
+        S3DriverBuilder builder = new(NullLogger.Instance, credentialResolver: null);
 
         Action act = () =>
             builder.Build(
                 FolderId,
                 "s3",
                 """{"bucket":"media","region":"us-east-1"}""",
-                ""
+                subPath: ""
             );
 
         act.Should().Throw<ArgumentException>().WithMessage("*no credentials configured*");
@@ -138,7 +138,7 @@ public sealed class S3DriverBuilderTests
                 FolderId,
                 "s3",
                 """{"bucket":"media","region":"us-east-1"}""",
-                ""
+                subPath: ""
             );
 
         act.Should().Throw<ArgumentException>().WithMessage("*no credentials configured*");
@@ -155,7 +155,7 @@ public sealed class S3DriverBuilderTests
             FolderId,
             "s3",
             """{"bucket":"media","region":"us-east-1","credentialsRef":"my-custom-ref"}""",
-            ""
+            subPath: ""
         );
 
         storage.Should().BeOfType<RemoteStorage>();
@@ -180,7 +180,7 @@ public sealed class S3DriverBuilderTests
             FolderId,
             "s3",
             """{"bucket":"media","region":"us-east-1","credentialsRef":"missing-ref"}""",
-            ""
+            subPath: ""
         );
 
         storage.Should().NotBeNull();
@@ -202,7 +202,7 @@ public sealed class S3DriverBuilderTests
             FolderId,
             "s3",
             """{"bucket":"media","region":"us-east-1"}""",
-            ""
+            subPath: ""
         );
 
         storage.Should().NotBeNull();
@@ -220,7 +220,7 @@ public sealed class S3DriverBuilderTests
             FolderId,
             "r2",
             """{"bucket":"media","region":"auto","endpoint":"https://accountid.r2.cloudflarestorage.com"}""",
-            ""
+            subPath: ""
         );
 
         storage.Should().BeOfType<RemoteStorage>();

@@ -52,7 +52,10 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
         int ffmpegPid = 0;
 
         logger.LogDebug(
-            "[{CorrelationId}] Executing: {Executable} {Args}", [correlationId, command.Executable, string.Join(" ", command.Arguments)]
+            "[{CorrelationId}] Executing: {Executable} {Args}",
+            correlationId,
+            command.Executable,
+            string.Join(" ", command.Arguments)
         );
 
         void OnStdOut(string line)
@@ -76,7 +79,9 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
             {
                 lastTotalSize = snapshot.TotalSizeBytes;
                 logger.LogDebug(
-                    "[{CorrelationId}] progress=end received, starting {Grace}s exit grace period", [correlationId, ExitGracePeriod.TotalSeconds]
+                    "[{CorrelationId}] progress=end received, starting {Grace}s exit grace period",
+                    correlationId,
+                    ExitGracePeriod.TotalSeconds
                 );
                 killCts.CancelAfter(ExitGracePeriod);
             }
@@ -104,7 +109,7 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 snapshot.Speed > 0 && inputDuration.TotalSeconds > 0
                     ? TimeSpan.FromSeconds(
                         (inputDuration.TotalSeconds - snapshot.OutTime.TotalSeconds)
-                               / snapshot.Speed
+                            / snapshot.Speed
                     )
                     : null;
 
@@ -117,19 +122,19 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 : "N/A";
 
             EncodingProgress progress = new(
-                correlationId ?? "",
-                percent,
-                stopwatch.Elapsed,
-                remaining,
-                snapshot.Fps,
-                snapshot.Speed,
-                "Execute",
-                null,
-                snapshot.BitrateKbps.HasValue ? (int)snapshot.BitrateKbps.Value : null,
-                bitrateStr,
-                ffmpegPid,
-                snapshot.OutTime.TotalSeconds,
-                inputDuration.TotalSeconds
+                CorrelationId: correlationId ?? "",
+                PercentComplete: percent,
+                Elapsed: stopwatch.Elapsed,
+                EstimatedRemaining: remaining,
+                CurrentFps: snapshot.Fps,
+                CurrentSpeed: snapshot.Speed,
+                CurrentStage: "Execute",
+                CurrentOperation: null,
+                BitrateKbps: snapshot.BitrateKbps.HasValue ? (int)snapshot.BitrateKbps.Value : null,
+                Bitrate: bitrateStr,
+                ProcessId: ffmpegPid,
+                CurrentTimeSeconds: snapshot.OutTime.TotalSeconds,
+                DurationSeconds: inputDuration.TotalSeconds
             );
 
             onProgress(progress);
@@ -153,38 +158,46 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
             if (result.IsSuccess)
             {
                 ExecutionMetrics metrics = new(
-                    sampleCount > 0 ? speedSum / sampleCount : 0,
-                    sampleCount > 0 ? fpsSum / sampleCount : 0,
-                    peakSpeed,
-                    peakFps,
-                    lastTotalSize
+                    AverageSpeed: sampleCount > 0 ? speedSum / sampleCount : 0,
+                    AverageFps: sampleCount > 0 ? fpsSum / sampleCount : 0,
+                    PeakSpeed: peakSpeed,
+                    PeakFps: peakFps,
+                    TotalSizeBytes: lastTotalSize
                 );
 
                 logger.LogInformation(
-                    "[{CorrelationId}] FFmpeg completed in {Duration} (avg {Speed:F2}x, {Fps:F1} fps)", [correlationId, stopwatch.Elapsed, metrics.AverageSpeed, metrics.AverageFps]
+                    "[{CorrelationId}] FFmpeg completed in {Duration} (avg {Speed:F2}x, {Fps:F1} fps)",
+                    correlationId,
+                    stopwatch.Elapsed,
+                    metrics.AverageSpeed,
+                    metrics.AverageFps
                 );
 
                 return new(
-                    true,
-                    0,
-                    result.StdErr,
-                    stopwatch.Elapsed,
-                    null,
-                    metrics
+                    Success: true,
+                    ExitCode: 0,
+                    StdErr: result.StdErr,
+                    Duration: stopwatch.Elapsed,
+                    Error: null,
+                    Metrics: metrics
                 );
             }
 
             EncodingError error = ClassifyError(result.StdErr, result.ExitCode);
             logger.LogError(
-                "[{CorrelationId}] FFmpeg failed: exit={ExitCode} error={ErrorKind}\nstderr: {StdErr}", [correlationId, result.ExitCode, error.Kind, result.StdErr]
+                "[{CorrelationId}] FFmpeg failed: exit={ExitCode} error={ErrorKind}\nstderr: {StdErr}",
+                correlationId,
+                result.ExitCode,
+                error.Kind,
+                result.StdErr
             );
 
             return new(
-                false,
-                result.ExitCode,
-                result.StdErr,
-                stopwatch.Elapsed,
-                error
+                Success: false,
+                ExitCode: result.ExitCode,
+                StdErr: result.StdErr,
+                Duration: stopwatch.Elapsed,
+                Error: error
             );
         }
         finally
@@ -213,11 +226,11 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
         };
 
         return new(
-            kind,
-            $"FFmpeg exited with code {exitCode}",
-            stderr.Length > 2000 ? stderr[^2000..] : stderr,
-            "Execute",
-            kind
+            Kind: kind,
+            Message: $"FFmpeg exited with code {exitCode}",
+            FfmpegStderr: stderr.Length > 2000 ? stderr[^2000..] : stderr,
+            StageName: "Execute",
+            Recoverable: kind
                 is EncodingErrorKind.HardwareFailure
                     or EncodingErrorKind.ProcessCrashed
         );

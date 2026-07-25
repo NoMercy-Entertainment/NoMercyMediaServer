@@ -18,6 +18,7 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.Distribution;
 
@@ -45,7 +46,7 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
     {
         try
         {
-            Directory.Delete(_dir, true);
+            Directory.Delete(_dir, recursive: true);
         }
         catch
         {
@@ -63,13 +64,13 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
 
     private JsonRemoteWorkerRegistry BuildRegistry() =>
         new(
-            new(),
-            _path,
-            MakeHttpClientFactory(),
-            _serializer,
-            _signingKey,
-            NullLogger<JsonRemoteWorkerRegistry>.Instance,
-            MakeStorage()
+            inner: new(),
+            filePath: _path,
+            httpClientFactory: MakeHttpClientFactory(),
+            serializer: _serializer,
+            signingKey: _signingKey,
+            logger: NullLogger<JsonRemoteWorkerRegistry>.Instance,
+            storage: MakeStorage()
         );
 
     private static IHttpClientFactory MakeHttpClientFactory()
@@ -87,13 +88,13 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
 
     private HttpRemoteWorker MakeWorker(string id, string baseUrl = "http://worker.test/") =>
         new(
-            id,
-            new(new NoOpHandler()) { BaseAddress = new(baseUrl) },
-            _serializer,
-            _signingKey,
-            new HardwareCapabilities([], 4),
-            new(0, 4, 0),
-            NullLogger<HttpRemoteWorker>.Instance
+            workerId: id,
+            http: new(new NoOpHandler()) { BaseAddress = new(baseUrl) },
+            serializer: _serializer,
+            signingKey: _signingKey,
+            initialCapabilities: new HardwareCapabilities([], 4),
+            initialBudget: new(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0),
+            logger: NullLogger<HttpRemoteWorker>.Instance
         );
 
     // ── Tests ────────────────────────────────────────────────────────────────
@@ -169,13 +170,13 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
     {
         // Path points at a file that doesn't exist.
         JsonRemoteWorkerRegistry sut = new(
-            new(),
-            Path.Combine(_dir, "nonexistent.json"),
-            MakeHttpClientFactory(),
-            _serializer,
-            _signingKey,
-            NullLogger<JsonRemoteWorkerRegistry>.Instance,
-            MakeStorage()
+            inner: new(),
+            filePath: Path.Combine(_dir, "nonexistent.json"),
+            httpClientFactory: MakeHttpClientFactory(),
+            serializer: _serializer,
+            signingKey: _signingKey,
+            logger: NullLogger<JsonRemoteWorkerRegistry>.Instance,
+            storage: MakeStorage()
         );
 
         sut.GetActiveWorkers().Should().BeEmpty();
@@ -210,9 +211,9 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
         // Should not throw — delegates to inner InMemoryRemoteWorkerRegistry.
         Action act = () =>
         {
-            sut.RecordTaskOutcome("tracked", false);
-            sut.RecordTaskOutcome("tracked", false);
-            sut.RecordTaskOutcome("tracked", false);
+            sut.RecordTaskOutcome("tracked", success: false);
+            sut.RecordTaskOutcome("tracked", success: false);
+            sut.RecordTaskOutcome("tracked", success: false);
         };
         act.Should().NotThrow();
 

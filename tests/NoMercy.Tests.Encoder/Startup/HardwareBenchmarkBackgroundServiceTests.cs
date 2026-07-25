@@ -26,8 +26,8 @@ public class HardwareBenchmarkBackgroundServiceTests
         Mock<IHardwareBenchmark> benchmark = new();
         HardwareBenchmarkBackgroundService sut = NewService(
             benchmark.Object,
-            false,
-            true
+            autoCalibrate: false,
+            startedNow: true
         );
 
         await sut.StartAsync(CancellationToken.None);
@@ -45,8 +45,8 @@ public class HardwareBenchmarkBackgroundServiceTests
 
         HardwareBenchmarkBackgroundService sut = NewService(
             benchmark.Object,
-            true,
-            true
+            autoCalibrate: true,
+            startedNow: true
         );
 
         await sut.StartAsync(CancellationToken.None);
@@ -70,9 +70,9 @@ public class HardwareBenchmarkBackgroundServiceTests
 
         HardwareBenchmarkBackgroundService sut = NewService(
             benchmark.Object,
-            true,
-            true,
-            probe.Object
+            autoCalibrate: true,
+            startedNow: true,
+            probe: probe.Object
         );
 
         await sut.StartAsync(CancellationToken.None);
@@ -100,8 +100,8 @@ public class HardwareBenchmarkBackgroundServiceTests
 
         HardwareBenchmarkBackgroundService sut = NewService(
             benchmark.Object,
-            true,
-            true
+            autoCalibrate: true,
+            startedNow: true
         );
 
         await sut.StartAsync(CancellationToken.None);
@@ -216,8 +216,8 @@ public class HardwareBenchmarkBackgroundServiceTests
             effectiveLifetime,
             probe ?? defaultProbe.Object,
             NullLogger<HardwareBenchmarkBackgroundService>.Instance,
-            TimeSpan.Zero,
-            TimeSpan.FromMilliseconds(20),
+            initialGrace: TimeSpan.Zero,
+            busyPollInterval: TimeSpan.FromMilliseconds(20),
             phaseTracker
         );
     }

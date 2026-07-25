@@ -27,13 +27,13 @@ public class NfsExpiredRecoveryTests
 {
     private static NfsDriverConfig BuildConfig() =>
         new(
-            "test.local",
-            "/export",
-            4,
-            null,
-            null,
-            2049,
-            null
+            Server: "test.local",
+            Export: "/export",
+            Version: 4,
+            Uid: null,
+            Gid: null,
+            Port: 2049,
+            MountPort: null
         );
 
     private static (NfsStorageDriver driver, FaultyLibNfs lib) BuildDriver()
@@ -189,7 +189,7 @@ public class NfsExpiredRecoveryTests
         {
             lib.Faults["Open:0"] = (-11, "NFS4ERR_EXPIRED");
 
-            using Stream s = driver.OpenWrite("/new.bin", true);
+            using Stream s = driver.OpenWrite("/new.bin", overwrite: true);
             byte[] payload = [1, 2, 3];
             s.Write(payload, 0, payload.Length);
             s.Flush();
@@ -209,13 +209,13 @@ public class NfsExpiredRecoveryTests
         FaultyLibNfs lib = new();
         lib.SeedDir("/");
         NfsDriverConfig config = new(
-            "test.local",
-            "/export",
-            4,
-            1000,
-            1000,
-            2049,
-            null
+            Server: "test.local",
+            Export: "/export",
+            Version: 4,
+            Uid: 1000,
+            Gid: 1000,
+            Port: 2049,
+            MountPort: null
         );
         NfsStorageDriver driver = new(config, lib);
         try

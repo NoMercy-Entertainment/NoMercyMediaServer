@@ -126,7 +126,9 @@ public class ChromeCastService : IChromeCastService
                     _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
                     foreach (ChromecastReceiver chromecast in _chromecastReceivers)
                         _logger.LogInformation(
-                            "Discovered chromecast: {Name} @ {Host}", [chromecast.Name, chromecast.DeviceUri.Host]
+                            "Discovered chromecast: {Name} @ {Host}",
+                            chromecast.Name,
+                            chromecast.DeviceUri.Host
                         );
                 }
                 catch (Exception ex)
@@ -640,7 +642,9 @@ public class ChromeCastService : IChromeCastService
             // pulled a client writing to a closed socket. Rebuild the connection
             // once and re-probe before attempting LAUNCH.
             _logger.LogInformation(
-                "LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {Target}: {Message} — reconnecting stale client", [target, ex.Message]
+                "LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {Target}: {Message} — reconnecting stale client",
+                target,
+                ex.Message
             );
 
             ChromecastClient? reconnected = await ForceReconnectAsync(target);
@@ -662,7 +666,9 @@ public class ChromeCastService : IChromeCastService
             catch (Exception retryEx)
             {
                 _logger.LogInformation(
-                    "LaunchAndroidReceiver: GET_STATUS still failing for {Target} after reconnect: {Message}", [target, retryEx.Message]
+                    "LaunchAndroidReceiver: GET_STATUS still failing for {Target} after reconnect: {Message}",
+                    target,
+                    retryEx.Message
                 );
             }
         }
@@ -672,7 +678,10 @@ public class ChromeCastService : IChromeCastService
 
         string flavor = useAndroidReceiver ? "androidReceiverCompatible" : "webReceiverOnly";
         _logger.LogInformation(
-            "Launching cast-tv ({Flavor}{CustomData}) on {Target}", [flavor, (customData is null ? "" : ", customData"), target]
+            "Launching cast-tv ({Flavor}{CustomData}) on {Target}",
+            flavor,
+            (customData is null ? "" : ", customData"),
+            target
         );
 
         // If the receiver is already running our app (panel already on,
@@ -742,7 +751,9 @@ public class ChromeCastService : IChromeCastService
         catch (Exception ex)
         {
             _logger.LogInformation(
-                "LaunchAndroidReceiver failed for {Target}: {Message}", [target, ex.Message]
+                "LaunchAndroidReceiver failed for {Target}: {Message}",
+                target,
+                ex.Message
             );
         }
         finally
@@ -818,11 +829,11 @@ public class ChromeCastService : IChromeCastService
     private async Task SendLaunchAsync(ChromecastClient client, int requestId, string json)
     {
         await client.SendAsync(
-            null,
-            "urn:x-cast:com.google.cast.receiver",
-            requestId,
-            json,
-            "receiver-0"
+            logger: null,
+            ns: "urn:x-cast:com.google.cast.receiver",
+            messageRequestId: requestId,
+            messagePayload: json,
+            destinationId: "receiver-0"
         );
     }
 
@@ -839,7 +850,7 @@ public class ChromeCastService : IChromeCastService
         if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
             return;
 
-        _logger.LogInformation("Casting playlist to {Target}: {Value}", [target, value]);
+        _logger.LogInformation("Casting playlist to {Target}: {Value}", target, value);
 
         string externalAddress = (_networkDiscovery?.ExternalAddress).OrEmpty();
         string? token = accessToken;

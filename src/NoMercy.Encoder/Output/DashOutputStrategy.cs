@@ -68,7 +68,7 @@ public class DashOutputStrategy(IStorage storage) : IOutputStrategy
 
         builder.AddOutput(
             new(
-                mpdPath,
+                FilePath: mpdPath,
                 VideoCodec: primaryVideo?.EncoderName,
                 AudioCodec: primaryAudio?.Action == StreamAction.Copy
                     ? "copy"
@@ -134,7 +134,9 @@ public class DashOutputStrategy(IStorage storage) : IOutputStrategy
         XNamespace ns = doc.Root?.Name.Namespace ?? XNamespace.None;
 
         XElement eventStream = new(
-            ns + "EventStream", [new XAttribute("schemeIdUri", "urn:nomercy:chapters"), new XAttribute("timescale", "1000")]
+            ns + "EventStream",
+            new XAttribute("schemeIdUri", "urn:nomercy:chapters"),
+            new XAttribute("timescale", "1000")
         );
 
         for (int i = 0; i < chapters.Count; i++)
@@ -150,7 +152,11 @@ public class DashOutputStrategy(IStorage storage) : IOutputStrategy
 
             eventStream.Add(
                 new XElement(
-                    ns + "Event", [new XAttribute("presentationTime", startMs), new XAttribute("duration", durationMs), new XAttribute("id", i), new XText(title)]
+                    ns + "Event",
+                    new XAttribute("presentationTime", startMs),
+                    new XAttribute("duration", durationMs),
+                    new XAttribute("id", i),
+                    new XText(title)
                 )
             );
         }

@@ -57,23 +57,23 @@ public class PlanStageAudioFilterTests
             )
             .Returns(
                 new ResolvedCodec(
-                    "libx264",
-                    new(
-                        "libx264",
-                        null,
-                        ["medium"],
-                        ["high"],
-                        ["4.1"],
-                        new(0, 51, 23),
-                        [RateControlMode.Crf],
-                        false,
-                        false,
-                        int.MaxValue,
-                        "yuv420p10le",
-                        new()
+                    FfmpegEncoderName: "libx264",
+                    EncoderInfo: new(
+                        FfmpegName: "libx264",
+                        RequiredVendor: null,
+                        Presets: ["medium"],
+                        Profiles: ["high"],
+                        Levels: ["4.1"],
+                        QualityRange: new(0, 51, 23),
+                        SupportedRateControl: [RateControlMode.Crf],
+                        Supports10Bit: false,
+                        SupportsHdr: false,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new()
                     ),
-                    null,
-                    RateControlMode.Crf
+                    Device: null,
+                    DefaultRateControl: RateControlMode.Crf
                 )
             );
 
@@ -147,7 +147,7 @@ public class PlanStageAudioFilterTests
         AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
         Assert.Equal(
             "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR,"
-                      + "loudnorm=I=-16:TP=-1.5:LRA=11",
+                + "loudnorm=I=-16:TP=-1.5:LRA=11",
             audio.AudioFilter
         );
     }
@@ -178,41 +178,43 @@ public class PlanStageAudioFilterTests
 
     private static MediaInfo BuildMedia() =>
         new(
-            "/media/test.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            8000,
-            4_000_000_000,
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
+            AudioStreams:
             [
                 new(
-                    1,
-                    "ac3",
-                    6,
-                    48000,
-                    640,
-                    "en",
-                    true,
-                    false
+                    Index: 1,
+                    Codec: "ac3",
+                    Channels: 6,
+                    SampleRate: 48000,
+                    BitRateKbps: 640,
+                    Language: "en",
+                    IsDefault: true,
+                    IsForced: false
                 ),
             ],
-            [],
-            []
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile BuildProfile(
@@ -220,45 +222,46 @@ public class PlanStageAudioFilterTests
         DownmixConfig? downmix = null
     ) =>
         new(
-            Ulid.NewUlid(),
-            "Audio Filter Test",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                "video/{label}",
-                "video/{label}/playlist"
+            Id: Ulid.NewUlid(),
+            Name: "Audio Filter Test",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
             ),
+            Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    loudness == LoudnessMode.None ? null : new LoudnessConfig(loudness),
-                    downmix,
-                    "audio/{lang}-{codec}",
-                    "audio/{lang}-{codec}/playlist"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: loudness == LoudnessMode.None ? null : new LoudnessConfig(loudness),
+                    Downmix: downmix,
+                    SegmentNameTemplate: "audio/{lang}-{codec}",
+                    PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),
             ],
-            []
+            Subtitles: []
         );
 }

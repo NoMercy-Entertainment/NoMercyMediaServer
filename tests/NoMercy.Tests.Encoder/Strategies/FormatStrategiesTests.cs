@@ -44,8 +44,8 @@ public class FormatStrategiesTests
         EncodingRequest request = FakeRequest();
         EncodingResult? result = await strategy.EncodeAsync(
             request,
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         Assert.NotNull(result);
@@ -122,11 +122,11 @@ public class FormatStrategiesTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out",
-                    TimeSpan.Zero,
-                    null,
-                    new(0, 0, 0, "test", null)
+                    Success: true,
+                    OutputPath: "/out",
+                    Duration: TimeSpan.Zero,
+                    Error: null,
+                    Metrics: new(0, 0, 0, "test", null)
                 )
             );
         return mock.Object;
@@ -134,15 +134,15 @@ public class FormatStrategiesTests
 
     private static EncodingRequest FakeRequest() =>
         new(
-            "/media/test.mkv",
-            "/out",
-            new(
-                Ulid.NewUlid(),
-                "Test",
-                Container.HlsTs,
-                null,
-                [],
-                []
+            InputPath: "/media/test.mkv",
+            OutputDirectory: "/out",
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "Test",
+                Container: Container.HlsTs,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 }

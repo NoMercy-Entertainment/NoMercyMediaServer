@@ -93,11 +93,11 @@ public class StrategyResolverTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out",
-                    TimeSpan.Zero,
-                    null,
-                    new(0, 0, 0, "test", null)
+                    Success: true,
+                    OutputPath: "/out",
+                    Duration: TimeSpan.Zero,
+                    Error: null,
+                    Metrics: new(0, 0, 0, "test", null)
                 )
             );
         return mock.Object;

@@ -130,7 +130,7 @@ public class InboxClassifierEventHandler : IDisposable
 
         IStorage storage = _storageFactory.For(folderId, driverId, inboxRoot);
 
-        IReadOnlyList<StorageEntry> children = storage.List("", null, false);
+        IReadOnlyList<StorageEntry> children = storage.List("", null, recursive: false);
 
         if (children.Count == 0)
         {
@@ -162,7 +162,9 @@ public class InboxClassifierEventHandler : IDisposable
             if (fingerprint is { } fp && !_seenContent.TryAdd(fp, childPath))
             {
                 _logger.LogInformation(
-                    "InboxClassifier: skipping {ChildPath} — duplicate content already seen at {Fp}", [childPath, _seenContent[fp]]
+                    "InboxClassifier: skipping {ChildPath} — duplicate content already seen at {Fp}",
+                    childPath,
+                    _seenContent[fp]
                 );
                 continue;
             }
@@ -211,7 +213,9 @@ public class InboxClassifierEventHandler : IDisposable
             catch (Exception ex)
             {
                 _logger.LogError(
-                    "InboxClassifier: Error processing {ChildPath}: {Message}", [childPath, ex.Message]
+                    "InboxClassifier: Error processing {ChildPath}: {Message}",
+                    childPath,
+                    ex.Message
                 );
 
                 InboxItem failedItem = new()
@@ -233,7 +237,9 @@ public class InboxClassifierEventHandler : IDisposable
                 catch (Exception saveEx)
                 {
                     _logger.LogError(
-                        "InboxClassifier: Could not persist Failed item for {ChildPath}: {Message}", [childPath, saveEx.Message]
+                        "InboxClassifier: Could not persist Failed item for {ChildPath}: {Message}",
+                        childPath,
+                        saveEx.Message
                     );
                 }
 

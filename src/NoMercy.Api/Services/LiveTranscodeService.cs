@@ -57,18 +57,18 @@ public class LiveTranscodeService(
         IReadOnlyList<LiveSessionSnapshot> snapshots = streamingService.GetActiveSessions();
         return snapshots
             .Select(s => new LiveSessionDto(
-                s.SessionId,
-                s.State.ToString(),
-                s.QualityId,
-                s.QualityLabel,
-                s.Width,
-                s.Height,
-                s.BitrateKbps,
-                s.PositionSeconds,
-                s.BufferAheadSeconds,
-                s.SegmentCount,
-                s.IsComplete,
-                s.LastAccess
+                SessionId: s.SessionId,
+                State: s.State.ToString(),
+                QualityId: s.QualityId,
+                QualityLabel: s.QualityLabel,
+                Width: s.Width,
+                Height: s.Height,
+                BitrateKbps: s.BitrateKbps,
+                PositionSeconds: s.PositionSeconds,
+                BufferAheadSeconds: s.BufferAheadSeconds,
+                SegmentCount: s.SegmentCount,
+                IsComplete: s.IsComplete,
+                LastAccess: s.LastAccess
             ))
             .ToList();
     }
@@ -162,7 +162,10 @@ public class LiveTranscodeService(
 
         if (deviceCaps is not null)
             logger.LogInformation(
-                "Live session for device {DeviceId}: caps channels={Ch} ramTier={Tier}", [deviceId, deviceCaps.MaxAudioChannels, deviceCaps.RamTier]
+                "Live session for device {DeviceId}: caps channels={Ch} ramTier={Tier}",
+                deviceId,
+                deviceCaps.MaxAudioChannels,
+                deviceCaps.RamTier
             );
 
         PlaybackDecision playbackDecision;
@@ -209,7 +212,7 @@ public class LiveTranscodeService(
         int audioStreamIndex = LiveAudioSelector.Select(mediaInfo.AudioStreams, preferredLanguages);
 
         LiveEncodeRequest liveRequest = new(
-            resolved.InputPath,
+            InputPath: resolved.InputPath,
             CachedInfo: mediaInfo,
             Client: clientCaps,
             StartPosition: TimeSpan.FromSeconds(Math.Max(0, request.StartTimeSeconds)),
@@ -270,10 +273,10 @@ public class LiveTranscodeService(
         LiveQuality quality = session.CurrentQuality;
         DateTime expiresAt = DateTime.UtcNow.AddMinutes(sessionLimits.IdleTimeoutMinutes);
         SelectedVariantDto selectedVariant = new(
-            quality.Codec.ToString(),
-            quality.Width,
-            quality.Height,
-            quality.BitrateKbps
+            Codec: quality.Codec.ToString(),
+            Width: quality.Width,
+            Height: quality.Height,
+            BitrateKbps: quality.BitrateKbps
         );
 
         return LiveResult.Ok(
@@ -296,11 +299,11 @@ public class LiveTranscodeService(
         // The video variant URI is relative so the client resolves it against the
         // master's own URL; the media playlist and its segment URLs are unchanged.
         LiveMasterPlaylistRequest request = new(
-            "playlist.m3u8",
-            quality.Width,
-            quality.Height,
-            quality.BitrateKbps,
-            runtime.AudioRenditions
+            VideoPlaylistUri: "playlist.m3u8",
+            Width: quality.Width,
+            Height: quality.Height,
+            BitrateKbps: quality.BitrateKbps,
+            AudioRenditions: runtime.AudioRenditions
         );
         string master = playlistBuilder.BuildMaster(request);
         return LiveResult.Ok(master);
@@ -315,12 +318,12 @@ public class LiveTranscodeService(
         string segmentUrlTemplate =
             $"/api/v1/streaming/live/sessions/{sessionId}/segment/{runtime.CurrentEpoch}/{{index}}.ts";
         LivePlaylistRequest request = new(
-            sessionId,
-            runtime.SnapshotSegments(),
-            runtime.TargetSegmentDuration,
-            runtime.IsComplete,
-            segmentUrlTemplate,
-            runtime.CachedMediaInfo?.Duration
+            SessionId: sessionId,
+            Segments: runtime.SnapshotSegments(),
+            TargetSegmentDuration: runtime.TargetSegmentDuration,
+            IsComplete: runtime.IsComplete,
+            SegmentUrlTemplate: segmentUrlTemplate,
+            TotalDuration: runtime.CachedMediaInfo?.Duration
         );
         string playlist = playlistBuilder.Build(request);
         return LiveResult.Ok(playlist);
@@ -359,7 +362,7 @@ public class LiveTranscodeService(
                 : 6;
         runtime.Session.ReportPlaybackPosition(
             TimeSpan.FromSeconds(index * segmentSeconds),
-            false
+            authoritative: false
         );
 
         // The whole-runtime VOD playlist lists every segment up front, so hls.js
@@ -430,7 +433,7 @@ public class LiveTranscodeService(
         double clampedSeconds = Math.Max(0, request.TimeSeconds);
         runtime.Session.ReportPlaybackPosition(
             TimeSpan.FromSeconds(clampedSeconds),
-            true
+            authoritative: true
         );
         bool isPaused = runtime.Session.State == LiveSessionState.Buffered;
         return LiveResult.Ok(new ReportPositionResponse(clampedSeconds, isPaused));
@@ -490,9 +493,9 @@ public class LiveTranscodeService(
         await PushIfTransportAsync(
                 sessionId,
                 new QualityChangedMessage(
-                    newQuality,
-                    QualityChangeReason.UserRequested,
-                    runtime.CurrentEpoch
+                    NewQuality: newQuality,
+                    Reason: QualityChangeReason.UserRequested,
+                    SeekEpoch: runtime.CurrentEpoch
                 ),
                 ct
             )
@@ -530,16 +533,16 @@ public class LiveTranscodeService(
         {
             runtime.Session.ReportPlaybackPosition(
                 TimeSpan.FromSeconds(clampedSeconds),
-                true
+                authoritative: true
             );
             runtime.TouchLastAccess();
 
             await PushIfTransportAsync(
                     sessionId,
                     new SeekCompletedMessage(
-                        clampedSeconds,
-                        targetIndex,
-                        runtime.CurrentEpoch
+                        NewPositionSeconds: clampedSeconds,
+                        FirstSegmentIndex: targetIndex,
+                        SeekEpoch: runtime.CurrentEpoch
                     ),
                     ct
                 )
@@ -560,9 +563,9 @@ public class LiveTranscodeService(
         await PushIfTransportAsync(
                 sessionId,
                 new SeekCompletedMessage(
-                    clampedSeconds,
-                    firstSegmentIndex,
-                    runtime.CurrentEpoch
+                    NewPositionSeconds: clampedSeconds,
+                    FirstSegmentIndex: firstSegmentIndex,
+                    SeekEpoch: runtime.CurrentEpoch
                 ),
                 ct
             )
@@ -601,7 +604,7 @@ public class LiveTranscodeService(
     {
         await PushIfTransportAsync(
                 sessionId,
-                new SessionEndedMessage(SessionEndReason.ClientDisconnected),
+                new SessionEndedMessage(Reason: SessionEndReason.ClientDisconnected),
                 ct
             )
             .ConfigureAwait(false);
@@ -634,7 +637,9 @@ public class LiveTranscodeService(
         {
             logger.LogDebug(
                 ex,
-                "Transport push failed for {Event} on session {SessionId}", [message.GetType().Name, sessionId]
+                "Transport push failed for {Event} on session {SessionId}",
+                message.GetType().Name,
+                sessionId
             );
         }
     }
@@ -642,15 +647,15 @@ public class LiveTranscodeService(
     private static ClientCapabilities ToClientCapabilities(ClientCapabilitiesDto dto)
     {
         return new(
-            dto.VideoCodecs ?? [],
-            dto.AudioCodecs ?? [],
-            dto.Containers ?? [],
-            dto.MaxWidth,
-            dto.MaxHeight,
-            dto.SupportsHdr,
-            dto.Supports10Bit,
-            dto.MaxBitrateKbps,
-            dto.MaxAudioChannels > 0 ? dto.MaxAudioChannels : 2
+            SupportedVideoCodecs: dto.VideoCodecs ?? [],
+            SupportedAudioCodecs: dto.AudioCodecs ?? [],
+            SupportedContainers: dto.Containers ?? [],
+            MaxWidth: dto.MaxWidth,
+            MaxHeight: dto.MaxHeight,
+            SupportsHdr: dto.SupportsHdr,
+            Supports10Bit: dto.Supports10Bit,
+            MaxBitrateKbps: dto.MaxBitrateKbps,
+            MaxAudioChannels: dto.MaxAudioChannels > 0 ? dto.MaxAudioChannels : 2
         );
     }
 
@@ -692,9 +697,9 @@ public class LiveTranscodeService(
             .Select(
                 (a, index) =>
                     new LiveAudioRendition(
-                        a.Language,
-                        EncodeServedPath($"{baseFolder}{a.FileName}"),
-                        index == defaultIndex
+                        Language: a.Language,
+                        Uri: EncodeServedPath($"{baseFolder}{a.FileName}"),
+                        IsDefault: index == defaultIndex
                     )
             )
             .ToList();
@@ -736,7 +741,9 @@ public class LiveTranscodeService(
             {
                 logger.LogWarning(
                     ex,
-                    "Failed to start live audio child for stream 0:a:{Index} of session {SessionId}", [index, parentSessionId]
+                    "Failed to start live audio child for stream 0:a:{Index} of session {SessionId}",
+                    index,
+                    parentSessionId
                 );
                 continue;
             }
@@ -744,9 +751,9 @@ public class LiveTranscodeService(
             childSessionIds.Add(child.SessionId);
             renditions.Add(
                 new LiveAudioRendition(
-                    audioStreams[index].Language ?? "und",
-                    $"/api/v1/streaming/live/sessions/{child.SessionId}/playlist.m3u8",
-                    index == defaultAudioIndex
+                    Language: audioStreams[index].Language ?? "und",
+                    Uri: $"/api/v1/streaming/live/sessions/{child.SessionId}/playlist.m3u8",
+                    IsDefault: index == defaultAudioIndex
                 )
             );
         }
@@ -786,13 +793,13 @@ public class LiveTranscodeService(
     private LiveResult DirectPlayResult(Ulid videoFileId, VideoFile file, string reason)
     {
         string url = BuildServedUrl(file);
-        logger.LogInformation("Direct-play for {VideoFileId}: {Url}", [videoFileId, url]);
+        logger.LogInformation("Direct-play for {VideoFileId}: {Url}", videoFileId, url);
         return LiveResult.Ok(
             new StartLiveSessionResponse(
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                string.Empty
+                SessionId: string.Empty,
+                PlaylistUrl: string.Empty,
+                QualityId: string.Empty,
+                QualityLabel: string.Empty
             )
             {
                 Mode = "direct",

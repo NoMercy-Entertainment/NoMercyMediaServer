@@ -95,7 +95,7 @@ public sealed class ConnectivityManagerLifecycleTests
         boot.MarkStarted();
         AuthTokenStore tokenStore = new();
         tokenStore.SetAccessToken("test-token");
-        RecordingStrategy strategy = new(true);
+        RecordingStrategy strategy = new(succeeds: true);
         ConnectivityManager manager = BuildManager(discovery, boot, tokenStore, strategy);
 
         await manager.StartAsync(CancellationToken.None);
@@ -180,7 +180,7 @@ public sealed class ConnectivityManagerLifecycleTests
         boot.MarkStarted();
         AuthTokenStore tokenStore = new();
         tokenStore.SetAccessToken("test-token");
-        RecordingStrategy strategy = new(true);
+        RecordingStrategy strategy = new(succeeds: true);
         ConnectivityManager manager = BuildManager(discovery, boot, tokenStore, strategy);
 
         await manager.StartAsync(CancellationToken.None);

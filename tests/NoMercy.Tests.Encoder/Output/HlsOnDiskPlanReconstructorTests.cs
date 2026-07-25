@@ -57,28 +57,28 @@ public class HlsOnDiskPlanReconstructorTests : IDisposable
         // Published output of a single preset the decode-aware bundler split
         // into two self-finalizing Whole bundles — video/audio/subtitles were
         // never in the SAME in-memory OutputPlan at any point in this test.
-        WriteVariant("video_3840x2160", "video_3840x2160", 900_000);
-        WriteVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
-        WriteVariant("audio_eng_eac3", "audio_eng_eac3", 60_000);
+        WriteVariant("video_3840x2160", "video_3840x2160", segmentBytes: 900_000);
+        WriteVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
+        WriteVariant("audio_eng_eac3", "audio_eng_eac3", segmentBytes: 60_000);
         WriteInitMp4("video_3840x2160");
         WriteInitMp4("video_1920x1080_SDR");
         WriteSubtitle("eng", "full");
 
         SetupProbe(
             "video_3840x2160",
-            "hevc",
-            3840,
-            2160,
-            10,
-            "smpte2084"
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            bitDepth: 10,
+            colorTransfer: "smpte2084"
         );
         SetupProbe(
             "video_1920x1080_SDR",
-            "hevc",
-            1920,
-            1080,
-            8,
-            "bt709"
+            codec: "hevc",
+            width: 1920,
+            height: 1080,
+            bitDepth: 8,
+            colorTransfer: "bt709"
         );
 
         HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer.Object);
@@ -152,30 +152,31 @@ public class HlsOnDiskPlanReconstructorTests : IDisposable
     )
     {
         MediaInfo info = new(
-            dirName,
-            "mov,mp4,m4a,3gp,3g2,mj2",
-            TimeSpan.FromSeconds(6),
-            0,
-            0,
+            FilePath: dirName,
+            Format: "mov,mp4,m4a,3gp,3g2,mj2",
+            Duration: TimeSpan.FromSeconds(6),
+            OverallBitRateKbps: 0,
+            FileSizeBytes: 0,
+            VideoStreams:
             [
                 new VideoStreamInfo(
-                    0,
-                    codec,
-                    width,
-                    height,
-                    23.976,
-                    bitDepth,
-                    bitDepth >= 10 ? "yuv420p10le" : "yuv420p",
-                    "bt2020",
-                    colorTransfer,
-                    "bt2020nc",
-                    true,
-                    0
+                    Index: 0,
+                    Codec: codec,
+                    Width: width,
+                    Height: height,
+                    FrameRate: 23.976,
+                    BitDepth: bitDepth,
+                    PixelFormat: bitDepth >= 10 ? "yuv420p10le" : "yuv420p",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: colorTransfer,
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 0
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
         _mediaAnalyzer

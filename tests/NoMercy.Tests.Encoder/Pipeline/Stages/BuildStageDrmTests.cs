@@ -51,7 +51,7 @@ public class BuildStageDrmTests
                 TestStorageFactory.CreateLocal()
             );
 
-            DrmConfig drm = new(DrmMethod.Aes128, "https://example/keys/1");
+            DrmConfig drm = new(DrmMethod.Aes128, KeyUri: "https://example/keys/1");
             OutputPlan plan = BuildPlan(drm);
             ExecutionPlan execPlan = BuildExecutionPlan(plan);
             BuildInput input = new(execPlan, "/movies/test.mkv", tempDir, "TestMovie");
@@ -87,12 +87,12 @@ public class BuildStageDrmTests
             File.Exists(keyInfoPath).Should().BeTrue();
             File.Exists(Path.Combine(fullKeyInfoDir, "drm.key")).Should().BeTrue();
 
-            Directory.Delete(fullKeyInfoDir, true);
+            Directory.Delete(fullKeyInfoDir, recursive: true);
         }
         finally
         {
             if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, true);
+                Directory.Delete(tempDir, recursive: true);
         }
     }
 
@@ -120,7 +120,7 @@ public class BuildStageDrmTests
                 TestStorageFactory.CreateLocal()
             );
 
-            OutputPlan plan = BuildPlan(null);
+            OutputPlan plan = BuildPlan(drm: null);
             ExecutionPlan execPlan = BuildExecutionPlan(plan);
             BuildInput input = new(execPlan, "/movies/test.mkv", tempDir, "TestMovie");
             EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
@@ -135,7 +135,7 @@ public class BuildStageDrmTests
         finally
         {
             if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, true);
+                Directory.Delete(tempDir, recursive: true);
         }
     }
 
@@ -166,7 +166,7 @@ public class BuildStageDrmTests
                 TestStorageFactory.CreateLocal()
             );
 
-            DrmConfig drm = new(DrmMethod.Aes128, "https://example/keys/1");
+            DrmConfig drm = new(DrmMethod.Aes128, KeyUri: "https://example/keys/1");
             OutputPlan plan = BuildPlan(drm);
             ExecutionPlan execPlan = BuildExecutionPlan(plan);
             BuildInput input = new(execPlan, "/movies/test.mkv", tempDir, "TestMovie");
@@ -181,40 +181,40 @@ public class BuildStageDrmTests
         finally
         {
             if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, true);
+                Directory.Delete(tempDir, recursive: true);
         }
     }
 
     private static OutputPlan BuildPlan(DrmConfig? drm) =>
         new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs:
             [
                 new(
-                    1280,
-                    720,
-                    "libx264",
-                    23,
-                    4000,
-                    "medium",
-                    "high",
-                    "4.1",
-                    false,
-                    "yuv420p",
-                    "[v0]",
-                    new()
+                    Width: 1280,
+                    Height: 720,
+                    EncoderName: "libx264",
+                    Crf: 23,
+                    BitrateKbps: 4000,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.1",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: "[v0]",
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs:
             [
                 new(
-                    "aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    "en",
-                    "0:a:0"
+                    EncoderName: "aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: "en",
+                    MapLabel: "0:a:0"
                 ),
             ],
             SubtitleOutputs: [],
@@ -224,46 +224,48 @@ public class BuildStageDrmTests
 
     private static ExecutionPlan BuildExecutionPlan(OutputPlan outputPlan) =>
         new(
+            Groups:
             [
                 new(
-                    "group_0",
-                    [new("decode_0", OperationType.Decode, [], new())],
-                    null,
-                    0,
-                    4,
-                    false,
-                    1
+                    GroupId: "group_0",
+                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 4,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            outputPlan
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: outputPlan
         );
 
     private static MediaInfo BuildMediaInfo() =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            4_000_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 }

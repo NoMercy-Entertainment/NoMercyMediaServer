@@ -54,7 +54,7 @@ public class PluginLoaderManifestPathTests : IDisposable
         try
         {
             if (Directory.Exists(_tempPluginsDir))
-                Directory.Delete(_tempPluginsDir, true);
+                Directory.Delete(_tempPluginsDir, recursive: true);
         }
         catch (Exception) { }
     }
@@ -62,11 +62,11 @@ public class PluginLoaderManifestPathTests : IDisposable
     private PluginManager BuildManager(IPluginConsentService? consentService = null) =>
         new(
             _eventBus,
-            serviceProvider: new MinimalServiceProvider(),
-            logger: NullLogger<PluginManager>.Instance,
-            pluginsPath: _tempPluginsDir,
-            storage: TestStorageHelper.CreateStorage(_tempPluginsDir),
-            driver: TestStorageHelper.CreateBackend(),
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend(),
             consentService: consentService
         );
 
@@ -77,9 +77,15 @@ public class PluginLoaderManifestPathTests : IDisposable
         )!;
         string configDir = Path.GetDirectoryName(testBinDir)!;
         string buildConfig = Path.GetFileName(configDir);
-        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
+        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
 
-        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.ManifestFailure", "bin", buildConfig, "net10.0"]
+        return Path.Combine(
+            repoRoot,
+            "tests",
+            "NoMercy.Plugin.Samples.ManifestFailure",
+            "bin",
+            buildConfig,
+            "net10.0"
         );
     }
 
@@ -97,9 +103,9 @@ public class PluginLoaderManifestPathTests : IDisposable
         Directory.CreateDirectory(pluginDir);
 
         foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
-            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), overwrite: true);
         foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
-            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), overwrite: true);
 
         string manifestPath = Path.Combine(pluginDir, "plugin.json");
         File.WriteAllText(manifestPath, manifestJson);
@@ -238,9 +244,9 @@ public class PluginLoaderManifestPathTests : IDisposable
         string pluginDir = Path.Combine(_tempPluginsDir, "FailuresViaManifest");
         Directory.CreateDirectory(pluginDir);
         foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
-            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), overwrite: true);
         foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
-            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), overwrite: true);
 
         Guid manifestId = Guid.NewGuid();
         string manifestJson = $$"""
@@ -271,9 +277,15 @@ public class PluginLoaderManifestPathTests : IDisposable
         )!;
         string configDir = Path.GetDirectoryName(testBinDir)!;
         string buildConfig = Path.GetFileName(configDir);
-        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
+        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
 
-        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0"]
+        return Path.Combine(
+            repoRoot,
+            "tests",
+            "NoMercy.Plugin.Samples.Failures",
+            "bin",
+            buildConfig,
+            "net10.0"
         );
     }
 
@@ -287,7 +299,7 @@ public class PluginLoaderManifestPathTests : IDisposable
         Directory.CreateDirectory(pluginDir);
         string abstractionsSrc = typeof(IPlugin).Assembly.Location;
         string abstractionsDest = Path.Combine(pluginDir, "NoMercy.Plugins.Abstractions.dll");
-        File.Copy(abstractionsSrc, abstractionsDest, true);
+        File.Copy(abstractionsSrc, abstractionsDest, overwrite: true);
 
         Guid manifestId = Guid.NewGuid();
         string manifestJson = $$"""

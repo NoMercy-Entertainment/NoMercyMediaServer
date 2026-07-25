@@ -67,15 +67,15 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
         // Bundle 1 ("4K HDR"): produces the 4K video rendition plus the
         // audio and subtitle tracks — the smart orchestrator shares those
         // once across the whole ladder instead of duplicating them per rung.
-        WriteVariant("video_3840x2160", "video_3840x2160", 900_000);
-        WriteVariant("audio_eng_eac3", "audio_eng_eac3", 60_000);
-        WriteVariant("audio_jpn_eac3", "audio_jpn_eac3", 60_000);
+        WriteVariant("video_3840x2160", "video_3840x2160", segmentBytes: 900_000);
+        WriteVariant("audio_eng_eac3", "audio_eng_eac3", segmentBytes: 60_000);
+        WriteVariant("audio_jpn_eac3", "audio_jpn_eac3", segmentBytes: 60_000);
         WriteSubtitle("eng", "full");
 
         OutputPlan bundle1Plan = BuildPlan(
-            [Create4KHdrVideo()],
-            [CreateAudio("eng"), CreateAudio("jpn")],
-            [CreateSubtitle()]
+            videoOutputs: [Create4KHdrVideo()],
+            audioOutputs: [CreateAudio("eng"), CreateAudio("jpn")],
+            subtitleOutputs: [CreateSubtitle()]
         );
 
         await strategy.FinalizeAsync(
@@ -93,12 +93,12 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
         // Bundle 2 ("1080p SDR"): a separate job, publishing its own video
         // rendition only — its OWN OutputPlan carries no audio and no
         // subtitle outputs at all, because those were bundle 1's job.
-        WriteVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
+        WriteVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
 
         OutputPlan bundle2Plan = BuildPlan(
-            [Create1080pSdrVideo()],
-            [],
-            []
+            videoOutputs: [Create1080pSdrVideo()],
+            audioOutputs: [],
+            subtitleOutputs: []
         );
 
         await strategy.FinalizeAsync(
@@ -123,10 +123,10 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
     {
         HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
 
-        WriteVariant("video_3840x2160", "video_3840x2160", 900_000);
-        WriteVariant("video_1920x1080_SDR", "video_1920x1080_SDR", 300_000);
-        WriteVariant("audio_eng_eac3", "audio_eng_eac3", 60_000);
-        WriteVariant("audio_jpn_eac3", "audio_jpn_eac3", 60_000);
+        WriteVariant("video_3840x2160", "video_3840x2160", segmentBytes: 900_000);
+        WriteVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
+        WriteVariant("audio_eng_eac3", "audio_eng_eac3", segmentBytes: 60_000);
+        WriteVariant("audio_jpn_eac3", "audio_jpn_eac3", segmentBytes: 60_000);
         WriteSubtitle("eng", "full");
 
         // What NoMercy.MediaProcessing.VideoEncodeJob.ReconcileMasterPlaylistAsync
@@ -134,9 +134,9 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
         // FinalizeAsync — the union of every bundle's video/audio/subtitle
         // outputs, not just the last bundle's own slice.
         OutputPlan unionedPlan = BuildPlan(
-            [Create4KHdrVideo(), Create1080pSdrVideo()],
-            [CreateAudio("eng"), CreateAudio("jpn")],
-            [CreateSubtitle()]
+            videoOutputs: [Create4KHdrVideo(), Create1080pSdrVideo()],
+            audioOutputs: [CreateAudio("eng"), CreateAudio("jpn")],
+            subtitleOutputs: [CreateSubtitle()]
         );
 
         await strategy.FinalizeAsync(
@@ -211,16 +211,16 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
         SubtitleOutputPlan[] subtitleOutputs
     ) =>
         new(
-            OutputFormat.Hls,
-            videoOutputs,
-            audioOutputs,
-            subtitleOutputs,
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: videoOutputs,
+            AudioOutputs: audioOutputs,
+            SubtitleOutputs: subtitleOutputs,
+            Thumbnails: null
         );
 
     private static VideoOutputPlan Create4KHdrVideo() =>
         new(
-            3840,
+            Width: 3840,
             Height: 2160,
             EncoderName: "libx265",
             Crf: 18,
@@ -240,7 +240,7 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
 
     private static VideoOutputPlan Create1080pSdrVideo() =>
         new(
-            1920,
+            Width: 1920,
             Height: 1080,
             EncoderName: "libx265",
             Crf: 20,
@@ -260,24 +260,24 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
 
     private static AudioOutputPlan CreateAudio(string language) =>
         new(
-            "eac3",
-            640,
-            6,
-            48000,
-            StreamAction.Transcode,
-            language,
-            language == "eng" ? "0:a:0" : "0:a:1",
-            "audio_{lang}_{codec}/audio_{lang}_{codec}",
-            "audio_{lang}_{codec}/audio_{lang}_{codec}"
+            EncoderName: "eac3",
+            BitrateKbps: 640,
+            Channels: 6,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: language,
+            MapLabel: language == "eng" ? "0:a:0" : "0:a:1",
+            SegmentNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}",
+            PlaylistNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}"
         );
 
     private static SubtitleOutputPlan CreateSubtitle() =>
         new(
-            SubtitleCodecType.Ass,
-            StreamAction.Extract,
-            "eng",
-            0,
-            null
+            OutputCodec: SubtitleCodecType.Ass,
+            Action: StreamAction.Extract,
+            Language: "eng",
+            SourceIndex: 0,
+            MapLabel: null
         );
 
     private void WriteVariant(string subDirectory, string name, int segmentBytes)

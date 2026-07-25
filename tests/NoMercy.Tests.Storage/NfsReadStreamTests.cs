@@ -47,7 +47,7 @@ public sealed class NfsReadStreamTests
         // proves the delegation wires LibNfsPInvoke.Instance rather than
         // silently requiring callers to supply one.
         using SemaphoreSlim lockObj = new(1, 1);
-        NfsReadStream stream = new(IntPtr.Zero, IntPtr.Zero, 5, lockObj);
+        NfsReadStream stream = new(IntPtr.Zero, IntPtr.Zero, length: 5, lockObj);
 
         stream.CanRead.Should().BeTrue();
         stream.CanSeek.Should().BeTrue();
@@ -77,7 +77,7 @@ public sealed class NfsReadStreamTests
         (FaultyLibNfs fake, IntPtr ctx, IntPtr fh) = OpenSeeded(content);
         using SemaphoreSlim lockObj = new(1, 1);
         // chunkSize=3 forces 4 native Read calls (3+3+3+1) for a single stream.Read.
-        using NfsReadStream stream = new(ctx, fh, content.Length, lockObj, fake, 3);
+        using NfsReadStream stream = new(ctx, fh, content.Length, lockObj, fake, chunkSize: 3);
 
         byte[] buffer = new byte[content.Length];
         int read = stream.Read(buffer, 0, buffer.Length);
@@ -145,9 +145,9 @@ public sealed class NfsReadStreamTests
     }
 
     [Theory]
-    [InlineData([SeekOrigin.Begin, 2L, 2L])]
-    [InlineData([SeekOrigin.Current, 2L, 2L])]
-    [InlineData([SeekOrigin.End, -1L, 3L])]
+    [InlineData(SeekOrigin.Begin, 2L, 2L)]
+    [InlineData(SeekOrigin.Current, 2L, 2L)]
+    [InlineData(SeekOrigin.End, -1L, 3L)]
     public void Seek_computes_target_from_origin(
         SeekOrigin origin,
         long offset,

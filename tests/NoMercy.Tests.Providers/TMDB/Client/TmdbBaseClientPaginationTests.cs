@@ -141,7 +141,7 @@ public class TmdbBaseClientPaginationTests : IDisposable
     [Fact]
     public async Task Paginated_WhenLimitExceedsTotalPages_FetchesEveryPage()
     {
-        using TestableBaseClient client = CreateClient(3);
+        using TestableBaseClient client = CreateClient(totalPages: 3);
 
         List<FakeItem>? results = await client.Paginated<FakeItem>(UniquePaginatedUrl(), 10);
 
@@ -152,7 +152,7 @@ public class TmdbBaseClientPaginationTests : IDisposable
     [Fact]
     public async Task Paginated_LimitBelowTotalPages_FetchesUpToLimit()
     {
-        using TestableBaseClient client = CreateClient(500);
+        using TestableBaseClient client = CreateClient(totalPages: 500);
 
         List<FakeItem>? results = await client.Paginated<FakeItem>(UniquePaginatedUrl(), 4);
 

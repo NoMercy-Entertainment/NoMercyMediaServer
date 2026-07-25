@@ -24,7 +24,7 @@ public class RemoteWorkerDispatcherTests
     [Fact]
     public async Task DispatchAsync_NoRemoteWorkers_FallsBackToLocal()
     {
-        Mock<IFfmpegExecutor> executor = MakeExecutor(true);
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
         LocalWorkerDispatcher local = NewLocal(executor.Object);
         RemoteWorkerDispatcher sut = NewRemote(local, new EmptyRemoteWorkerRegistry());
 
@@ -43,14 +43,14 @@ public class RemoteWorkerDispatcherTests
         // Worker returns a successful DispatchResult — dispatcher must
         // return that directly, not the local fallback. WorkerId on the
         // result proves the worker was the one that executed.
-        Mock<IFfmpegExecutor> executor = MakeExecutor(true);
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
         LocalWorkerDispatcher local = NewLocal(executor.Object);
 
         IRemoteWorker beast = MakeRemoteWorkerWithResult(
             "beast",
-            8,
-            new(
-                "t0",
+            slots: 8,
+            result: new(
+                TaskId: "t0",
                 Success: true,
                 OutputPath: "/remote/out/t0",
                 Duration: TimeSpan.FromSeconds(5),
@@ -78,18 +78,18 @@ public class RemoteWorkerDispatcherTests
         // A worker that reports failure (not throws) must trigger local
         // retry for that specific task. The whole job shouldn't fail
         // because one worker went sideways.
-        Mock<IFfmpegExecutor> executor = MakeExecutor(true);
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
         LocalWorkerDispatcher local = NewLocal(executor.Object);
 
         IRemoteWorker brokenWorker = MakeRemoteWorkerWithResult(
             "broken",
-            4,
-            new(
-                "t0",
-                false,
-                "",
-                TimeSpan.Zero,
-                "Worker OOM"
+            slots: 4,
+            result: new(
+                TaskId: "t0",
+                Success: false,
+                OutputPath: "",
+                Duration: TimeSpan.Zero,
+                Error: "Worker OOM"
             )
         );
 
@@ -110,7 +110,7 @@ public class RemoteWorkerDispatcherTests
     {
         // Network failures / timeouts surface as thrown exceptions.
         // Dispatcher must swallow, log, and fall back — not fail the job.
-        Mock<IFfmpegExecutor> executor = MakeExecutor(true);
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
         LocalWorkerDispatcher local = NewLocal(executor.Object);
 
         Mock<IRemoteWorker> flaky = new();
@@ -136,7 +136,7 @@ public class RemoteWorkerDispatcherTests
     {
         // Worker A fails, Worker B succeeds. Dispatcher must reach B
         // BEFORE giving up to local fallback. Local must not be touched.
-        Mock<IFfmpegExecutor> localExec = MakeExecutor(true);
+        Mock<IFfmpegExecutor> localExec = MakeExecutor(succeed: true);
         int localCalls = 0;
         localExec
             .Setup(e =>
@@ -151,24 +151,24 @@ public class RemoteWorkerDispatcherTests
             .Callback(() => Interlocked.Increment(ref localCalls))
             .ReturnsAsync(
                 new ExecutionResult(
-                    true,
-                    0,
-                    "",
-                    TimeSpan.FromSeconds(1),
-                    null
+                    Success: true,
+                    ExitCode: 0,
+                    StdErr: "",
+                    Duration: TimeSpan.FromSeconds(1),
+                    Error: null
                 )
             );
         LocalWorkerDispatcher local = NewLocal(localExec.Object);
 
         IRemoteWorker failing = MakeRemoteWorkerWithResult(
             "a-broken",
-            8,
-            new("t0", false, "", TimeSpan.Zero, "boom")
+            slots: 8,
+            result: new("t0", false, "", TimeSpan.Zero, "boom")
         );
         IRemoteWorker rescue = MakeRemoteWorkerWithResult(
             "b-healthy",
-            2,
-            new("t0", Success: true, OutputPath: "/b/t0", Duration: TimeSpan.FromSeconds(2), WorkerId: "b-healthy")
+            slots: 2,
+            result: new("t0", true, "/b/t0", TimeSpan.FromSeconds(2), WorkerId: "b-healthy")
         );
 
         FakeRegistry registry = new([failing, rescue]);
@@ -191,7 +191,7 @@ public class RemoteWorkerDispatcherTests
         // Two workers with different weights, four tasks. The assigner
         // load-balances; every task must complete, every worker that
         // got work must have received its ExecuteTaskAsync call.
-        Mock<IFfmpegExecutor> executor = MakeExecutor(true);
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
         LocalWorkerDispatcher local = NewLocal(executor.Object);
 
         int beastCalls = 0;
@@ -205,9 +205,9 @@ public class RemoteWorkerDispatcherTests
                 Interlocked.Increment(ref beastCalls);
                 return new(
                     t.TaskId,
-                    Success: true,
-                    OutputPath: $"/beast/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(1),
+                    true,
+                    $"/beast/{t.TaskId}",
+                    TimeSpan.FromSeconds(1),
                     WorkerId: "beast"
                 );
             }
@@ -220,9 +220,9 @@ public class RemoteWorkerDispatcherTests
                 Interlocked.Increment(ref laptopCalls);
                 return new(
                     t.TaskId,
-                    Success: true,
-                    OutputPath: $"/laptop/{t.TaskId}",
-                    Duration: TimeSpan.FromSeconds(1),
+                    true,
+                    $"/laptop/{t.TaskId}",
+                    TimeSpan.FromSeconds(1),
                     WorkerId: "laptop"
                 );
             }
@@ -244,7 +244,7 @@ public class RemoteWorkerDispatcherTests
     [Fact]
     public async Task DispatchAsync_CancellationPropagates()
     {
-        Mock<IFfmpegExecutor> executor = MakeExecutor(true);
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
         LocalWorkerDispatcher local = NewLocal(executor.Object);
 
         Mock<IRemoteWorker> slow = new();
@@ -272,7 +272,7 @@ public class RemoteWorkerDispatcherTests
     [Fact]
     public void AvailableWorkerCount_ReflectsRegistryOrLocal()
     {
-        Mock<IFfmpegExecutor> executor = MakeExecutor(true);
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
         LocalWorkerDispatcher local = NewLocal(executor.Object);
 
         FakeRegistry registry = new([
@@ -308,7 +308,7 @@ public class RemoteWorkerDispatcherTests
             id,
             slots,
             new(
-                "placeholder",
+                TaskId: "placeholder",
                 Success: true,
                 OutputPath: $"/remote/{id}/placeholder",
                 Duration: TimeSpan.FromSeconds(1),
@@ -327,9 +327,9 @@ public class RemoteWorkerDispatcherTests
         mock.Setup(w => w.GetAvailableBudget())
             .Returns(
                 new ResourceBudgetSnapshot(
-                    0,
-                    slots,
-                    0
+                    AvailableGpuSlots: 0,
+                    AvailableCpuThreads: slots,
+                    GpuUtilization: 0
                 )
             );
         mock.Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
@@ -365,11 +365,11 @@ public class RemoteWorkerDispatcherTests
             )
             .ReturnsAsync(
                 new ExecutionResult(
-                    succeed,
-                    succeed ? 0 : 1,
-                    "",
-                    TimeSpan.FromSeconds(1),
-                    null
+                    Success: succeed,
+                    ExitCode: succeed ? 0 : 1,
+                    StdErr: "",
+                    Duration: TimeSpan.FromSeconds(1),
+                    Error: null
                 )
             );
         return mock;
@@ -377,9 +377,9 @@ public class RemoteWorkerDispatcherTests
 
     private static EncodeTask MakeTask(string id) =>
         new(
-            id,
-            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
-            $"/out/{id}",
-            EncodeTaskType.QualityVariant
+            TaskId: id,
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            OutputPath: $"/out/{id}",
+            Type: EncodeTaskType.QualityVariant
         );
 }

@@ -40,11 +40,11 @@ public class SingleFileAudioStrategiesTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out/audio",
-                    TimeSpan.Zero,
-                    null,
-                    null
+                    Success: true,
+                    OutputPath: "/out/audio",
+                    Duration: TimeSpan.Zero,
+                    Error: null,
+                    Metrics: null
                 )
             );
         return mock.Object;
@@ -103,11 +103,11 @@ public class SingleFileAudioStrategiesTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out/song.mp3",
-                    TimeSpan.FromSeconds(180),
-                    null,
-                    null
+                    Success: true,
+                    OutputPath: "/out/song.mp3",
+                    Duration: TimeSpan.FromSeconds(180),
+                    Error: null,
+                    Metrics: null
                 )
             );
         Mp3Strategy strategy = new(
@@ -118,7 +118,7 @@ public class SingleFileAudioStrategiesTests
 
         EncodingResult result = await strategy.EncodeAsync(
             new("/in.flac", "/out", null!),
-            null,
+            progress: null,
             CancellationToken.None
         );
 
@@ -144,11 +144,11 @@ public class SingleFileAudioStrategiesTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out/track.flac",
-                    TimeSpan.Zero,
-                    null,
-                    null
+                    Success: true,
+                    OutputPath: "/out/track.flac",
+                    Duration: TimeSpan.Zero,
+                    Error: null,
+                    Metrics: null
                 )
             );
         FlacStrategy strategy = new(
@@ -159,7 +159,7 @@ public class SingleFileAudioStrategiesTests
 
         EncodingResult result = await strategy.EncodeAsync(
             new("/in.wav", "/out", null!),
-            null,
+            progress: null,
             CancellationToken.None
         );
 
@@ -180,11 +180,11 @@ public class SingleFileAudioStrategiesTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out/album.ogg",
-                    TimeSpan.Zero,
-                    null,
-                    null
+                    Success: true,
+                    OutputPath: "/out/album.ogg",
+                    Duration: TimeSpan.Zero,
+                    Error: null,
+                    Metrics: null
                 )
             );
         OggStrategy strategy = new(
@@ -195,7 +195,7 @@ public class SingleFileAudioStrategiesTests
 
         EncodingResult result = await strategy.EncodeAsync(
             new("/in.flac", "/out", null!),
-            null,
+            progress: null,
             CancellationToken.None
         );
 

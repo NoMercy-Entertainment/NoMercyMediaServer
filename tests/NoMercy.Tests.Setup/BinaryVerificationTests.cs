@@ -35,7 +35,7 @@ public class BinaryVerificationTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+            Directory.Delete(_tempDir, recursive: true);
     }
 
     // -------------------------------------------------------------------------
@@ -92,8 +92,8 @@ public class BinaryVerificationTests : IDisposable
     // -------------------------------------------------------------------------
 
     [Theory]
-    [InlineData(["sha256:ABC123", "ABC123"])]
-    [InlineData(["SHA256:deadbeef", "deadbeef"])]
+    [InlineData("sha256:ABC123", "ABC123")]
+    [InlineData("SHA256:deadbeef", "deadbeef")]
     public void ExtractSha256FromDigest_ValidPrefix_ReturnsHex(string digest, string expected)
     {
         BinaryVerification.ExtractSha256FromDigest(digest).Should().Be(expected);

@@ -78,7 +78,7 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/subtitles/search?type=movie&id={SeededMovieId}"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
 
     // =========================================================================
@@ -95,23 +95,23 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    true
+                    priority: true
                 )
             )
             .ReturnsAsync([
                 new(
-                    "eng",
-                    "9.0",
-                    "4321",
-                    "1",
-                    "23.976",
-                    "https://dl.example.com/spirited-away.srt",
-                    "srt",
-                    "tag",
-                    "Spirited.Away.2001.1080p.srt",
-                    "Spirited.Away.2001.1080p.BluRay",
-                    "0",
-                    "SubUploader"
+                    Language: "eng",
+                    SubRating: "9.0",
+                    SubDownloadsCnt: "4321",
+                    SubFromTrusted: "1",
+                    MovieFPS: "23.976",
+                    SubDownloadLink: "https://dl.example.com/spirited-away.srt",
+                    SubFormat: "srt",
+                    MatchedBy: "tag",
+                    SubFileName: "Spirited.Away.2001.1080p.srt",
+                    MovieReleaseName: "Spirited.Away.2001.1080p.BluRay",
+                    SubHearingImpaired: "0",
+                    UserNickName: "SubUploader"
                 ),
             ]);
 
@@ -179,7 +179,7 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    true
+                    priority: true
                 )
             )
             .ReturnsAsync([]);
@@ -193,19 +193,19 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    true
+                    priority: true
                 )
             )
             .ReturnsAsync([
                 new(
-                    "eng",
-                    "7.5",
-                    "10",
-                    "0",
-                    null,
-                    "https://dl.example.com/breaking-bad-s01e01.srt",
-                    "srt",
-                    "title"
+                    Language: "eng",
+                    SubRating: "7.5",
+                    SubDownloadsCnt: "10",
+                    SubFromTrusted: "0",
+                    MovieFPS: null,
+                    SubDownloadLink: "https://dl.example.com/breaking-bad-s01e01.srt",
+                    SubFormat: "srt",
+                    MatchedBy: "title"
                 ),
             ]);
 
@@ -239,7 +239,7 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    true
+                    priority: true
                 ),
             Times.Once
         );
@@ -262,7 +262,7 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    true
+                    priority: true
                 )
             )
             .Callback(() => rateLimited = true)
@@ -277,7 +277,7 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
                     It.IsAny<CancellationToken>(),
-                    true
+                    priority: true
                 )
             )
             .ReturnsAsync([]);

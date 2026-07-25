@@ -20,10 +20,10 @@ public class ProcessRunnerTests
     public void ProcessResult_Stores_AllFields()
     {
         ProcessResult result = new(
-            0,
-            "output",
-            "",
-            TimeSpan.FromSeconds(1.5)
+            ExitCode: 0,
+            StdOut: "output",
+            StdErr: "",
+            Duration: TimeSpan.FromSeconds(1.5)
         );
 
         result.ExitCode.Should().Be(0);
@@ -50,7 +50,7 @@ public class ProcessRunnerTests
     public async Task ProcessRunner_RunsSimpleCommand()
     {
         ProcessRunner runner = new(NullLogger<ProcessRunner>.Instance);
-        ProcessResult result = await runner.RunAsync("dotnet", ["--version"], null, CancellationToken.None);
+        ProcessResult result = await runner.RunAsync("dotnet", ["--version"], (string?)null);
 
         result.IsSuccess.Should().BeTrue();
         result.StdOut.Should().NotBeNullOrWhiteSpace();
@@ -64,8 +64,7 @@ public class ProcessRunnerTests
         ProcessResult result = await runner.RunAsync(
             "dotnet",
             ["nonexistent-command-xyz"],
-            null,
-            CancellationToken.None
+            (string?)null
         );
 
         result.IsSuccess.Should().BeFalse();
@@ -90,7 +89,7 @@ public class ProcessRunnerTests
     {
         ProcessRunner runner = new(NullLogger<ProcessRunner>.Instance);
 
-        ProcessResult result = await runner.RunAsync("dotnet", ["--version"], null, CancellationToken.None);
+        ProcessResult result = await runner.RunAsync("dotnet", ["--version"], (string?)null);
 
         result.StdOut.Should().NotBeNullOrWhiteSpace();
         result.IsSuccess.Should().BeTrue();
@@ -107,10 +106,10 @@ public class ProcessRunnerTests
         ProcessResult result = await runner.RunAsync(
             "dotnet",
             ["--version"],
-            line => captured.Add(line),
-            null,
-            null,
-            CancellationToken.None
+            onStdOut: line => captured.Add(line),
+            onStdErr: null,
+            workingDirectory: null,
+            cancellationToken: CancellationToken.None
         );
 
         result.IsSuccess.Should().BeTrue();
@@ -132,12 +131,12 @@ public class ProcessRunnerTests
         await runner.RunAsync(
             "dotnet",
             ["--version"],
-            null,
-            null,
-            null,
-            CancellationToken.None,
-            CancellationToken.None,
-            pid => capturedPid = pid
+            onStdOut: null,
+            onStdErr: null,
+            workingDirectory: null,
+            cancellationToken: CancellationToken.None,
+            killSignal: CancellationToken.None,
+            onProcessStarted: pid => capturedPid = pid
         );
 
         capturedPid.Should().BeGreaterThan(0);
@@ -165,7 +164,7 @@ public class ProcessRunnerTests
         }
         finally
         {
-            Directory.Delete(tempDir, true);
+            Directory.Delete(tempDir, recursive: true);
         }
     }
 
@@ -194,7 +193,7 @@ public class ProcessRunnerTests
         finally
         {
             if (Directory.Exists(missingDir))
-                Directory.Delete(missingDir, true);
+                Directory.Delete(missingDir, recursive: true);
         }
     }
 
@@ -224,9 +223,9 @@ public class ProcessRunnerTests
         ProcessResult result = await runner.RunAsync(
             shell,
             args,
-            env,
-            null,
-            CancellationToken.None
+            extraEnv: env,
+            workingDirectory: null,
+            cancellationToken: CancellationToken.None
         );
 
         result.IsSuccess.Should().BeTrue();

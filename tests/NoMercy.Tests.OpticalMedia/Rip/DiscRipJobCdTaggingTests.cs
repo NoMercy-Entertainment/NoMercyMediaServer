@@ -13,10 +13,12 @@ using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Audio;
 using NoMercy.Events;
 using NoMercy.Events.DriveMonitor;
 using NoMercy.NmSystem.Dto;
+using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
@@ -63,7 +65,7 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
 
     private static RipRequest MakeCdRequest(string metadataId, int[] titleIndices) =>
         new(
-            "/dev/sr0",
+            DrivePath: "/dev/sr0",
             SelectedTitleIndices: titleIndices,
             MetadataId: metadataId,
             Custom: null,
@@ -104,12 +106,12 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
             await File.WriteAllBytesAsync(path, []);
             results.Add(
                 new(
-                    i,
-                    path,
-                    true,
-                    TimeSpan.FromMinutes(3),
-                    20_000_000,
-                    null
+                    TitleIndex: i,
+                    OutputPath: path,
+                    Success: true,
+                    Duration: TimeSpan.FromMinutes(3),
+                    OutputSizeBytes: 20_000_000,
+                    Error: null
                 )
             );
         }
@@ -689,15 +691,15 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
         [
             successFile[0],
             new(
-                2,
-                Path.Combine(
+                TitleIndex: 2,
+                OutputPath: Path.Combine(
                     Path.GetTempPath(),
                     $"cdtag_missing_{Guid.NewGuid():N}.flac"
                 ),
-                false,
-                TimeSpan.Zero,
-                0,
-                "read error"
+                Success: false,
+                Duration: TimeSpan.Zero,
+                OutputSizeBytes: 0,
+                Error: "read error"
             ),
         ];
         try

@@ -134,10 +134,10 @@ public class CdDiscSourceTests
             )
             .ReturnsAsync(
                 new ProcessResult(
-                    1,
-                    "",
-                    "no tracks",
-                    TimeSpan.Zero
+                    ExitCode: 1,
+                    StdOut: "",
+                    StdErr: "no tracks",
+                    Duration: TimeSpan.Zero
                 )
             );
 
@@ -157,10 +157,10 @@ public class CdDiscSourceTests
         CdDiscSource sut = MakeSut(runnerMock.Object, driverMock.Object);
 
         DiscDrive drive = new(
-            "D:\\",
-            "DATA",
-            true,
-            OpticalDiscType.Cd
+            Path: "D:\\",
+            Label: "DATA",
+            HasDisc: true,
+            DiscType: OpticalDiscType.Cd
         );
         DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
@@ -193,7 +193,7 @@ public class CdDiscSourceTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(1, "", "", TimeSpan.Zero)
+                new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         Mock<IStorageDriver> driverMock = new();
@@ -213,10 +213,10 @@ public class CdDiscSourceTests
         CdDiscSource sut = MakeSut(runnerMock.Object, driverMock.Object);
 
         DiscDrive drive = new(
-            "D:\\",
-            "DATA",
-            true,
-            OpticalDiscType.Cd
+            Path: "D:\\",
+            Label: "DATA",
+            HasDisc: true,
+            DiscType: OpticalDiscType.Cd
         );
         DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
@@ -247,10 +247,10 @@ public class CdDiscSourceTests
             )
             .ReturnsAsync(
                 new ProcessResult(
-                    0,
-                    ffprobeJson,
-                    "",
-                    TimeSpan.Zero
+                    ExitCode: 0,
+                    StdOut: ffprobeJson,
+                    StdErr: "",
+                    Duration: TimeSpan.Zero
                 )
             );
 
@@ -259,10 +259,10 @@ public class CdDiscSourceTests
         CdDiscSource sut = MakeSut(runnerMock.Object, driverMock.Object);
 
         DiscDrive drive = new(
-            "/dev/sr0",
-            "AUDIO_CD",
-            true,
-            OpticalDiscType.Cd
+            Path: "/dev/sr0",
+            Label: "AUDIO_CD",
+            HasDisc: true,
+            DiscType: OpticalDiscType.Cd
         );
         DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
 
@@ -313,10 +313,10 @@ public class CdDiscSourceTests
             )
             .ReturnsAsync(
                 new ProcessResult(
-                    0,
-                    "{ not valid json",
-                    "",
-                    TimeSpan.Zero
+                    ExitCode: 0,
+                    StdOut: "{ not valid json",
+                    StdErr: "",
+                    Duration: TimeSpan.Zero
                 )
             );
 
@@ -358,7 +358,7 @@ public class CdDiscSourceTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(1, "", "", TimeSpan.Zero)
+                new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         Mock<IStorageDriver> driverMock = new();

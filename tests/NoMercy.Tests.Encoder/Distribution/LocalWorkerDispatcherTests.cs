@@ -37,11 +37,11 @@ public class LocalWorkerDispatcherTests
             )
             .ReturnsAsync(
                 new ExecutionResult(
-                    true,
-                    0,
-                    "",
-                    TimeSpan.FromSeconds(3),
-                    null
+                    Success: true,
+                    ExitCode: 0,
+                    StdErr: "",
+                    Duration: TimeSpan.FromSeconds(3),
+                    Error: null
                 )
             );
 
@@ -95,11 +95,11 @@ public class LocalWorkerDispatcherTests
                     await Task.Delay(20);
                     callOrder.Add($"end:{corrId}");
                     return new(
-                        true,
-                        0,
-                        "",
-                        TimeSpan.FromSeconds(1),
-                        null
+                        Success: true,
+                        ExitCode: 0,
+                        StdErr: "",
+                        Duration: TimeSpan.FromSeconds(1),
+                        Error: null
                     );
                 }
             );
@@ -109,7 +109,7 @@ public class LocalWorkerDispatcherTests
 
         await dispatcher.DispatchAsync(tasks, CancellationToken.None);
 
-        callOrder.Should().Equal(["start:t0", "end:t0", "start:t1", "end:t1"]);
+        callOrder.Should().Equal("start:t0", "end:t0", "start:t1", "end:t1");
     }
 
     [Fact]
@@ -133,17 +133,17 @@ public class LocalWorkerDispatcherTests
                 bool failFirst = current == 1;
                 return Task.FromResult(
                     new ExecutionResult(
-                        !failFirst,
-                        failFirst ? 1 : 0,
-                        failFirst ? "boom" : "",
-                        TimeSpan.FromSeconds(1),
-                        failFirst
+                        Success: !failFirst,
+                        ExitCode: failFirst ? 1 : 0,
+                        StdErr: failFirst ? "boom" : "",
+                        Duration: TimeSpan.FromSeconds(1),
+                        Error: failFirst
                             ? new EncodingError(
                                 EncodingErrorKind.ProcessCrashed,
                                 "ffmpeg died",
                                 null,
                                 "Execute",
-                                false
+                                Recoverable: false
                             )
                             : null
                     )
@@ -180,11 +180,11 @@ public class LocalWorkerDispatcherTests
                 call++;
                 return Task.FromResult(
                     new ExecutionResult(
-                        true,
-                        0,
-                        "",
-                        TimeSpan.FromMilliseconds(10),
-                        null
+                        Success: true,
+                        ExitCode: 0,
+                        StdErr: "",
+                        Duration: TimeSpan.FromMilliseconds(10),
+                        Error: null
                     )
                 );
             });
@@ -218,9 +218,9 @@ public class LocalWorkerDispatcherTests
 
     private static EncodeTask MakeTask(string id, string outputPath) =>
         new(
-            id,
-            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
-            outputPath,
-            EncodeTaskType.QualityVariant
+            TaskId: id,
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            OutputPath: outputPath,
+            Type: EncodeTaskType.QualityVariant
         );
 }

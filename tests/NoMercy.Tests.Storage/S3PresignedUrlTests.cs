@@ -211,10 +211,10 @@ public class S3PresignedUrlTests
         using S3StorageDriver driver = new(
             Bucket,
             Region,
-            null,
-            Endpoint,
-            AccessKey,
-            SecretKey
+            prefix: null,
+            endpoint: Endpoint,
+            accessKey: AccessKey,
+            secretKey: SecretKey
         );
 
         Uri? url = await driver.TryGetPresignedUrlAsync(
@@ -235,10 +235,10 @@ public class S3PresignedUrlTests
         using S3StorageDriver driver = new(
             Bucket,
             "us-east-1",
-            null,
-            null,
-            null,
-            null
+            prefix: null,
+            endpoint: null,
+            accessKey: null,
+            secretKey: null
         );
 
         Uri? url = await driver.TryGetPresignedUrlAsync(

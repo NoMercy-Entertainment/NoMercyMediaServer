@@ -38,25 +38,25 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         string sourcePath = originalSourcePath ?? source.FilePath;
 
         BlueprintSource blueprintSource = new(
-            sourcePath,
-            Path.GetFileName(sourcePath),
-            source.Format,
-            source.FileSizeBytes,
-            source.Duration.TotalSeconds,
+            Path: sourcePath,
+            Filename: Path.GetFileName(sourcePath),
+            Container: source.Format,
+            SizeBytes: source.FileSizeBytes,
+            DurationSeconds: source.Duration.TotalSeconds,
             // Deferred until a streaming hasher is wired into the analyzer —
             // see spec "Open items".
-            null,
-            source.Ffprobe
+            Sha256: null,
+            Ffprobe: source.Ffprobe
         );
 
         return new(
-            CurrentVersion,
-            identity,
-            blueprintSource,
+            Version: CurrentVersion,
+            Identity: identity,
+            Source: blueprintSource,
             // Zero encode entries: this builder runs source-derived only, no
             // encode has happened yet. Proves the blueprint is generatable
             // with zero encode outputs — the foundation-slice invariant.
-            []
+            Encodes: []
         );
     }
 
@@ -87,17 +87,17 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         string targetContainer = SourceContainerMapper.Map(source.Format);
 
         return new(
-            layout.PresetSlug,
-            layout.PresetId,
-            profileFingerprint,
-            encoderVersion,
-            targetContainer,
-            outputLocation,
-            createdAt,
-            completedAt,
-            tracks,
-            BuildCommandTemplate(targetContainer, tracks),
-            BuildWarnings(tracks)
+            PresetSlug: layout.PresetSlug,
+            PresetId: layout.PresetId,
+            ProfileFingerprint: profileFingerprint,
+            EncoderVersion: encoderVersion,
+            TargetContainer: targetContainer,
+            OutputLocation: outputLocation,
+            CreatedAt: createdAt,
+            CompletedAt: completedAt,
+            Tracks: tracks,
+            ReconstructionCommandTemplate: BuildCommandTemplate(targetContainer, tracks),
+            LossyWarnings: BuildWarnings(tracks)
         );
     }
 
@@ -138,17 +138,17 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
 
         if (copyOutput is not null)
             return new(
-                stream.Index,
-                "video",
-                stream.Codec,
-                null,
-                "copy",
-                "lossless",
-                true,
-                null,
-                layout.ContainerString,
-                ResolveVideoFiles(copyOutput, layout, outputFiles),
-                null
+                SourceStreamIndex: stream.Index,
+                Kind: "video",
+                SourceCodec: stream.Codec,
+                SourceLanguage: null,
+                Policy: "copy",
+                Fidelity: "lossless",
+                Reconstructable: true,
+                OriginalParams: null,
+                Container: layout.ContainerString,
+                Files: ResolveVideoFiles(copyOutput, layout, outputFiles),
+                Sha256: null
             );
 
         // No copy rung: the first rung the ladder built for this stream is
@@ -157,17 +157,17 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         VideoOutputPlan? transcodeOutput = matched.FirstOrDefault();
         if (transcodeOutput is not null)
             return new(
-                stream.Index,
-                "video",
-                stream.Codec,
-                null,
-                "transcode",
-                "lossy",
-                false,
-                BuildVideoOriginalParams(stream),
-                layout.ContainerString,
-                ResolveVideoFiles(transcodeOutput, layout, outputFiles),
-                null
+                SourceStreamIndex: stream.Index,
+                Kind: "video",
+                SourceCodec: stream.Codec,
+                SourceLanguage: null,
+                Policy: "transcode",
+                Fidelity: "lossy",
+                Reconstructable: false,
+                OriginalParams: BuildVideoOriginalParams(stream),
+                Container: layout.ContainerString,
+                Files: ResolveVideoFiles(transcodeOutput, layout, outputFiles),
+                Sha256: null
             );
 
         return DroppedTrack(stream.Index, "video", stream.Codec, null);
@@ -234,33 +234,33 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         AudioOutputPlan? copyOutput = matched.FirstOrDefault(o => o.Action == StreamAction.Copy);
         if (copyOutput is not null)
             return new(
-                stream.Index,
-                "audio",
-                stream.Codec,
-                stream.Language,
-                "copy",
-                "lossless",
-                true,
-                null,
-                layout.ContainerString,
-                ResolveAudioFiles(copyOutput, layout, outputFiles),
-                null
+                SourceStreamIndex: stream.Index,
+                Kind: "audio",
+                SourceCodec: stream.Codec,
+                SourceLanguage: stream.Language,
+                Policy: "copy",
+                Fidelity: "lossless",
+                Reconstructable: true,
+                OriginalParams: null,
+                Container: layout.ContainerString,
+                Files: ResolveAudioFiles(copyOutput, layout, outputFiles),
+                Sha256: null
             );
 
         AudioOutputPlan? transcodeOutput = matched.FirstOrDefault();
         if (transcodeOutput is not null)
             return new(
-                stream.Index,
-                "audio",
-                stream.Codec,
-                stream.Language,
-                "transcode",
-                "lossy",
-                false,
-                BuildAudioOriginalParams(stream),
-                layout.ContainerString,
-                ResolveAudioFiles(transcodeOutput, layout, outputFiles),
-                null
+                SourceStreamIndex: stream.Index,
+                Kind: "audio",
+                SourceCodec: stream.Codec,
+                SourceLanguage: stream.Language,
+                Policy: "transcode",
+                Fidelity: "lossy",
+                Reconstructable: false,
+                OriginalParams: BuildAudioOriginalParams(stream),
+                Container: layout.ContainerString,
+                Files: ResolveAudioFiles(transcodeOutput, layout, outputFiles),
+                Sha256: null
             );
 
         return DroppedTrack(stream.Index, "audio", stream.Codec, stream.Language);
@@ -330,17 +330,17 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
 
         if (matched.Policy == SubtitlePolicy.BurnIn)
             return new(
-                stream.Index,
-                "subtitle",
-                stream.Codec,
-                stream.Language,
-                "burn_in",
-                "irreversible",
-                false,
-                null,
-                null,
-                [],
-                null
+                SourceStreamIndex: stream.Index,
+                Kind: "subtitle",
+                SourceCodec: stream.Codec,
+                SourceLanguage: stream.Language,
+                Policy: "burn_in",
+                Fidelity: "irreversible",
+                Reconstructable: false,
+                OriginalParams: null,
+                Container: null,
+                Files: [],
+                Sha256: null
             );
 
         // A container-embedded copy (MKV single-file output) has no sidecar
@@ -354,17 +354,17 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
             return DroppedTrack(stream.Index, "subtitle", stream.Codec, stream.Language);
 
         return new(
-            stream.Index,
-            "subtitle",
-            stream.Codec,
-            stream.Language,
-            matched.Policy == SubtitlePolicy.Copy ? "copy" : "extract",
-            "lossless",
-            true,
-            null,
-            artifact.Container,
-            artifact.Files,
-            null
+            SourceStreamIndex: stream.Index,
+            Kind: "subtitle",
+            SourceCodec: stream.Codec,
+            SourceLanguage: stream.Language,
+            Policy: matched.Policy == SubtitlePolicy.Copy ? "copy" : "extract",
+            Fidelity: "lossless",
+            Reconstructable: true,
+            OriginalParams: null,
+            Container: artifact.Container,
+            Files: artifact.Files,
+            Sha256: null
         );
     }
 
@@ -449,17 +449,17 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         string? language
     ) =>
         new(
-            sourceStreamIndex,
-            kind,
-            codec,
-            language,
-            "dropped",
-            "lost",
-            false,
-            null,
-            null,
-            [],
-            null
+            SourceStreamIndex: sourceStreamIndex,
+            Kind: kind,
+            SourceCodec: codec,
+            SourceLanguage: language,
+            Policy: "dropped",
+            Fidelity: "lost",
+            Reconstructable: false,
+            OriginalParams: null,
+            Container: null,
+            Files: [],
+            Sha256: null
         );
 
     private static string FolderOf(string resolvedTemplate)

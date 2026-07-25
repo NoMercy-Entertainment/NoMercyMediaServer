@@ -166,7 +166,7 @@ public class AllowlistStressTests
         string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-trav3"));
         StoragePathGuard guard = EnforcedGuard(root);
 
-        string escape = Path.Combine([root, "a", "b", "c", "..", "..", "..", "..", "outside.txt"]);
+        string escape = Path.Combine(root, "a", "b", "c", "..", "..", "..", "..", "outside.txt");
 
         Action act = () => guard.Validate(escape);
 
@@ -336,7 +336,7 @@ public class AllowlistStressTests
             try
             {
                 if (Directory.Exists(root))
-                    Directory.Delete(root, true);
+                    Directory.Delete(root, recursive: true);
             }
             catch
             {
@@ -409,7 +409,7 @@ public class AllowlistStressTests
             try
             {
                 if (Directory.Exists(root))
-                    Directory.Delete(root, true);
+                    Directory.Delete(root, recursive: true);
             }
             catch
             {
@@ -448,7 +448,7 @@ public class AllowlistStressTests
             try
             {
                 if (Directory.Exists(root))
-                    Directory.Delete(root, true);
+                    Directory.Delete(root, recursive: true);
             }
             catch
             {

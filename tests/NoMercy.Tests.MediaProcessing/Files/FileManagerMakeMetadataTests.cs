@@ -46,7 +46,7 @@ public sealed class FileManagerMakeMetadataTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, true);
+            Directory.Delete(_tempRoot, recursive: true);
     }
 
     private FileManager BuildFileManager()
@@ -134,10 +134,10 @@ public sealed class FileManagerMakeMetadataTests : IDisposable
         File.WriteAllText(
             masterPath,
             "#EXTM3U\n"
-                      + "#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080\n"
-                      + "video_1920x1080_SDR/video_1920x1080_SDR.m3u8\n"
-                      + "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio_aac\",LANGUAGE=\"eng\"\n"
-                      + "audio_eng_aac/audio_eng_aac.m3u8\n"
+                + "#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080\n"
+                + "video_1920x1080_SDR/video_1920x1080_SDR.m3u8\n"
+                + "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio_aac\",LANGUAGE=\"eng\"\n"
+                + "audio_eng_aac/audio_eng_aac.m3u8\n"
         );
 
         List<VideoTrack> extraFiles =

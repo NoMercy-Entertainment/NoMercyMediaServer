@@ -21,6 +21,7 @@ using NoMercy.Encoder.Pipeline.Stages;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using LadderConfig = NoMercy.Encoder.Profiles.LadderConfig;
 using LadderMode = NoMercy.Encoder.Profiles.LadderMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
 using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
@@ -70,67 +71,69 @@ public class PlanStageMapLabelTests
 
     private static ResolvedCodec BuildSoftwareH264Codec() =>
         new(
-            "libx264",
-            new(
-                "libx264",
-                null,
-                ["slow", "medium", "fast"],
-                ["high"],
-                ["4.1"],
-                new(0, 51, 23),
-                [RateControlMode.Crf, RateControlMode.Cbr],
-                false,
-                false,
-                int.MaxValue,
-                "yuv420p10le",
-                new()
+            FfmpegEncoderName: "libx264",
+            EncoderInfo: new(
+                FfmpegName: "libx264",
+                RequiredVendor: null,
+                Presets: ["slow", "medium", "fast"],
+                Profiles: ["high"],
+                Levels: ["4.1"],
+                QualityRange: new(0, 51, 23),
+                SupportedRateControl: [RateControlMode.Crf, RateControlMode.Cbr],
+                Supports10Bit: false,
+                SupportsHdr: false,
+                MaxConcurrentSessions: int.MaxValue,
+                PixelFormat10Bit: "yuv420p10le",
+                VendorSpecificFlags: new()
             ),
-            null,
-            RateControlMode.Crf
+            Device: null,
+            DefaultRateControl: RateControlMode.Crf
         );
 
     private static MediaInfo BuildMediaInfo(int width = 1920, int height = 1080) =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    width,
-                    height,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
+                    Index: 0,
+                    Codec: "h264",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
                     // Below every profile's target bitrate in this file so the
                     // smart-copy downgrade (PlanStage.ApplySmartCopyDowngrade)
                     // never fires here — these tests exist to pin MapLabel
                     // bracket-vs-direct format for genuine Transcode outputs,
                     // not to double as smart-copy fixtures.
-                    3000
+                    BitRateKbps: 3000
                 ),
             ],
+            AudioStreams:
             [
                 new(
-                    1,
-                    "aac",
-                    2,
-                    48000,
-                    192,
-                    "en",
-                    true,
-                    false
+                    Index: 1,
+                    Codec: "aac",
+                    Channels: 2,
+                    SampleRate: 48000,
+                    BitRateKbps: 192,
+                    Language: "en",
+                    IsDefault: true,
+                    IsForced: false
                 ),
             ],
-            [],
-            []
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     // ------------------------------------------------------------------
@@ -143,46 +146,47 @@ public class PlanStageMapLabelTests
         // Profile output exactly matches source — previously this used "0:v:0", now must use "[v0]"
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
-            "SameRes",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                "video/{label}",
-                "video/{label}/playlist"
+            Id: Ulid.NewUlid(),
+            Name: "SameRes",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
             ),
+            Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    ["en"],
-                    null,
-                    null,
-                    null,
-                    "audio/{lang}-{codec}",
-                    "audio/{lang}-{codec}/playlist"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["en"],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "audio/{lang}-{codec}",
+                    PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),
             ],
-            []
+            Subtitles: []
         );
 
         ValidateInput input = new(media, profile);
@@ -204,24 +208,24 @@ public class PlanStageMapLabelTests
     {
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "ABR",
             Container: Container.HlsTs,
             Video: null,
             Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    ["en"],
-                    null,
-                    null,
-                    null,
-                    "audio/{lang}-{codec}",
-                    "audio/{lang}-{codec}/playlist"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["en"],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "audio/{lang}-{codec}",
+                    PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),
             ],
             Subtitles: [],
@@ -231,30 +235,30 @@ public class PlanStageMapLabelTests
                 Rungs =
                 [
                     new(
-                        1920,
-                        1080,
-                        VideoCodecType.H264,
-                        4000,
-                        6000,
-                        8000,
-                        24.0,
-                        "medium",
-                        CodecProfile.High,
-                        8,
-                        "yuv420p"
+                        Width: 1920,
+                        Height: 1080,
+                        Codec: VideoCodecType.H264,
+                        BitrateKbps: 4000,
+                        MaxBitrateKbps: 6000,
+                        BufferSizeKbps: 8000,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.High,
+                        BitDepth: 8,
+                        PixelFormat: "yuv420p"
                     ),
                     new(
-                        1280,
-                        720,
-                        VideoCodecType.H264,
-                        2500,
-                        3750,
-                        5000,
-                        24.0,
-                        "medium",
-                        CodecProfile.High,
-                        8,
-                        "yuv420p"
+                        Width: 1280,
+                        Height: 720,
+                        Codec: VideoCodecType.H264,
+                        BitrateKbps: 2500,
+                        MaxBitrateKbps: 3750,
+                        BufferSizeKbps: 5000,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.High,
+                        BitDepth: 8,
+                        PixelFormat: "yuv420p"
                     ),
                 ],
             }

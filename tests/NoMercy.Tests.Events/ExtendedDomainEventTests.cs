@@ -75,12 +75,12 @@ public class ExtendedDomainEventTests
         );
 
         DriveStatePayload payload = new(
-            "disc_inserted",
-            "D:\\",
-            "MOVIE_TITLE",
-            true,
-            "bluray",
-            DateTime.UtcNow
+            Method: "disc_inserted",
+            Drive: "D:\\",
+            VolumeLabel: "MOVIE_TITLE",
+            HasDisc: true,
+            DiscType: "bluray",
+            Timestamp: DateTime.UtcNow
         );
 
         await bus.PublishAsync(new DriveStateChangedEvent { DriveStateData = payload });
@@ -109,14 +109,14 @@ public class ExtendedDomainEventTests
         );
 
         DriveStatePayload payload = new(
-            "rip_progress",
-            "/dev/sr0",
-            "DISC_LABEL",
-            true,
-            "dvd",
-            DateTime.UtcNow,
-            "job-abc-123",
-            "Ripping track 3 of 12"
+            Method: "rip_progress",
+            Drive: "/dev/sr0",
+            VolumeLabel: "DISC_LABEL",
+            HasDisc: true,
+            DiscType: "dvd",
+            Timestamp: DateTime.UtcNow,
+            JobId: "job-abc-123",
+            Message: "Ripping track 3 of 12"
         );
 
         await bus.PublishAsync(new DriveStateChangedEvent { DriveStateData = payload });

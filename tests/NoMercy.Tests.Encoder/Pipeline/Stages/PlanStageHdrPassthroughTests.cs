@@ -54,23 +54,23 @@ public class PlanStageHdrPassthroughTests
             )
             .Returns(
                 new ResolvedCodec(
-                    "libx265",
-                    new(
-                        "libx265",
-                        null,
-                        ["medium"],
-                        ["main10"],
-                        ["5.1"],
-                        new(0, 51, 28),
-                        [RateControlMode.Crf],
-                        true,
-                        true,
-                        int.MaxValue,
-                        "yuv420p10le",
-                        new()
+                    FfmpegEncoderName: "libx265",
+                    EncoderInfo: new(
+                        FfmpegName: "libx265",
+                        RequiredVendor: null,
+                        Presets: ["medium"],
+                        Profiles: ["main10"],
+                        Levels: ["5.1"],
+                        QualityRange: new(0, 51, 28),
+                        SupportedRateControl: [RateControlMode.Crf],
+                        Supports10Bit: true,
+                        SupportsHdr: true,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new()
                     ),
-                    null,
-                    RateControlMode.Crf
+                    Device: null,
+                    DefaultRateControl: RateControlMode.Crf
                 )
             );
 
@@ -91,8 +91,8 @@ public class PlanStageHdrPassthroughTests
     [Fact]
     public async Task HdrSource_TenBitKeepHdr_EmitsColorMetadataFlags()
     {
-        MediaInfo media = BuildHdrMedia("smpte2084");
-        EncodingProfile profile = BuildProfile(true, false);
+        MediaInfo media = BuildHdrMedia(transfer: "smpte2084");
+        EncodingProfile profile = BuildProfile(tenBit: true, convertHdrToSdr: false);
 
         OutputPlan plan = await RunPlan(media, profile);
 
@@ -106,8 +106,8 @@ public class PlanStageHdrPassthroughTests
     [Fact]
     public async Task HdrSource_HlgTransfer_PreservesHlgTag()
     {
-        MediaInfo media = BuildHdrMedia("arib-std-b67");
-        EncodingProfile profile = BuildProfile(true, false);
+        MediaInfo media = BuildHdrMedia(transfer: "arib-std-b67");
+        EncodingProfile profile = BuildProfile(tenBit: true, convertHdrToSdr: false);
 
         OutputPlan plan = await RunPlan(media, profile);
 
@@ -118,8 +118,8 @@ public class PlanStageHdrPassthroughTests
     [Fact]
     public async Task HdrSource_ConvertToSdr_DoesNotEmitBt2020()
     {
-        MediaInfo media = BuildHdrMedia("smpte2084");
-        EncodingProfile profile = BuildProfile(false, true);
+        MediaInfo media = BuildHdrMedia(transfer: "smpte2084");
+        EncodingProfile profile = BuildProfile(tenBit: false, convertHdrToSdr: true);
 
         OutputPlan plan = await RunPlan(media, profile);
 
@@ -132,7 +132,7 @@ public class PlanStageHdrPassthroughTests
     public async Task SdrSource_NoColorMetadataAdded()
     {
         MediaInfo media = BuildSdrMedia();
-        EncodingProfile profile = BuildProfile(false, false);
+        EncodingProfile profile = BuildProfile(tenBit: false, convertHdrToSdr: false);
 
         OutputPlan plan = await RunPlan(media, profile);
 
@@ -145,8 +145,8 @@ public class PlanStageHdrPassthroughTests
     {
         // TenBit=true with ConvertHdrToSdr=true is a contradiction, but guard for it:
         // explicit SDR conversion wins.
-        MediaInfo media = BuildHdrMedia("smpte2084");
-        EncodingProfile profile = BuildProfile(true, true);
+        MediaInfo media = BuildHdrMedia(transfer: "smpte2084");
+        EncodingProfile profile = BuildProfile(tenBit: true, convertHdrToSdr: true);
 
         OutputPlan plan = await RunPlan(media, profile);
 
@@ -166,87 +166,89 @@ public class PlanStageHdrPassthroughTests
 
     private static MediaInfo BuildHdrMedia(string transfer) =>
         new(
-            "/media/hdr.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            50000,
-            30_000_000_000,
+            FilePath: "/media/hdr.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 50000,
+            FileSizeBytes: 30_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "hevc",
-                    3840,
-                    2160,
-                    24.0,
-                    10,
-                    "yuv420p10le",
-                    "bt2020",
-                    transfer,
-                    "bt2020nc",
-                    true,
-                    45000
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: 3840,
+                    Height: 2160,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: transfer,
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 45000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static MediaInfo BuildSdrMedia() =>
         new(
-            "/media/sdr.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            8000,
-            4_000_000_000,
+            FilePath: "/media/sdr.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 4_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile BuildProfile(bool tenBit, bool convertHdrToSdr) =>
         new(
-            Ulid.NewUlid(),
-            "HDR Test",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H265,
-                3840,
-                2160,
-                V2RateControlMode.Crf,
-                22,
-                20000,
-                null,
-                null,
-                "medium",
-                CodecProfile.Main10,
-                "5.1",
-                null,
-                tenBit ? 10 : 8,
-                tenBit ? "yuv420p10le" : null,
-                2,
-                convertHdrToSdr,
-                "video/{label}",
-                "video/{label}/playlist"
+            Id: Ulid.NewUlid(),
+            Name: "HDR Test",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H265,
+                Width: 3840,
+                Height: 2160,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 22,
+                BitrateKbps: 20000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.Main10,
+                Level: "5.1",
+                Tune: null,
+                BitDepth: tenBit ? 10 : 8,
+                PixelFormat: tenBit ? "yuv420p10le" : null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: convertHdrToSdr,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
             ),
-            [],
-            []
+            Audio: [],
+            Subtitles: []
         );
 }

@@ -62,7 +62,7 @@ public class PluginBootScanTests : IDisposable
         try
         {
             if (Directory.Exists(_tempPluginsDir))
-                Directory.Delete(_tempPluginsDir, true);
+                Directory.Delete(_tempPluginsDir, recursive: true);
         }
         catch (Exception) { }
     }
@@ -73,13 +73,19 @@ public class PluginBootScanTests : IDisposable
         // Echo must NOT be loaded into the default AssemblyLoadContext (no ProjectReference
         // copy) — loading it through PluginLoadContext requires clean isolation.
         string testBinDir = Path.GetDirectoryName(typeof(PluginBootScanTests).Assembly.Location)!;
-        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
+        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
         // Mirror the test's own build configuration + TFM so this works under
         // both Debug (local) and Release (CI coverage) — hardcoding "Debug"
         // makes every Echo-staging test fail when CI builds Release.
         string tfm = Path.GetFileName(testBinDir);
         string configuration = Path.GetFileName(Path.GetDirectoryName(testBinDir)!);
-        return Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", configuration, tfm]
+        return Path.Combine(
+            repoRoot,
+            "tests",
+            "NoMercy.Plugin.Samples.Echo",
+            "bin",
+            configuration,
+            tfm
         );
     }
 
@@ -96,18 +102,18 @@ public class PluginBootScanTests : IDisposable
 
         // Copy DLL and all dependencies that the Echo assembly needs at runtime.
         foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
-            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), overwrite: true);
 
         // Copy the .deps.json — AssemblyDependencyResolver reads it to resolve the
         // plugin's dependencies. Without it the resolver constructor throws and the
         // plugin silently fails to load (results come back empty). This mirrors how
         // a real plugin package ships its DLL alongside its deps manifest.
         foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
-            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), overwrite: true);
 
         // Copy the plugin manifest.
         if (File.Exists(manifestSrc))
-            File.Copy(manifestSrc, Path.Combine(_echoPluginDir, "plugin.json"), true);
+            File.Copy(manifestSrc, Path.Combine(_echoPluginDir, "plugin.json"), overwrite: true);
     }
 
     [Fact]
@@ -239,21 +245,21 @@ public class PluginBootScanTests : IDisposable
         Directory.CreateDirectory(disabledDir);
         string binDir = GetEchoPluginBinDir();
         foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
-            File.Copy(file, Path.Combine(disabledDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(disabledDir, Path.GetFileName(file)), overwrite: true);
         foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
-            File.Copy(file, Path.Combine(disabledDir, Path.GetFileName(file)), true);
+            File.Copy(file, Path.Combine(disabledDir, Path.GetFileName(file)), overwrite: true);
         File.WriteAllText(
             Path.Combine(disabledDir, "plugin.json"),
             """
-                      {
-                        "id": "66666666-1111-2222-3333-444444444444",
-                        "name": "EchoDisabled",
-                        "version": "0.1.0",
-                        "description": "same assembly, never auto-enabled",
-                        "assembly": "NoMercy.Plugin.Samples.Echo.dll",
-                        "autoEnabled": false
-                      }
-                      """
+            {
+              "id": "66666666-1111-2222-3333-444444444444",
+              "name": "EchoDisabled",
+              "version": "0.1.0",
+              "description": "same assembly, never auto-enabled",
+              "assembly": "NoMercy.Plugin.Samples.Echo.dll",
+              "autoEnabled": false
+            }
+            """
         );
 
         IReadOnlyList<PluginLoadResult> results = await _manager.LoadAllAsync();

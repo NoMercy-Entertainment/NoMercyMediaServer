@@ -26,30 +26,30 @@ public class PlanStageHelpersTests
 {
     private static VideoOutput RefVideo() =>
         new(
-            StreamPolicy.Transcode,
-            VideoCodecType.H264,
-            1920,
-            1080,
-            RateControlMode.Vbr,
-            0,
-            4000,
-            null,
-            null,
-            "medium",
-            CodecProfile.Main,
-            "4.0",
-            null,
-            8,
-            "yuv420p",
-            2,
-            false,
-            "video/{w}x{h}",
-            "video/{w}x{h}/playlist"
+            Policy: StreamPolicy.Transcode,
+            Codec: VideoCodecType.H264,
+            Width: 1920,
+            Height: 1080,
+            RateControl: RateControlMode.Vbr,
+            Crf: 0,
+            BitrateKbps: 4000,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
+            Preset: "medium",
+            CodecProfile: CodecProfile.Main,
+            Level: "4.0",
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: "yuv420p",
+            KeyframeIntervalSeconds: 2,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: "video/{w}x{h}",
+            PlaylistNameTemplate: "video/{w}x{h}/playlist"
         );
 
     private static EncodingProfile Profile(VideoOutput? video, LadderConfig? ladder) =>
         new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "test",
             Container: Container.HlsFmp4,
             Video: video,
@@ -63,14 +63,14 @@ public class PlanStageHelpersTests
     [Fact]
     public void EnumerateVideo_NoVideoNoLadder_ReturnsEmpty()
     {
-        EncodingProfile profile = Profile(null, null);
+        EncodingProfile profile = Profile(video: null, ladder: null);
         PlanStageHelpers.EnumerateVideo(profile).Should().BeEmpty();
     }
 
     [Fact]
     public void EnumerateVideo_VideoNoLadder_ReturnsSingleEntry()
     {
-        EncodingProfile profile = Profile(RefVideo(), null);
+        EncodingProfile profile = Profile(RefVideo(), ladder: null);
         VideoOutput[] result = PlanStageHelpers.EnumerateVideo(profile);
 
         result.Should().ContainSingle();
@@ -138,7 +138,7 @@ public class PlanStageHelpersTests
     public void EnumerateVideo_ManualLadderNoReferenceVideo_SynthesisesFromRung()
     {
         EncodingProfile profile = Profile(
-            null,
+            video: null,
             new()
             {
                 Mode = LadderMode.Manual,
@@ -157,19 +157,19 @@ public class PlanStageHelpersTests
     // ── ContainerToOutputFormat ─────────────────────────────────────────────
 
     [Theory]
-    [InlineData([Container.HlsTs, OutputFormat.Hls])]
-    [InlineData([Container.HlsFmp4, OutputFormat.Hls])]
-    [InlineData([Container.AudioHlsTs, OutputFormat.AudioHls])]
-    [InlineData([Container.AudioHlsFmp4, OutputFormat.AudioHls])]
-    [InlineData([Container.Mkv, OutputFormat.Mkv])]
-    [InlineData([Container.Mka, OutputFormat.Mkv])]
-    [InlineData([Container.Mks, OutputFormat.Mkv])]
-    [InlineData([Container.Mp4, OutputFormat.Mp4])]
-    [InlineData([Container.Aac, OutputFormat.Mp4])]
-    [InlineData([Container.Dash, OutputFormat.Dash])]
-    [InlineData([Container.Mp3, OutputFormat.Mp3])]
-    [InlineData([Container.Flac, OutputFormat.Flac])]
-    [InlineData([Container.Ogg, OutputFormat.Ogg])]
+    [InlineData(Container.HlsTs, OutputFormat.Hls)]
+    [InlineData(Container.HlsFmp4, OutputFormat.Hls)]
+    [InlineData(Container.AudioHlsTs, OutputFormat.AudioHls)]
+    [InlineData(Container.AudioHlsFmp4, OutputFormat.AudioHls)]
+    [InlineData(Container.Mkv, OutputFormat.Mkv)]
+    [InlineData(Container.Mka, OutputFormat.Mkv)]
+    [InlineData(Container.Mks, OutputFormat.Mkv)]
+    [InlineData(Container.Mp4, OutputFormat.Mp4)]
+    [InlineData(Container.Aac, OutputFormat.Mp4)]
+    [InlineData(Container.Dash, OutputFormat.Dash)]
+    [InlineData(Container.Mp3, OutputFormat.Mp3)]
+    [InlineData(Container.Flac, OutputFormat.Flac)]
+    [InlineData(Container.Ogg, OutputFormat.Ogg)]
     public void ContainerToOutputFormat_KnownContainers(Container c, OutputFormat expected)
     {
         PlanStageHelpers.ContainerToOutputFormat(c).Should().Be(expected);

@@ -32,7 +32,7 @@ public class NfsExportDiscoveryTests
         List<string>? result;
         try
         {
-            result = await NfsStorageDriver.GetExportsAsync("192.0.2.1", 500);
+            result = await NfsStorageDriver.GetExportsAsync("192.0.2.1", timeoutMs: 500);
         }
         catch (DllNotFoundException)
         {
@@ -50,7 +50,7 @@ public class NfsExportDiscoveryTests
         List<string>? result;
         try
         {
-            result = await NfsStorageDriver.GetExportsAsync("127.0.0.1", 500);
+            result = await NfsStorageDriver.GetExportsAsync("127.0.0.1", timeoutMs: 500);
         }
         catch (DllNotFoundException)
         {
@@ -66,7 +66,7 @@ public class NfsExportDiscoveryTests
     [Fact]
     public void NfsDriverConfig_For_builds_valid_config()
     {
-        NfsDriverConfig config = NfsDriverConfig.For("nas.local", "/media", 3);
+        NfsDriverConfig config = NfsDriverConfig.For("nas.local", "/media", version: 3);
 
         config.Server.Should().Be("nas.local");
         config.Export.Should().Be("/media");
@@ -79,7 +79,7 @@ public class NfsExportDiscoveryTests
     [Fact]
     public void NfsDriverConfig_For_accepts_uid_gid()
     {
-        NfsDriverConfig config = NfsDriverConfig.For("nas.local", export: "/media", uid: 1000, gid: 1000);
+        NfsDriverConfig config = NfsDriverConfig.For("nas.local", "/media", uid: 1000, gid: 1000);
 
         config.Uid.Should().Be(1000);
         config.Gid.Should().Be(1000);
@@ -144,7 +144,7 @@ public class NfsListDirectoriesIntegrationTests(StorageBackendsFixture fix)
         entries.Should().NotContain(e => e.Name.StartsWith('.'));
         entries.Should().Contain(e => e.Name == "visible");
 
-        d.DeleteDirectory(dir, true);
+        d.DeleteDirectory(dir, recursive: true);
     }
 
     [SkippableFact]
@@ -163,7 +163,7 @@ public class NfsListDirectoriesIntegrationTests(StorageBackendsFixture fix)
 
         List<string>? exports = await NfsStorageDriver.GetExportsAsync(
             StorageBackendsFixture.NfsHost,
-            5_000
+            timeoutMs: 5_000
         );
 
         // May return null if libnfs mount-protocol call fails (depends on container);

@@ -19,10 +19,10 @@ internal static class TestProfiles
 {
     public static EncodingProfile ArchiveRemuxMkv() =>
         new(
-            Ulid.NewUlid(),
-            "Archive Remux MKV",
-            Container.Mkv,
-            new(
+            Id: Ulid.NewUlid(),
+            Name: "Archive Remux MKV",
+            Container: Container.Mkv,
+            Video: new(
                 StreamPolicy.Copy,
                 VideoCodecType.Copy,
                 0,
@@ -43,6 +43,7 @@ internal static class TestProfiles
                 "video/copy",
                 "video/copy/playlist"
             ),
+            Audio:
             [
                 new(
                     StreamPolicy.Copy,
@@ -58,6 +59,7 @@ internal static class TestProfiles
                     "audio/{lang}-copy/playlist"
                 ),
             ],
+            Subtitles:
             [
                 new(
                     SubtitlePolicy.Copy,
@@ -75,7 +77,7 @@ internal static class TestProfiles
 
     public static EncodingProfile WebHls1080p() =>
         new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "Web 1080p",
             Container: Container.HlsFmp4,
             Video: new(
@@ -135,20 +137,20 @@ internal static class TestProfiles
 
     public static EncodingProfile WithContainer(Container container) =>
         new(
-            Ulid.NewUlid(),
-            "Test",
-            container,
-            null,
-            [],
-            []
+            Id: Ulid.NewUlid(),
+            Name: "Test",
+            Container: container,
+            Video: null,
+            Audio: [],
+            Subtitles: []
         );
 
     public static EncodingProfile WithName(string name) =>
         new(
-            Ulid.NewUlid(),
-            name,
-            Container.HlsFmp4,
-            new(
+            Id: Ulid.NewUlid(),
+            Name: name,
+            Container: Container.HlsFmp4,
+            Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H264,
                 1920,
@@ -169,7 +171,7 @@ internal static class TestProfiles
                 "video/{label}",
                 "video/{label}/playlist"
             ),
-            [],
-            []
+            Audio: [],
+            Subtitles: []
         );
 }

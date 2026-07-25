@@ -75,11 +75,11 @@ public class ImageDtoTests
     }
 
     [Theory]
-    [InlineData(["/abc123.jpg", 922_006_951L])]
-    [InlineData(["/path-a.jpg", 1_781_138_878L])]
-    [InlineData(["/path-b.jpg", 2_746_522_937L])]
-    [InlineData(["", 3_128_831_035L])]
-    [InlineData(["/determinism-check-9f3ac1.jpg", 2_410_689_069L])]
+    [InlineData("/abc123.jpg", 922_006_951L)]
+    [InlineData("/path-a.jpg", 1_781_138_878L)]
+    [InlineData("/path-b.jpg", 2_746_522_937L)]
+    [InlineData("", 3_128_831_035L)]
+    [InlineData("/determinism-check-9f3ac1.jpg", 2_410_689_069L)]
     public void Ctor_TmdbImage_MintsThePreComputedFnv1AId_NotARandomizedHash(
         string filePath,
         long expectedId
@@ -114,7 +114,7 @@ public class ImageDtoTests
     [Fact]
     public void Ctor_TmdbImage_WidthGreaterThanOrEqualHeight_TypeIsBackdrop()
     {
-        ImageDto dto = new(MakeTmdbImage("/landscape.jpg", 1920, 1080));
+        ImageDto dto = new(MakeTmdbImage("/landscape.jpg", width: 1920, height: 1080));
 
         dto.Type.Should().Be("backdrop");
     }
@@ -122,7 +122,7 @@ public class ImageDtoTests
     [Fact]
     public void Ctor_TmdbImage_HeightGreaterThanWidth_TypeIsPoster()
     {
-        ImageDto dto = new(MakeTmdbImage("/portrait.jpg", 500, 750));
+        ImageDto dto = new(MakeTmdbImage("/portrait.jpg", width: 500, height: 750));
 
         dto.Type.Should().Be("poster");
     }

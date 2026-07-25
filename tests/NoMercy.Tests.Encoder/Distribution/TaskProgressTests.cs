@@ -31,7 +31,7 @@ public class TaskProgressTests
     public void Store_Update_And_Get_RoundTrips()
     {
         InMemoryTaskProgressStore store = new();
-        TaskProgressSnapshot snap = MakeSnapshot("t1", 42);
+        TaskProgressSnapshot snap = MakeSnapshot("t1", percent: 42);
 
         store.Update("t1", snap);
 
@@ -44,8 +44,8 @@ public class TaskProgressTests
     public void Store_LatestUpdateWins()
     {
         InMemoryTaskProgressStore store = new();
-        store.Update("t1", MakeSnapshot("t1", 10));
-        store.Update("t1", MakeSnapshot("t1", 80));
+        store.Update("t1", MakeSnapshot("t1", percent: 10));
+        store.Update("t1", MakeSnapshot("t1", percent: 80));
 
         store.Get("t1")!.PercentComplete.Should().Be(80);
     }
@@ -55,12 +55,12 @@ public class TaskProgressTests
     {
         InMemoryTaskProgressStore store = new();
         // Back-date one snapshot past the 15-minute stale window.
-        TaskProgressSnapshot stale = MakeSnapshot("old", 50) with
+        TaskProgressSnapshot stale = MakeSnapshot("old", percent: 50) with
         {
             ReceivedAtUtc = DateTime.UtcNow.AddMinutes(-30),
         };
         store.Update("old", stale);
-        store.Update("fresh", MakeSnapshot("fresh", 20));
+        store.Update("fresh", MakeSnapshot("fresh", percent: 20));
 
         IReadOnlyList<TaskProgressSnapshot> all = store.GetAll();
 
@@ -150,11 +150,11 @@ public class TaskProgressTests
                     onProgress?.Invoke(MakeProgress(75));
                     return Task.FromResult(
                         new ExecutionResult(
-                            true,
-                            0,
-                            "",
-                            TimeSpan.FromSeconds(1),
-                            null
+                            Success: true,
+                            ExitCode: 0,
+                            StdErr: "",
+                            Duration: TimeSpan.FromSeconds(1),
+                            Error: null
                         )
                     );
                 }
@@ -167,10 +167,10 @@ public class TaskProgressTests
         );
 
         EncodeTask task = new(
-            "progress-task",
-            new("ffmpeg", [], null),
-            "/out",
-            EncodeTaskType.QualityVariant
+            TaskId: "progress-task",
+            Command: new("ffmpeg", [], null),
+            OutputPath: "/out",
+            Type: EncodeTaskType.QualityVariant
         );
 
         await dispatcher.DispatchAsync([task], CancellationToken.None);
@@ -209,11 +209,11 @@ public class TaskProgressTests
                     onProgress?.Invoke(MakeProgress());
                     return Task.FromResult(
                         new ExecutionResult(
-                            true,
-                            0,
-                            "",
-                            TimeSpan.FromSeconds(1),
-                            null
+                            Success: true,
+                            ExitCode: 0,
+                            StdErr: "",
+                            Duration: TimeSpan.FromSeconds(1),
+                            Error: null
                         )
                     );
                 }
@@ -226,10 +226,10 @@ public class TaskProgressTests
         );
 
         EncodeTask task = new(
-            "survivor",
-            new("ffmpeg", [], null),
-            "/out",
-            EncodeTaskType.QualityVariant
+            TaskId: "survivor",
+            Command: new("ffmpeg", [], null),
+            OutputPath: "/out",
+            Type: EncodeTaskType.QualityVariant
         );
 
         DispatchResult[] results = await dispatcher.DispatchAsync([task], CancellationToken.None);
@@ -243,29 +243,29 @@ public class TaskProgressTests
 
     private static TaskProgressSnapshot MakeSnapshot(string id, double percent) =>
         new(
-            id,
-            "w1",
-            percent,
-            60,
-            1.5,
-            "encode",
-            10,
-            20,
-            5,
-            30,
-            DateTime.UtcNow
+            TaskId: id,
+            WorkerId: "w1",
+            PercentComplete: percent,
+            CurrentFps: 60,
+            CurrentSpeed: 1.5,
+            CurrentStage: "encode",
+            ElapsedSeconds: 10,
+            EstimatedRemainingSeconds: 20,
+            CurrentTimeSeconds: 5,
+            DurationSeconds: 30,
+            ReceivedAtUtc: DateTime.UtcNow
         );
 
     private static EncodingProgress MakeProgress(double percent = 50) =>
         new(
-            "corr",
-            percent,
-            TimeSpan.FromSeconds(5),
-            TimeSpan.FromSeconds(5),
-            30,
-            1.0,
-            "stage",
-            "op"
+            CorrelationId: "corr",
+            PercentComplete: percent,
+            Elapsed: TimeSpan.FromSeconds(5),
+            EstimatedRemaining: TimeSpan.FromSeconds(5),
+            CurrentFps: 30,
+            CurrentSpeed: 1.0,
+            CurrentStage: "stage",
+            CurrentOperation: "op"
         );
 
     private static IHttpClientFactory MakeFactory(HttpMessageHandler handler)

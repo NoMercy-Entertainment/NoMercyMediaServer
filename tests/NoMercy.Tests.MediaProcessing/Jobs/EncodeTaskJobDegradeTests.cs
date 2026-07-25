@@ -34,12 +34,12 @@ public class EncodeTaskJobDegradeTests
             InputFile = "/movies/test/test.mkv",
             PresetId = Ulid.NewUlid(),
             Task = new DecomposedTask(
-                "task-1",
-                1,
-                "group-1",
-                EncodeTaskKind.Video,
-                0,
-                resources
+                TaskId: "task-1",
+                ParentJobId: 1,
+                GroupTag: "group-1",
+                Kind: EncodeTaskKind.Video,
+                OutputIndex: 0,
+                Resources: resources
             ),
         };
 
@@ -47,7 +47,7 @@ public class EncodeTaskJobDegradeTests
     public void DegradeToSoftware_GpuPinnedTask_DropsGpuKeyAndReroutesToEncoderCpu()
     {
         EncodeTaskJob job = BuildJob(
-            new ResourceRequirement("h264_amf", 1, 2)
+            new ResourceRequirement(GpuDeviceKey: "h264_amf", GpuSlots: 1, CpuThreads: 2)
         );
 
         Assert.Equal(QueueNames.EncoderGpu, job.QueueName);
@@ -67,7 +67,7 @@ public class EncodeTaskJobDegradeTests
     public void DegradeToSoftware_AlreadyCpuOnlyTask_ReturnsNull()
     {
         EncodeTaskJob job = BuildJob(
-            new ResourceRequirement(null, 0, 4)
+            new ResourceRequirement(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 4)
         );
 
         IShouldQueue? degraded = job.DegradeToSoftware();
@@ -79,7 +79,7 @@ public class EncodeTaskJobDegradeTests
     [Fact]
     public void DegradeToSoftware_NoResourceRequirementAtAll_ReturnsNull()
     {
-        EncodeTaskJob job = BuildJob(null);
+        EncodeTaskJob job = BuildJob(resources: null);
 
         IShouldQueue? degraded = job.DegradeToSoftware();
 

@@ -23,6 +23,7 @@ using NoMercy.Encoder.Pipeline.Stages;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using LadderConfig = NoMercy.Encoder.Profiles.LadderConfig;
 using LadderMode = NoMercy.Encoder.Profiles.LadderMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
 using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
@@ -77,106 +78,109 @@ public class PlanStageTests
 
     private static ResolvedCodec BuildSoftwareH264Codec() =>
         new(
-            "libx264",
-            new(
-                "libx264",
-                null,
-                ["slow", "medium", "fast"],
-                ["high"],
-                ["4.1"],
-                new(0, 51, 23),
-                [RateControlMode.Crf, RateControlMode.Cbr],
-                false,
-                false,
-                int.MaxValue,
-                "yuv420p10le",
-                new()
+            FfmpegEncoderName: "libx264",
+            EncoderInfo: new(
+                FfmpegName: "libx264",
+                RequiredVendor: null,
+                Presets: ["slow", "medium", "fast"],
+                Profiles: ["high"],
+                Levels: ["4.1"],
+                QualityRange: new(0, 51, 23),
+                SupportedRateControl: [RateControlMode.Crf, RateControlMode.Cbr],
+                Supports10Bit: false,
+                SupportsHdr: false,
+                MaxConcurrentSessions: int.MaxValue,
+                PixelFormat10Bit: "yuv420p10le",
+                VendorSpecificFlags: new()
             ),
-            null,
-            RateControlMode.Crf
+            Device: null,
+            DefaultRateControl: RateControlMode.Crf
         );
 
     private static MediaInfo BuildMediaInfo() =>
         new(
-            "/movies/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
+            AudioStreams:
             [
                 new(
-                    1,
-                    "aac",
-                    2,
-                    48000,
-                    192,
-                    "en",
-                    true,
-                    false
+                    Index: 1,
+                    Codec: "aac",
+                    Channels: 2,
+                    SampleRate: 48000,
+                    BitRateKbps: 192,
+                    Language: "en",
+                    IsDefault: true,
+                    IsForced: false
                 ),
             ],
-            [],
-            []
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile BuildSimpleProfile() =>
         new(
-            Ulid.NewUlid(),
-            "Test",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                8,
-                null,
-                2,
-                false,
-                ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-                ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            Id: Ulid.NewUlid(),
+            Name: "Test",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
             ),
+            Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    ["en"],
-                    null,
-                    null,
-                    null,
-                    ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                    ":type:_:language:_:codec:/:type:_:language:_:codec:"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["en"],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            []
+            Subtitles: []
         );
 
     // ------------------------------------------------------------------
@@ -269,46 +273,47 @@ public class PlanStageTests
         // Default resolver returns libx264 with Supports10Bit=false + empty PixelFormat10Bit.
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
-            "TenBitDowngrade",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                23,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.1",
-                null,
-                10,
-                null,
-                2,
-                false,
-                "video/{label}",
-                "video/{label}/playlist"
+            Id: Ulid.NewUlid(),
+            Name: "TenBitDowngrade",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 10,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
             ),
+            Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    ["en"],
-                    null,
-                    null,
-                    null,
-                    "audio/{lang}-{codec}",
-                    "audio/{lang}-{codec}/playlist"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["en"],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "audio/{lang}-{codec}",
+                    PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),
             ],
-            []
+            Subtitles: []
         );
 
         StageResult result = await _stage.ExecuteAsync(new(media, profile), _context, default);
@@ -332,68 +337,69 @@ public class PlanStageTests
             )
             .Returns(
                 new ResolvedCodec(
-                    "libx265",
-                    new(
-                        "libx265",
-                        null,
-                        ["slow", "medium", "fast"],
-                        ["main", "main10"],
-                        ["4.1"],
-                        new(0, 51, 28),
-                        [RateControlMode.Crf],
-                        true,
-                        true,
-                        int.MaxValue,
-                        "yuv420p10le",
-                        new()
+                    FfmpegEncoderName: "libx265",
+                    EncoderInfo: new(
+                        FfmpegName: "libx265",
+                        RequiredVendor: null,
+                        Presets: ["slow", "medium", "fast"],
+                        Profiles: ["main", "main10"],
+                        Levels: ["4.1"],
+                        QualityRange: new(0, 51, 28),
+                        SupportedRateControl: [RateControlMode.Crf],
+                        Supports10Bit: true,
+                        SupportsHdr: true,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new()
                     ),
-                    null,
-                    RateControlMode.Crf
+                    Device: null,
+                    DefaultRateControl: RateControlMode.Crf
                 )
             );
 
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
-            "TenBit",
-            Container.HlsTs,
-            new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H265,
-                1920,
-                1080,
-                V2RateControlMode.Crf,
-                28,
-                4000,
-                null,
-                null,
-                "medium",
-                CodecProfile.Main10,
-                "4.1",
-                null,
-                10,
-                null,
-                2,
-                false,
-                "video/{label}",
-                "video/{label}/playlist"
+            Id: Ulid.NewUlid(),
+            Name: "TenBit",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H265,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 28,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.Main10,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 10,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
             ),
+            Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    ["en"],
-                    null,
-                    null,
-                    null,
-                    "audio/{lang}-{codec}",
-                    "audio/{lang}-{codec}/playlist"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["en"],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "audio/{lang}-{codec}",
+                    PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),
             ],
-            []
+            Subtitles: []
         );
 
         StageResult result = await _stage.ExecuteAsync(new(media, profile), _context, default);
@@ -408,24 +414,24 @@ public class PlanStageTests
     {
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "Multi",
             Container: Container.HlsTs,
             Video: null,
             Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    ["en"],
-                    null,
-                    null,
-                    null,
-                    "audio/{lang}-{codec}",
-                    "audio/{lang}-{codec}/playlist"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["en"],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "audio/{lang}-{codec}",
+                    PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),
             ],
             Subtitles: [],
@@ -435,30 +441,30 @@ public class PlanStageTests
                 Rungs =
                 [
                     new(
-                        1920,
-                        1080,
-                        VideoCodecType.H264,
-                        4000,
-                        6000,
-                        8000,
-                        24.0,
-                        "medium",
-                        CodecProfile.High,
-                        8,
-                        "yuv420p"
+                        Width: 1920,
+                        Height: 1080,
+                        Codec: VideoCodecType.H264,
+                        BitrateKbps: 4000,
+                        MaxBitrateKbps: 6000,
+                        BufferSizeKbps: 8000,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.High,
+                        BitDepth: 8,
+                        PixelFormat: "yuv420p"
                     ),
                     new(
-                        1280,
-                        720,
-                        VideoCodecType.H264,
-                        2500,
-                        3750,
-                        5000,
-                        24.0,
-                        "medium",
-                        CodecProfile.High,
-                        8,
-                        "yuv420p"
+                        Width: 1280,
+                        Height: 720,
+                        Codec: VideoCodecType.H264,
+                        BitrateKbps: 2500,
+                        MaxBitrateKbps: 3750,
+                        BufferSizeKbps: 5000,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.High,
+                        BitDepth: 8,
+                        PixelFormat: "yuv420p"
                     ),
                 ],
             }
@@ -484,14 +490,14 @@ public class PlanStageTests
     {
         Mock<IOutputNamingResolver> namingResolver = new();
         BundleLayout fakeLayout = new(
-            "mfa",
-            "test",
-            false,
-            "encodes/test",
-            "mfa_master.m3u8",
-            "encodes/test/manifest.json",
-            "encodes/test/reconstruction.json",
-            string.Empty
+            MediaKey: "mfa",
+            PresetSlug: "test",
+            IsSingleFile: false,
+            BundleDirectory: "encodes/test",
+            MasterPlaylistName: "mfa_master.m3u8",
+            ManifestPath: "encodes/test/manifest.json",
+            ReconstructionPath: "encodes/test/reconstruction.json",
+            SingleFileName: string.Empty
         );
 
         namingResolver
@@ -500,15 +506,15 @@ public class PlanStageTests
 
         PlanStage stage = new(
             _graphBuilder,
-            groupingStrategy: _groupingStrategy,
-            costEstimator: _costEstimator,
-            codecResolver: _codecResolver.Object,
-            hardware: _hardware.Object,
-            tonemapSelector: new TonemapSelector(),
-            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
-            abrLadderGenerator: new AbrLadderGenerator(),
-            cropDetector: new NoOpCropDetector(),
-            logger: NullLogger<PlanStage>.Instance,
+            _groupingStrategy,
+            _costEstimator,
+            _codecResolver.Object,
+            _hardware.Object,
+            new TonemapSelector(),
+            new Mock<IFfmpegCapabilities>().Object,
+            new AbrLadderGenerator(),
+            new NoOpCropDetector(),
+            NullLogger<PlanStage>.Instance,
             outputNamingResolver: namingResolver.Object
         );
 
@@ -542,15 +548,15 @@ public class PlanStageTests
 
         PlanStage stage = new(
             _graphBuilder,
-            groupingStrategy: _groupingStrategy,
-            costEstimator: _costEstimator,
-            codecResolver: _codecResolver.Object,
-            hardware: _hardware.Object,
-            tonemapSelector: new TonemapSelector(),
-            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
-            abrLadderGenerator: new AbrLadderGenerator(),
-            cropDetector: new NoOpCropDetector(),
-            logger: NullLogger<PlanStage>.Instance,
+            _groupingStrategy,
+            _costEstimator,
+            _codecResolver.Object,
+            _hardware.Object,
+            new TonemapSelector(),
+            new Mock<IFfmpegCapabilities>().Object,
+            new AbrLadderGenerator(),
+            new NoOpCropDetector(),
+            NullLogger<PlanStage>.Instance,
             outputNamingResolver: namingResolver.Object
         );
 

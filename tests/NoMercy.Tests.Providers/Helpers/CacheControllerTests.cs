@@ -38,7 +38,7 @@ public class CacheControllerTests : IDisposable
     {
         if (Directory.Exists(_testCacheDir))
         {
-            Directory.Delete(_testCacheDir, true);
+            Directory.Delete(_testCacheDir, recursive: true);
         }
     }
 
@@ -64,7 +64,7 @@ public class CacheControllerTests : IDisposable
         }
 
         // Act: prune with 500-byte limit
-        CacheController.PruneCache(_testCacheDir, 500);
+        CacheController.PruneCache(_testCacheDir, maxSizeBytes: 500);
 
         // Assert: oldest files deleted, newest kept
         // Total was 1000, limit is 500, so at least 3 files should be deleted
@@ -99,7 +99,7 @@ public class CacheControllerTests : IDisposable
         }
 
         // Act: prune with 500-byte limit (under limit)
-        CacheController.PruneCache(_testCacheDir, 500);
+        CacheController.PruneCache(_testCacheDir, maxSizeBytes: 500);
 
         // Assert: all files remain
         Assert.Equal(2, Directory.GetFiles(_testCacheDir).Length);
@@ -109,7 +109,7 @@ public class CacheControllerTests : IDisposable
     public void PruneCache_HandlesEmptyDirectory()
     {
         // Act & Assert: should not throw
-        CacheController.PruneCache(_testCacheDir, 500);
+        CacheController.PruneCache(_testCacheDir, maxSizeBytes: 500);
 
         Assert.Empty(Directory.GetFiles(_testCacheDir));
     }
@@ -120,7 +120,7 @@ public class CacheControllerTests : IDisposable
         string nonExistent = Path.Combine(Path.GetTempPath(), $"NonExistent_{Guid.NewGuid():N}");
 
         // Act & Assert: should not throw
-        CacheController.PruneCache(nonExistent, 500);
+        CacheController.PruneCache(nonExistent, maxSizeBytes: 500);
     }
 
     [Fact]

@@ -24,10 +24,10 @@ public class LiveGapPlannerTests
     public void Plan_EmptyCoverage_StartsAtDesired_RunsToEof()
     {
         LiveGapPlan? plan = LiveGapPlanner.Plan(
-            new HashSet<int>(),
-            0,
-            6,
-            null
+            existing: new HashSet<int>(),
+            desiredIndex: 0,
+            segmentDurationSeconds: 6,
+            lastIndex: null
         );
 
         plan.Should().NotBeNull();
@@ -41,10 +41,10 @@ public class LiveGapPlannerTests
         HashSet<int> existing = [.. Enumerable.Range(0, 10)]; // 0..9
 
         LiveGapPlan? plan = LiveGapPlanner.Plan(
-            existing,
-            0,
-            6,
-            9
+            existing: existing,
+            desiredIndex: 0,
+            segmentDurationSeconds: 6,
+            lastIndex: 9
         );
 
         plan.Should().BeNull();
@@ -61,10 +61,10 @@ public class LiveGapPlannerTests
         const int segDur = 6;
 
         LiveGapPlan? plan = LiveGapPlanner.Plan(
-            existing,
-            100,
-            segDur,
-            null
+            existing: existing,
+            desiredIndex: 100,
+            segmentDurationSeconds: segDur,
+            lastIndex: null
         );
 
         plan.Should().NotBeNull();
@@ -79,10 +79,10 @@ public class LiveGapPlannerTests
         const int segDur = 6;
 
         LiveGapPlan? plan = LiveGapPlanner.Plan(
-            existing,
-            20,
-            segDur,
-            null
+            existing: existing,
+            desiredIndex: 20,
+            segmentDurationSeconds: segDur,
+            lastIndex: null
         );
 
         plan.Should().NotBeNull();
@@ -97,10 +97,10 @@ public class LiveGapPlannerTests
         const int segDur = 6;
 
         LiveGapPlan? plan = LiveGapPlanner.Plan(
-            existing,
-            5,
-            segDur,
-            null
+            existing: existing,
+            desiredIndex: 5,
+            segmentDurationSeconds: segDur,
+            lastIndex: null
         );
 
         plan.Should().NotBeNull();
@@ -112,10 +112,10 @@ public class LiveGapPlannerTests
     public void Plan_DesiredPastLastIndex_ReturnsNull()
     {
         LiveGapPlan? plan = LiveGapPlanner.Plan(
-            new HashSet<int>(),
-            500,
-            6,
-            100
+            existing: new HashSet<int>(),
+            desiredIndex: 500,
+            segmentDurationSeconds: 6,
+            lastIndex: 100
         );
 
         plan.Should().BeNull();
@@ -125,10 +125,10 @@ public class LiveGapPlannerTests
     public void Plan_ZeroSegmentDuration_FallsBackToSixInsteadOfDividingByZero()
     {
         LiveGapPlan? plan = LiveGapPlanner.Plan(
-            new HashSet<int>(),
-            2,
-            0,
-            null
+            existing: new HashSet<int>(),
+            desiredIndex: 2,
+            segmentDurationSeconds: 0,
+            lastIndex: null
         );
 
         plan.Should().NotBeNull();
@@ -139,10 +139,10 @@ public class LiveGapPlannerTests
     public void Plan_NegativeDesiredIndex_ClampsToZero()
     {
         LiveGapPlan? plan = LiveGapPlanner.Plan(
-            new HashSet<int>(),
-            -5,
-            6,
-            null
+            existing: new HashSet<int>(),
+            desiredIndex: -5,
+            segmentDurationSeconds: 6,
+            lastIndex: null
         );
 
         plan.Should().NotBeNull();

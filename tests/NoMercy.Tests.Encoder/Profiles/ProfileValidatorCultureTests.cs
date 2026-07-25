@@ -34,7 +34,7 @@ public class ProfileValidatorCultureTests
 {
     private static EncodingProfile ProfileWithAutoLadder(AutoLadderConfig config) =>
         new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "culture-test",
             Container: Container.HlsFmp4,
             Video: null,
@@ -113,8 +113,8 @@ public class ProfileValidatorCultureTests
 
             // 1920 x 1080 x 240 = 497,664,000 luma samples/sec — H.264 Level 4.2
             // caps at 133,693,440, far below.
-            MediaInfo source = Source(1920, 1080, 240.0);
-            EncodingProfile profile = TranscodeProfile(VideoCodecType.H264, "4.2");
+            MediaInfo source = Source(width: 1920, height: 1080, fps: 240.0);
+            EncodingProfile profile = TranscodeProfile(codec: VideoCodecType.H264, level: "4.2");
 
             ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
 
@@ -130,60 +130,61 @@ public class ProfileValidatorCultureTests
 
     private static MediaInfo Source(int width, int height, double fps) =>
         new(
-            "/media/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    width,
-                    height,
-                    fps,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    8000,
-                    fps
+                    Index: 0,
+                    Codec: "h264",
+                    Width: width,
+                    Height: height,
+                    FrameRate: fps,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 8000,
+                    AverageFrameRate: fps
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static EncodingProfile TranscodeProfile(VideoCodecType codec, string level) =>
         new(
-            Ulid.NewUlid(),
-            "culture-test",
-            Container.Mkv,
-            new(
-                StreamPolicy.Transcode,
-                codec,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                23,
-                0,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                level,
-                null,
-                8,
-                null,
-                2,
-                false,
-                "video/video",
-                "video/video"
+            Id: Ulid.NewUlid(),
+            Name: "culture-test",
+            Container: Container.Mkv,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: codec,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 0,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: level,
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/video",
+                PlaylistNameTemplate: "video/video"
             ),
-            [],
-            []
+            Audio: [],
+            Subtitles: []
         );
 }

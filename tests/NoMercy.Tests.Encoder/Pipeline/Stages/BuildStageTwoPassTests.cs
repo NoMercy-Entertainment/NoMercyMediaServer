@@ -65,7 +65,7 @@ public class BuildStageTwoPassTests
     {
         OutputPlan plan = PlanWith(BuildVideo(1920, 1080, "[v0]"));
 
-        StageResult result = await ExecuteBuild(plan, EncodingPass.One, null);
+        StageResult result = await ExecuteBuild(plan, EncodingPass.One, statsFilePath: null);
 
         Assert.IsType<StageFailure>(result);
         Assert.Contains("StatsFilePath", ((StageFailure)result).Error.Message);
@@ -76,7 +76,7 @@ public class BuildStageTwoPassTests
     {
         // Multi-variant profiles are now supported — pass 1 picks the variant
         // by Pass1VariantIndex (default 0) and produces that variant's stats.
-        OutputPlan plan = PlanWith([BuildVideo(1920, 1080, "[v0]"), BuildVideo(1280, 720, "[v1]")]);
+        OutputPlan plan = PlanWith(BuildVideo(1920, 1080, "[v0]"), BuildVideo(1280, 720, "[v1]"));
 
         FfmpegCommand[] commands = await RunBuild(plan, EncodingPass.One, "/tmp/stats");
 
@@ -119,7 +119,9 @@ public class BuildStageTwoPassTests
         // A mixed-codec 2-pass ladder must give each rung its OWN indexed stats
         // file (-passlogfile _v0 / _v1) and its OWN -c:v — sharing one stats file
         // across different codecs corrupts the second rung's rate-control data.
-        OutputPlan plan = PlanWith([BuildVideo(1920, 1080, "[v0]", "libx264"), BuildVideo(1280, 720, "[v1]", "libx265")]
+        OutputPlan plan = PlanWith(
+            BuildVideo(1920, 1080, "[v0]", "libx264"),
+            BuildVideo(1280, 720, "[v1]", "libx265")
         );
         string statsPath = $"/tmp/stats-{Guid.NewGuid():N}";
 
@@ -139,7 +141,7 @@ public class BuildStageTwoPassTests
     {
         OutputPlan plan = PlanWith(BuildVideo(1920, 1080, "[v0]"));
 
-        FfmpegCommand[] commands = await RunBuild(plan, EncodingPass.Single, null);
+        FfmpegCommand[] commands = await RunBuild(plan, EncodingPass.Single, statsFilePath: null);
 
         string joined = string.Join(" ", commands[0].Arguments);
         Assert.DoesNotContain("-pass 1", joined);
@@ -168,12 +170,12 @@ public class BuildStageTwoPassTests
     {
         BuildInput input = new(
             BuildPlan(plan),
-            "/media/test.mkv",
-            Path.Combine(Path.GetTempPath(), $"bs-{Guid.NewGuid():N}"),
-            "Test.NoMercy",
-            null,
-            pass,
-            statsFilePath
+            InputPath: "/media/test.mkv",
+            OutputDirectory: Path.Combine(Path.GetTempPath(), $"bs-{Guid.NewGuid():N}"),
+            MediaTitle: "Test.NoMercy",
+            DurationLimit: null,
+            Pass: pass,
+            StatsFilePath: statsFilePath
         );
         Directory.CreateDirectory(input.OutputDirectory);
 
@@ -187,28 +189,29 @@ public class BuildStageTwoPassTests
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
         new(
+            Groups:
             [
                 new(
-                    "group_0",
-                    [new("decode_0", OperationType.Decode, [], new())],
-                    null,
-                    0,
-                    4,
-                    false,
-                    1
+                    GroupId: "group_0",
+                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 4,
+                    RequiresGpu: false,
+                    Priority: 1
                 ),
             ],
-            TimeSpan.FromMinutes(90),
-            outputPlan
+            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            OutputPlan: outputPlan
         );
 
     private static OutputPlan PlanWith(params VideoOutputPlan[] video) =>
         new(
-            OutputFormat.Hls,
-            video,
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: video,
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
     private static VideoOutputPlan BuildVideo(
@@ -218,46 +221,47 @@ public class BuildStageTwoPassTests
         string encoder = "libx264"
     ) =>
         new(
-            width,
-            height,
-            encoder,
-            23,
-            4000,
-            "medium",
-            "high",
-            "4.1",
-            false,
-            "yuv420p",
-            mapLabel,
-            new()
+            Width: width,
+            Height: height,
+            EncoderName: encoder,
+            Crf: 23,
+            BitrateKbps: 4000,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.1",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: mapLabel,
+            ExtraFlags: new()
         );
 
     private static MediaInfo BuildMediaInfo(int width, int height) =>
         new(
-            "/media/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            8000,
-            7_200_000_000,
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    width,
-                    height,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static void AssertContainsPair(string[] args, string key, string value)

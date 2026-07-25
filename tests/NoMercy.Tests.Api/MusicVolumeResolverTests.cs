@@ -28,10 +28,10 @@ namespace NoMercy.Tests.Api;
 public class MusicVolumeResolverTests
 {
     [Theory]
-    [InlineData([-10, 0])]
-    [InlineData([0, 0])]
-    [InlineData([55, 55])]
-    [InlineData([150, 100])]
+    [InlineData(-10, 0)]
+    [InlineData(0, 0)]
+    [InlineData(55, 55)]
+    [InlineData(150, 100)]
     public void Clamp_ClampsToZeroHundred(int input, int expected)
     {
         MusicVolumeResolver.Clamp(input).Should().Be(expected);
@@ -70,9 +70,9 @@ public class MusicVolumeResolverTests
 
         MusicVolumeResolver.ApplyDeviceVolume(
             state,
-            "tv-1",
-            "tv-1",
-            80
+            targetDeviceId: "tv-1",
+            activeDeviceId: "tv-1",
+            clampedVolume: 80
         );
 
         state.VolumePercentage.Should().Be(80);
@@ -88,9 +88,9 @@ public class MusicVolumeResolverTests
 
         MusicVolumeResolver.ApplyDeviceVolume(
             state,
-            "phone-1",
-            "tv-1",
-            80
+            targetDeviceId: "phone-1",
+            activeDeviceId: "tv-1",
+            clampedVolume: 80
         );
 
         state.VolumePercentage.Should().Be(20, "the active device's mirrored volume is untouched");
@@ -120,8 +120,8 @@ public class MusicVolumeResolverTests
 
         int resolved = MusicVolumeResolver.ResolveTransferVolume(
             state,
-            "phone-1",
-            30
+            targetDeviceId: "phone-1",
+            targetPersistedVolume: 30
         );
 
         resolved.Should().Be(65);
@@ -134,8 +134,8 @@ public class MusicVolumeResolverTests
 
         int resolved = MusicVolumeResolver.ResolveTransferVolume(
             state,
-            "phone-1",
-            30
+            targetDeviceId: "phone-1",
+            targetPersistedVolume: 30
         );
 
         resolved.Should().Be(30);
@@ -148,8 +148,8 @@ public class MusicVolumeResolverTests
 
         int resolved = MusicVolumeResolver.ResolveTransferVolume(
             state,
-            "phone-1",
-            null
+            targetDeviceId: "phone-1",
+            targetPersistedVolume: null
         );
 
         resolved.Should().Be(Device.DefaultVolumePercent);
@@ -165,8 +165,8 @@ public class MusicVolumeResolverTests
 
         int resolved = MusicVolumeResolver.ResolveTransferVolume(
             state,
-            "phone-1",
-            null
+            targetDeviceId: "phone-1",
+            targetPersistedVolume: null
         );
 
         resolved.Should().Be(Device.DefaultVolumePercent);

@@ -158,7 +158,7 @@ public class QueueBehaviorTests : IDisposable
     public void FailJob_AtExactMaxAttempts_MovesToFailedJobs()
     {
         // Arrange — use maxAttempts=2 and set Attempts=2 (at boundary)
-        JobQueue jobQueue = new(_adapter, 2);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
         QueueJob job = new()
         {
             Queue = "boundary-test",
@@ -194,7 +194,7 @@ public class QueueBehaviorTests : IDisposable
     public void FailJob_OneUnderMaxAttempts_StaysInQueue()
     {
         // Arrange — use maxAttempts=2 and set Attempts=1 (one under)
-        JobQueue jobQueue = new(_adapter, 2);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
         QueueJob job = new()
         {
             Queue = "boundary-test",
@@ -230,7 +230,7 @@ public class QueueBehaviorTests : IDisposable
     public void FailJob_AboveMaxAttempts_MovesToFailedJobs()
     {
         // Arrange — use maxAttempts=2 and set Attempts=5 (well above)
-        JobQueue jobQueue = new(_adapter, 2);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
         QueueJob job = new()
         {
             Queue = "boundary-test",
@@ -265,7 +265,7 @@ public class QueueBehaviorTests : IDisposable
     public async Task FullRetryLifecycle_ExhaustRetriesThenManualRetry_Succeeds()
     {
         // Arrange
-        JobQueue jobQueue = new(_adapter, 2);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
         TestJob testJob = new() { Message = "lifecycle", ShouldFail = true };
         QueueJob job = new()
         {
@@ -364,7 +364,7 @@ public class QueueBehaviorTests : IDisposable
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.AddRange([alphaJob, betaJob]);
+        _context.QueueJobs.AddRange(alphaJob, betaJob);
         _context.SaveChanges();
 
         // Act
@@ -439,7 +439,7 @@ public class QueueBehaviorTests : IDisposable
     public void FailJob_ExceptionContentPreserved_InFailedJobRecord()
     {
         // Arrange
-        JobQueue jobQueue = new(_adapter, 1);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 1);
         QueueJob job = new()
         {
             Queue = "exception-test",
@@ -478,7 +478,7 @@ public class QueueBehaviorTests : IDisposable
     public void FailJob_NoInnerException_UsesOuterException()
     {
         // Arrange
-        JobQueue jobQueue = new(_adapter, 1);
+        JobQueue jobQueue = new(_adapter, maxAttempts: 1);
         QueueJob job = new()
         {
             Queue = "exception-test",
@@ -669,7 +669,7 @@ public class QueueBehaviorTests : IDisposable
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.AddRange([job1, job2]);
+        _context.QueueJobs.AddRange(job1, job2);
         _context.SaveChanges();
 
         // Act — reserve first (deletes it to simulate worker finishing)
@@ -841,7 +841,7 @@ public class QueueBehaviorTests : IDisposable
             Exception = "retry-error",
             FailedAt = DateTime.UtcNow,
         };
-        _context.FailedJobs.AddRange([keep, retry]);
+        _context.FailedJobs.AddRange(keep, retry);
         _context.SaveChanges();
 
         // Act

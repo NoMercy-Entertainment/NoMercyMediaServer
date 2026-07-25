@@ -28,48 +28,48 @@ public class HlsDerivativesValidatorTests
         StreamPolicy videoPolicy = StreamPolicy.Transcode
     ) =>
         new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "validator-test",
             Container: container,
             Video: videoPolicy == StreamPolicy.Omit
                 ? null
                 : new(
-                    videoPolicy,
-                    videoPolicy == StreamPolicy.Copy
+                    Policy: videoPolicy,
+                    Codec: videoPolicy == StreamPolicy.Copy
                         ? VideoCodecType.Copy
                         : VideoCodecType.H264,
-                    1920,
-                    1080,
-                    RateControlMode.Crf,
-                    23,
-                    0,
-                    null,
-                    null,
-                    "fast",
-                    CodecProfile.High,
-                    "4.0",
-                    null,
-                    8,
-                    "yuv420p",
-                    4,
-                    false,
-                    "video/{label}",
-                    "video/{label}/playlist"
+                    Width: 1920,
+                    Height: 1080,
+                    RateControl: RateControlMode.Crf,
+                    Crf: 23,
+                    BitrateKbps: 0,
+                    MaxBitrateKbps: null,
+                    BufferSizeKbps: null,
+                    Preset: "fast",
+                    CodecProfile: CodecProfile.High,
+                    Level: "4.0",
+                    Tune: null,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    KeyframeIntervalSeconds: 4,
+                    ConvertHdrToSdr: false,
+                    SegmentNameTemplate: "video/{label}",
+                    PlaylistNameTemplate: "video/{label}/playlist"
                 ),
             Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio/{lang}-{codec}",
-                    "audio/{lang}-{codec}/playlist"
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: AllowedLanguages.All,
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "audio/{lang}-{codec}",
+                    PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),
             ],
             Subtitles: [],
@@ -83,7 +83,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.Mkv,
-            new() { GenerateSpriteVtt = true }
+            hlsDerivatives: new() { GenerateSpriteVtt = true }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -99,7 +99,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            new() { GenerateSpriteVtt = true }
+            hlsDerivatives: new() { GenerateSpriteVtt = true }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -112,7 +112,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsTs,
-            new() { GenerateSpriteVtt = true }
+            hlsDerivatives: new() { GenerateSpriteVtt = true }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -125,7 +125,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.Mkv,
-            new() { GenerateSpriteVtt = false }
+            hlsDerivatives: new() { GenerateSpriteVtt = false }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -140,8 +140,8 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            new() { GenerateIFramePlaylists = true },
-            StreamPolicy.Copy
+            hlsDerivatives: new() { GenerateIFramePlaylists = true },
+            videoPolicy: StreamPolicy.Copy
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -157,8 +157,8 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            new() { GenerateIFramePlaylists = true },
-            StreamPolicy.Transcode
+            hlsDerivatives: new() { GenerateIFramePlaylists = true },
+            videoPolicy: StreamPolicy.Transcode
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -173,7 +173,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            new() { GenerateMasterPlaylist = false }
+            hlsDerivatives: new() { GenerateMasterPlaylist = false }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -189,7 +189,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.Mkv,
-            new()
+            hlsDerivatives: new()
             {
                 GenerateMasterPlaylist = false,
                 GenerateSpriteVtt = false,
@@ -211,7 +211,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            new() { SpriteVttIntervalSeconds = value }
+            hlsDerivatives: new() { SpriteVttIntervalSeconds = value }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -225,7 +225,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            new() { SpriteVttIntervalSeconds = 10 }
+            hlsDerivatives: new() { SpriteVttIntervalSeconds = 10 }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -241,7 +241,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            new() { SpriteVttColumns = value }
+            hlsDerivatives: new() { SpriteVttColumns = value }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -258,7 +258,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            new() { SpriteVttRows = value }
+            hlsDerivatives: new() { SpriteVttRows = value }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -275,7 +275,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            new() { SpriteVttThumbnailWidth = value }
+            hlsDerivatives: new() { SpriteVttThumbnailWidth = value }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -289,7 +289,7 @@ public class HlsDerivativesValidatorTests
     [Fact]
     public void Rule4_DefaultValues_AllPass()
     {
-        EncodingProfile profile = HlsProfile(Container.HlsFmp4, new());
+        EncodingProfile profile = HlsProfile(Container.HlsFmp4, hlsDerivatives: new());
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
 

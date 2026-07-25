@@ -41,7 +41,7 @@ public class SensitiveDataLoggingTests
     [Fact]
     public void ProductionMode_DoesNotEnableSensitiveDataLogging()
     {
-        bool isSensitiveLogging = BuildOptionsAndCheckSensitiveLogging(false);
+        bool isSensitiveLogging = BuildOptionsAndCheckSensitiveLogging(isDev: false);
 
         Assert.False(
             isSensitiveLogging,
@@ -52,7 +52,7 @@ public class SensitiveDataLoggingTests
     [Fact]
     public void DevMode_EnablesSensitiveDataLogging()
     {
-        bool isSensitiveLogging = BuildOptionsAndCheckSensitiveLogging(true);
+        bool isSensitiveLogging = BuildOptionsAndCheckSensitiveLogging(isDev: true);
 
         Assert.True(isSensitiveLogging, "EnableSensitiveDataLogging must be active in dev mode");
     }

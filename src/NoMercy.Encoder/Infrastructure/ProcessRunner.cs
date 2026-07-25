@@ -80,7 +80,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             onStdErr,
             workingDirectory,
             cancellationToken,
-            default
+            killSignal: default
         );
     }
 
@@ -118,13 +118,13 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         return RunCoreAsync(
             executable,
             arguments,
-            null,
-            null,
+            onStdOut: null,
+            onStdErr: null,
             workingDirectory,
             cancellationToken,
-            default,
-            null,
-            extraEnv
+            killSignal: default,
+            onProcessStarted: null,
+            extraEnv: extraEnv
         );
     }
 
@@ -181,7 +181,9 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         }
 
         logger.LogDebug(
-            "Starting process: {Executable} {Arguments}", [executable, string.Join(" ", arguments)]
+            "Starting process: {Executable} {Arguments}",
+            executable,
+            string.Join(" ", arguments)
         );
 
         using Process process = new() { StartInfo = startInfo };
@@ -219,7 +221,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
                             "Kill signal received — terminating process: {Executable}",
                             executable
                         );
-                        process.Kill(true);
+                        process.Kill(entireProcessTree: true);
                     }
                 }
                 catch (InvalidOperationException) { }
@@ -284,15 +286,19 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         int exitCode = killedBySignal ? 0 : process.ExitCode;
 
         ProcessResult result = new(
-            exitCode,
-            stdOutBuilder.ToString().TrimEnd(),
-            stdErrBuilder.ToString().TrimEnd(),
-            stopwatch.Elapsed,
-            process.Id
+            ExitCode: exitCode,
+            StdOut: stdOutBuilder.ToString().TrimEnd(),
+            StdErr: stdErrBuilder.ToString().TrimEnd(),
+            Duration: stopwatch.Elapsed,
+            ProcessId: process.Id
         );
 
         logger.LogDebug(
-            "Process exited: {Executable} ExitCode={ExitCode} Duration={Duration}ms{KillNote}", [executable, result.ExitCode, result.Duration.TotalMilliseconds, killedBySignal ? " (killed by signal)" : ""]
+            "Process exited: {Executable} ExitCode={ExitCode} Duration={Duration}ms{KillNote}",
+            executable,
+            result.ExitCode,
+            result.Duration.TotalMilliseconds,
+            killedBySignal ? " (killed by signal)" : ""
         );
 
         return result;
@@ -326,7 +332,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             else
             {
                 // SIGTERM — FFmpeg catches this and exits cleanly.
-                process.Kill(false);
+                process.Kill(entireProcessTree: false);
             }
         }
         catch (InvalidOperationException)
@@ -359,7 +365,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
                     "Grace period expired — force-killing process tree: {Executable}",
                     executable
                 );
-                process.Kill(true);
+                process.Kill(entireProcessTree: true);
             }
         }
         catch (InvalidOperationException) { }

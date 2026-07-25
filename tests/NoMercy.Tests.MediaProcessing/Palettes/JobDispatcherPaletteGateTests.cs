@@ -47,7 +47,7 @@ public class JobDispatcherPaletteGateTests
     [Fact]
     public void DispatchColorPaletteJob_WhenEntityAlreadyHasAPalette_QueuesNothing()
     {
-        RecordingDispatcher dispatcher = new(false);
+        RecordingDispatcher dispatcher = new(needsPalette: false);
 
         dispatcher.DispatchColorPaletteJob("person", "1445824");
 
@@ -57,7 +57,7 @@ public class JobDispatcherPaletteGateTests
     [Fact]
     public void DispatchColorPaletteJob_WhenEntityHasNoPalette_QueuesTheJob()
     {
-        RecordingDispatcher dispatcher = new(true);
+        RecordingDispatcher dispatcher = new(needsPalette: true);
 
         dispatcher.DispatchColorPaletteJob("person", "1445824");
 
@@ -68,7 +68,7 @@ public class JobDispatcherPaletteGateTests
     [Fact]
     public void DispatchColorPaletteJob_ConsultsTheGateForTheRequestedEntity()
     {
-        RecordingDispatcher dispatcher = new(true);
+        RecordingDispatcher dispatcher = new(needsPalette: true);
 
         dispatcher.DispatchColorPaletteJob("episode", "550");
 
@@ -81,7 +81,7 @@ public class JobDispatcherPaletteGateTests
     {
         // The shape that produced ~3.6k inserts/min on a real library: the same
         // cast dispatched again for every title they appear in.
-        RecordingDispatcher painted = new(false);
+        RecordingDispatcher painted = new(needsPalette: false);
         foreach (string id in new[] { "1", "2", "3", "4", "5" })
             painted.DispatchColorPaletteJob("person", id);
 

@@ -37,7 +37,7 @@ public class PluginConfigurationTests : IDisposable
         {
             if (Directory.Exists(_tempDir))
             {
-                Directory.Delete(_tempDir, true);
+                Directory.Delete(_tempDir, recursive: true);
             }
         }
         catch (IOException) { }
@@ -109,7 +109,7 @@ public class PluginConfigurationTests : IDisposable
         loaded!.ApiKey.Should().Be("test-key-123");
         loaded.MaxRetries.Should().Be(5);
         loaded.Enabled.Should().BeFalse();
-        loaded.Tags.Should().BeEquivalentTo(["tag1", "tag2"]);
+        loaded.Tags.Should().BeEquivalentTo("tag1", "tag2");
     }
 
     [Fact]
@@ -346,7 +346,7 @@ public class PluginConfigurationTests : IDisposable
                 await _config.SaveConfigurationAsync(new TestConfig { ApiKey = $"async-{i}" });
         });
 
-        Func<Task> act = () => Task.WhenAll([syncTask, asyncTask]);
+        Func<Task> act = () => Task.WhenAll(syncTask, asyncTask);
 
         await act.Should().NotThrowAsync();
     }
@@ -368,7 +368,7 @@ public class PluginConfigurationTests : IDisposable
                 await _config.GetConfigurationAsync<TestConfig>();
         });
 
-        Func<Task> act = () => Task.WhenAll([writer, reader]);
+        Func<Task> act = () => Task.WhenAll(writer, reader);
 
         await act.Should().NotThrowAsync();
     }

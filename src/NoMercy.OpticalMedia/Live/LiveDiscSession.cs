@@ -45,7 +45,10 @@ public sealed class LiveDiscSession(
     {
         string inputPath = BuildInputPath(drive, titleIndex);
         logger.LogInformation(
-            "Live disc session for {Drive} title {Title} → {InputPath}", [drive.Path, titleIndex, inputPath]
+            "Live disc session for {Drive} title {Title} → {InputPath}",
+            drive.Path,
+            titleIndex,
+            inputPath
         );
 
         // Probe the disc input the same way the encoder probes any other
@@ -58,23 +61,23 @@ public sealed class LiveDiscSession(
         // the runtime context. Caller can override later via the existing
         // /streaming/live/sessions/* endpoints.
         ClientCapabilities client = new(
-            [VideoCodecType.H264, VideoCodecType.H265],
-            [AudioCodecType.Aac, AudioCodecType.Eac3],
-            ["hls", "mp4"],
-            1920,
-            1080,
-            false,
-            false,
-            8000,
-            2
+            SupportedVideoCodecs: [VideoCodecType.H264, VideoCodecType.H265],
+            SupportedAudioCodecs: [AudioCodecType.Aac, AudioCodecType.Eac3],
+            SupportedContainers: ["hls", "mp4"],
+            MaxWidth: 1920,
+            MaxHeight: 1080,
+            SupportsHdr: false,
+            Supports10Bit: false,
+            MaxBitrateKbps: 8000,
+            MaxAudioChannels: 2
         );
 
         LiveEncodeRequest request = new(
-            inputPath,
-            info,
-            client,
-            startPosition,
-            preferredQuality
+            InputPath: inputPath,
+            CachedInfo: info,
+            Client: client,
+            StartPosition: startPosition,
+            PreferredQuality: preferredQuality
         );
 
         return await liveEncoder.StartAsync(request, ct);
@@ -90,7 +93,7 @@ public sealed class LiveDiscSession(
     /// </summary>
     private static string BuildInputPath(DiscDrive drive, int titleIndex)
     {
-        string trimmed = drive.Path.TrimEnd(['\\', '/']);
+        string trimmed = drive.Path.TrimEnd('\\', '/');
         return drive.DiscType switch
         {
             OpticalDiscType.BluRay =>

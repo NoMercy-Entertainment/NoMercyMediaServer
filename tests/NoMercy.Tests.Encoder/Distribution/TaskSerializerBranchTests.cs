@@ -11,6 +11,7 @@
 
 using System.Text;
 using Newtonsoft.Json;
+using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Distribution;
 
 namespace NoMercy.Tests.Encoder.Distribution;
@@ -135,12 +136,12 @@ public class TaskSerializerBranchTests
         // is the worker id and shows up unescaped in the JSON-escaped Payload
         // field of the outer envelope).
         DispatchResult original = new(
-            "t0",
-            true,
-            "/out/t0.ts",
-            TimeSpan.FromSeconds(5),
-            null,
-            "beast"
+            TaskId: "t0",
+            Success: true,
+            OutputPath: "/out/t0.ts",
+            Duration: TimeSpan.FromSeconds(5),
+            Error: null,
+            WorkerId: "beast"
         );
 
         string wire = _serializer.SerializeResult(original, _signingKey);
@@ -171,12 +172,12 @@ public class TaskSerializerBranchTests
     public void RoundTrip_DispatchResult_with_error_message_preserves_error()
     {
         DispatchResult original = new(
-            "t0",
-            false,
-            "",
-            TimeSpan.FromMilliseconds(123),
-            "ffmpeg returned exit code 1",
-            null
+            TaskId: "t0",
+            Success: false,
+            OutputPath: "",
+            Duration: TimeSpan.FromMilliseconds(123),
+            Error: "ffmpeg returned exit code 1",
+            WorkerId: null
         );
 
         string wire = _serializer.SerializeResult(original, _signingKey);
@@ -215,10 +216,10 @@ public class TaskSerializerBranchTests
 
     private static EncodeTask MakeTask(string id = "task-1") =>
         new(
-            id,
-            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
-            $"/out/{id}",
-            EncodeTaskType.QualityVariant
+            TaskId: id,
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            OutputPath: $"/out/{id}",
+            Type: EncodeTaskType.QualityVariant
         );
 
     private string SignEnvelope(string inner)

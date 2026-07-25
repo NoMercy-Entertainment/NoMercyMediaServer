@@ -29,12 +29,12 @@ public class PresetResolverTests
 
     private static EncodingProfile MinimalProfile(string name) =>
         new(
-            Ulid.NewUlid(),
-            name,
-            Container.HlsFmp4,
-            null,
-            [],
-            []
+            Id: Ulid.NewUlid(),
+            Name: name,
+            Container: Container.HlsFmp4,
+            Video: null,
+            Audio: [],
+            Subtitles: []
         );
 
     [Fact]

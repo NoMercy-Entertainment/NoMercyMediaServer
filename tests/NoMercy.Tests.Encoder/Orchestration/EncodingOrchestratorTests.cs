@@ -47,7 +47,7 @@ public class EncodingOrchestratorTests
         Mock<IEncodingStrategy> strategy = BuildStrategy(
             OutputFormat.Hls,
             EncodeMode.SinglePass,
-            true
+            success: true
         );
 
         _resolver
@@ -128,7 +128,7 @@ public class EncodingOrchestratorTests
         Mock<IEncodingStrategy> strategy = BuildStrategy(
             OutputFormat.Dash,
             EncodeMode.TwoPass,
-            true
+            success: true
         );
         _resolver
             .Setup(r => r.Resolve(OutputFormat.Dash, EncodeMode.TwoPass))
@@ -161,7 +161,12 @@ public class EncodingOrchestratorTests
     [Fact]
     public async Task EncodeAsync_OutputDirectoryTraversesAboveTranscodeRoot_FailsWithoutTouchingFilesystem()
     {
-        string escapeTarget = Path.Combine([Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar), "..", "..", "..", $"nm-orch-escape-{Guid.NewGuid():N}"]
+        string escapeTarget = Path.Combine(
+            Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar),
+            "..",
+            "..",
+            "..",
+            $"nm-orch-escape-{Guid.NewGuid():N}"
         );
         string resolvedEscapeTarget = Path.GetFullPath(escapeTarget);
 
@@ -172,7 +177,7 @@ public class EncodingOrchestratorTests
         Mock<IEncodingStrategy> strategy = BuildStrategy(
             OutputFormat.Hls,
             EncodeMode.SinglePass,
-            true
+            success: true
         );
         _resolver
             .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
@@ -206,7 +211,7 @@ public class EncodingOrchestratorTests
         finally
         {
             if (Directory.Exists(resolvedEscapeTarget))
-                Directory.Delete(resolvedEscapeTarget, true);
+                Directory.Delete(resolvedEscapeTarget, recursive: true);
         }
     }
 
@@ -228,7 +233,7 @@ public class EncodingOrchestratorTests
         Mock<IEncodingStrategy> strategy = BuildStrategy(
             OutputFormat.Hls,
             EncodeMode.SinglePass,
-            true
+            success: true
         );
         _resolver
             .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
@@ -252,7 +257,7 @@ public class EncodingOrchestratorTests
         finally
         {
             if (Directory.Exists(rootedEscapeTarget))
-                Directory.Delete(rootedEscapeTarget, true);
+                Directory.Delete(rootedEscapeTarget, recursive: true);
         }
     }
 
@@ -268,16 +273,16 @@ public class EncodingOrchestratorTests
 
     private static EncodingRequest BuildRequest(OutputFormat format, EncodeMode mode) =>
         new(
-            "/media/test.mkv",
+            InputPath: "/media/test.mkv",
             // Storage-relative, no leading separator — OutputDirectory is
             // documented as relative-to-TranscodeRoot and real callers
             // (VideoEncodeJob) never emit a leading slash here. A leading
             // '/' is native-OS-rooted on Linux too (not just Windows-style
             // absolutes), so it would now trip the cross-platform rootedness
             // guard the same way a genuine escape attempt does.
-            "out",
-            new(
-                Ulid.NewUlid(),
+            OutputDirectory: "out",
+            Profile: new(
+                Id: Ulid.NewUlid(),
                 Name: "Test",
                 Container: ToContainer(format),
                 Video: null,
@@ -305,11 +310,11 @@ public class EncodingOrchestratorTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    success,
-                    "/out",
-                    TimeSpan.Zero,
-                    null,
-                    new(0, 0, 0, "test", null)
+                    Success: success,
+                    OutputPath: "/out",
+                    Duration: TimeSpan.Zero,
+                    Error: null,
+                    Metrics: new(0, 0, 0, "test", null)
                 )
             );
         return mock;

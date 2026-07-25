@@ -36,8 +36,8 @@ public class MigrationDriftGuardTests
 
         IModel initializedSnapshotModel = initializer.Initialize(
             snapshot.Model,
-            true,
-            null
+            designTime: true,
+            validationLogger: null
         );
 
         IRelationalModel snapshotRelational = initializedSnapshotModel.GetRelationalModel();
@@ -68,8 +68,8 @@ public class MigrationDriftGuardTests
 
         IModel initializedSnapshotModel = initializer.Initialize(
             snapshot.Model,
-            true,
-            null
+            designTime: true,
+            validationLogger: null
         );
 
         IRelationalModel snapshotRelational = initializedSnapshotModel.GetRelationalModel();

@@ -32,16 +32,16 @@ public class LiveSessionIdleReaperBranchTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            "1080p",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     private static LiveStreamingService NewStreamingService()
@@ -146,7 +146,7 @@ public class LiveSessionIdleReaperBranchTests
                 System.Reflection.FieldInfo? field = typeof(LiveRuntimeSession).GetField(
                     "_lastAccessTicks",
                     System.Reflection.BindingFlags.NonPublic
-                                 | System.Reflection.BindingFlags.Instance
+                        | System.Reflection.BindingFlags.Instance
                 );
                 field?.SetValue(runtime, DateTime.UtcNow.AddMinutes(-10).Ticks);
             }

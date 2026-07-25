@@ -86,7 +86,7 @@ public class FfmpegExecutorCultureTests
             await _executor.ExecuteAsync(
                 BuildSimpleCommand(),
                 TimeSpan.FromMinutes(1),
-                p => lastProgress = p
+                onProgress: p => lastProgress = p
             );
 
             lastProgress!.Bitrate.Should().Be("1234.5kbits/s");

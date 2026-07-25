@@ -51,8 +51,8 @@ public sealed partial class BlurayDiscSource(
         ProcessResult result = await processRunner.RunAsync(
             options.FfprobePath,
             ["-hide_banner", "-v", "info", "-i", drivePath],
-            null,
-            ct
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
         // Classify protection state from the stderr — even when the disc is
@@ -75,10 +75,14 @@ public sealed partial class BlurayDiscSource(
             // a probe came back empty — separate from the per-message format
             // so existing log-grep filters don't swallow it.
             logger.LogInformation(
-                "Bluray probe parsed 0 playlists for {Drive} | exit={Exit} stdout_len={StdOutLen} stderr_len={StdErrLen} stderr_head={StdErrHead}", [drive.Path, result.ExitCode, result.StdOut.Length, result.StdErr.Length, (result.StdErr ?? "").Length > 600
+                "Bluray probe parsed 0 playlists for {Drive} | exit={Exit} stdout_len={StdOutLen} stderr_len={StdErrLen} stderr_head={StdErrHead}",
+                drive.Path,
+                result.ExitCode,
+                result.StdOut.Length,
+                result.StdErr.Length,
+                (result.StdErr ?? "").Length > 600
                     ? result.StdErr![..600]
                     : (result.StdErr ?? "(no stderr)")
-                ]
             );
             return new(
                 OpticalDiscType.BluRay,
@@ -87,7 +91,7 @@ public sealed partial class BlurayDiscSource(
                 null,
                 TimeSpan.Zero,
                 protection,
-                embeddedTitle
+                DiscTitle: embeddedTitle
             );
         }
 
@@ -97,29 +101,29 @@ public sealed partial class BlurayDiscSource(
         TimeSpan maxDuration = playlists.Max(p => p.Duration);
         DiscTitle[] titles = playlists
             .Select(p => new DiscTitle(
-                p.Index,
-                $"Playlist {p.Index:D5}",
-                p.Duration,
-                [],
-                [],
-                [],
-                [],
-                0,
-                p.Duration == maxDuration
+                Index: p.Index,
+                Name: $"Playlist {p.Index:D5}",
+                Duration: p.Duration,
+                VideoStreams: [],
+                AudioStreams: [],
+                Subtitles: [],
+                Chapters: [],
+                EstimatedSizeBytes: 0,
+                IsMainFeature: p.Duration == maxDuration
             ))
             .OrderByDescending(t => t.Duration)
             .ToArray();
 
         return new(
-            OpticalDiscType.BluRay,
-            drive.Label,
-            titles,
-            null,
-            titles.Sum(t => t.Duration.Ticks) is long ticks
+            Type: OpticalDiscType.BluRay,
+            DiscLabel: drive.Label,
+            Titles: titles,
+            AudioTracks: null,
+            TotalDuration: titles.Sum(t => t.Duration.Ticks) is long ticks
                 ? TimeSpan.FromTicks(ticks)
                 : TimeSpan.Zero,
-            protection,
-            embeddedTitle
+            Protection: protection,
+            DiscTitle: embeddedTitle
         );
     }
 
@@ -146,9 +150,9 @@ public sealed partial class BlurayDiscSource(
         )
         {
             return new(
-                "AACS",
-                null,
-                "Disc is AACS-protected and the optical drive can't establish "
+                Kind: "AACS",
+                VolumeId: null,
+                Message: "Disc is AACS-protected and the optical drive can't establish "
                     + "the bus key required to read encrypted units. The drive's firmware "
                     + "likely lacks AACS-MKI-1 SCSI MMC support."
             );
@@ -162,9 +166,9 @@ public sealed partial class BlurayDiscSource(
         )
         {
             return new(
-                "AACS",
-                null,
-                "Disc is AACS-protected but no matching key was found in KEYDB.cfg."
+                Kind: "AACS",
+                VolumeId: null,
+                Message: "Disc is AACS-protected but no matching key was found in KEYDB.cfg."
             );
         }
 
@@ -172,9 +176,9 @@ public sealed partial class BlurayDiscSource(
         if (stderr.Contains("no matching converter", StringComparison.OrdinalIgnoreCase))
         {
             return new(
-                "BD+",
-                null,
-                "Disc uses BD+ and the converter database has no entry for it."
+                Kind: "BD+",
+                VolumeId: null,
+                Message: "Disc uses BD+ and the converter database has no entry for it."
             );
         }
 
@@ -192,15 +196,15 @@ public sealed partial class BlurayDiscSource(
         DiscTitle? single = info.Titles.FirstOrDefault();
         if (single is null)
             return new(
-                titleIndex,
-                $"Playlist {titleIndex:D5}",
-                TimeSpan.Zero,
-                [],
-                [],
-                [],
-                [],
-                0,
-                false
+                Index: titleIndex,
+                Name: $"Playlist {titleIndex:D5}",
+                Duration: TimeSpan.Zero,
+                VideoStreams: [],
+                AudioStreams: [],
+                Subtitles: [],
+                Chapters: [],
+                EstimatedSizeBytes: 0,
+                IsMainFeature: false
             );
 
         return single with
@@ -230,14 +234,18 @@ public sealed partial class BlurayDiscSource(
                 "-i",
                 drivePath,
             ],
-            null,
-            ct
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
         if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
         {
             logger.LogWarning(
-                "Per-playlist probe failed for {Drive} #{Playlist} (exit {Exit}): {Stderr}", [drivePath, playlistIndex, result.ExitCode, TrimStderr(result.StdErr)]
+                "Per-playlist probe failed for {Drive} #{Playlist} (exit {Exit}): {Stderr}",
+                drivePath,
+                playlistIndex,
+                result.ExitCode,
+                TrimStderr(result.StdErr)
             );
             return new(OpticalDiscType.BluRay, null, [], null, TimeSpan.Zero);
         }
@@ -255,7 +263,9 @@ public sealed partial class BlurayDiscSource(
             // rather than crash the per-playlist detail fetch.
             logger.LogWarning(
                 ex,
-                "Per-playlist probe returned unparsable JSON for {Drive} #{Playlist}", [drivePath, playlistIndex]
+                "Per-playlist probe returned unparsable JSON for {Drive} #{Playlist}",
+                drivePath,
+                playlistIndex
             );
             return new(OpticalDiscType.BluRay, null, [], null, TimeSpan.Zero);
         }
@@ -327,7 +337,7 @@ public sealed partial class BlurayDiscSource(
     {
         try
         {
-            string trimmed = mountPath.TrimEnd(['\\', '/']);
+            string trimmed = mountPath.TrimEnd('\\', '/');
             string dlDir = Path.Combine(trimmed, "BDMV", "META", "DL");
 
             if (!storageDriver.DirectoryExists(dlDir))
@@ -355,7 +365,9 @@ public sealed partial class BlurayDiscSource(
         {
             logger.LogInformation(
                 ex,
-                "Could not read bdmt title from {Mount}: {Message}", [mountPath, ex.Message]
+                "Could not read bdmt title from {Mount}: {Message}",
+                mountPath,
+                ex.Message
             );
             return null;
         }
@@ -367,7 +379,7 @@ public sealed partial class BlurayDiscSource(
             return mountPath;
         // libbluray needs a trailing separator on Windows: "bluray:D:/" works,
         // "bluray:D:" never enumerates playlists.
-        string trimmed = mountPath.TrimEnd(['\\', '/']);
+        string trimmed = mountPath.TrimEnd('\\', '/');
         return $"bluray:{trimmed}/";
     }
 

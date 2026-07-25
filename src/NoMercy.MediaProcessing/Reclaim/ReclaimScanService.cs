@@ -146,7 +146,7 @@ public sealed class ReclaimScanService : IReclaimScanService
         IReadOnlyList<StorageEntry> freshEntries = storage.List(
             item.Folder,
             null,
-            false
+            recursive: false
         );
 
         ReclaimClassification fresh = ClassifyFreshFolderState(
@@ -158,7 +158,10 @@ public sealed class ReclaimScanService : IReclaimScanService
         if (fresh.Kind != ReclaimKind.ReclaimableHls)
         {
             _logger.LogWarning(
-                "[ReclaimScanService] Folder {Folder} is no longer reclaimable-HLS (now {Kind}) — refusing to delete item {ItemId}", [item.Folder, fresh.Kind, item.Id]
+                "[ReclaimScanService] Folder {Folder} is no longer reclaimable-HLS (now {Kind}) — refusing to delete item {ItemId}",
+                item.Folder,
+                fresh.Kind,
+                item.Id
             );
             throw new InvalidOperationException(
                 $"Folder '{item.Folder}' is no longer reclaimable — original missing or folder now protected."
@@ -269,7 +272,10 @@ public sealed class ReclaimScanService : IReclaimScanService
                     continue;
 
                 _logger.LogWarning(
-                    "[ReclaimScanService] Refusing to delete {TargetPath} for item {ItemId} — it matches the currently served copy {ServedPath}", [targetPath, item.Id, servedPath]
+                    "[ReclaimScanService] Refusing to delete {TargetPath} for item {ItemId} — it matches the currently served copy {ServedPath}",
+                    targetPath,
+                    item.Id,
+                    servedPath
                 );
                 throw new InvalidOperationException(
                     $"Refusing to delete '{targetPath}' — it is the currently served copy '{servedPath}'."
@@ -311,7 +317,7 @@ public sealed class ReclaimScanService : IReclaimScanService
                 continue;
 
             if (entry.IsDirectory)
-                storage.DeleteDirectory(targetPath, true);
+                storage.DeleteDirectory(targetPath, recursive: true);
             else
                 storage.Delete(targetPath);
 
@@ -364,7 +370,7 @@ public sealed class ReclaimScanService : IReclaimScanService
                 dbInfo.Value.DriverId,
                 string.Empty
             );
-            freshEntries = storage.List(partial.Folder, null, false);
+            freshEntries = storage.List(partial.Folder, null, recursive: false);
         }
         catch (Exception ex)
         {
@@ -478,7 +484,9 @@ public sealed class ReclaimScanService : IReclaimScanService
         if (!driverIdByFolderId.TryGetValue(folderId, out Ulid driverId))
         {
             _logger.LogWarning(
-                "[ReclaimScanService] Folder {FolderId} for {HostFolder} not found — refusing to act", [folderId, hostFolder]
+                "[ReclaimScanService] Folder {FolderId} for {HostFolder} not found — refusing to act",
+                folderId,
+                hostFolder
             );
             return null;
         }
@@ -542,7 +550,9 @@ public sealed class ReclaimScanService : IReclaimScanService
             if (!Ulid.TryParse(firstRow.Share, out Ulid folderId))
             {
                 _logger.LogWarning(
-                    "[ReclaimScanService] VideoFile share '{Share}' in folder {HostFolder} is not a folder id — skipping", [firstRow.Share, hostFolder]
+                    "[ReclaimScanService] VideoFile share '{Share}' in folder {HostFolder} is not a folder id — skipping",
+                    firstRow.Share,
+                    hostFolder
                 );
                 continue;
             }
@@ -550,7 +560,9 @@ public sealed class ReclaimScanService : IReclaimScanService
             if (!driverIdByFolderId.TryGetValue(folderId, out Ulid driverId))
             {
                 _logger.LogWarning(
-                    "[ReclaimScanService] Folder {FolderId} for {HostFolder} not found — skipping", [folderId, hostFolder]
+                    "[ReclaimScanService] Folder {FolderId} for {HostFolder} not found — skipping",
+                    folderId,
+                    hostFolder
                 );
                 continue;
             }
@@ -594,14 +606,14 @@ public sealed class ReclaimScanService : IReclaimScanService
             {
                 items.Add(
                     new(
-                        DeterministicId(hostFolder),
-                        ResolveTitle(servedRow, hostFolder),
-                        ResolveMediaType(servedRow),
-                        hostFolder,
-                        servedRow.Filename,
-                        classification.Kind,
-                        targetPaths,
-                        classification.ReclaimableBytes
+                        Id: DeterministicId(hostFolder),
+                        Title: ResolveTitle(servedRow, hostFolder),
+                        MediaType: ResolveMediaType(servedRow),
+                        Folder: hostFolder,
+                        ServedCopy: servedRow.Filename,
+                        Kind: classification.Kind,
+                        TargetPaths: targetPaths,
+                        ReclaimableBytes: classification.ReclaimableBytes
                     )
                 );
             }
@@ -668,7 +680,7 @@ public sealed class ReclaimScanService : IReclaimScanService
     )
     {
         IStorage storage = _storageFactory.For(folderId, driverId, string.Empty);
-        IReadOnlyList<StorageEntry> entries = storage.List(hostFolder, null, false);
+        IReadOnlyList<StorageEntry> entries = storage.List(hostFolder, null, recursive: false);
 
         return entries
             .Select(entry => new FolderEntry(

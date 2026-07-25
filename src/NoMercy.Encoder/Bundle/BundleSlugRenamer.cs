@@ -67,7 +67,9 @@ public class BundleSlugRenamer(
             if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(pair.Value))
             {
                 logger.LogWarning(
-                    "BundleSlugRenamer: skipping empty slug pair '{Key}' → '{Value}'", [pair.Key, pair.Value]
+                    "BundleSlugRenamer: skipping empty slug pair '{Key}' → '{Value}'",
+                    pair.Key,
+                    pair.Value
                 );
                 continue;
             }
@@ -100,12 +102,14 @@ public class BundleSlugRenamer(
         IReadOnlyList<StorageEntry> allFiles;
         try
         {
-            allFiles = storage.List(string.Empty, null, true);
+            allFiles = storage.List(string.Empty, pattern: null, recursive: true);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                "BundleSlugRenamer: failed to list '{FolderPath}': {Message}", [folderPath, ex.Message]
+                "BundleSlugRenamer: failed to list '{FolderPath}': {Message}",
+                folderPath,
+                ex.Message
             );
             return;
         }
@@ -163,13 +167,18 @@ public class BundleSlugRenamer(
             await storage.WriteAsync(blueprintPath, Encoding.UTF8.GetBytes(updated), ct);
 
             logger.LogInformation(
-                "BundleSlugRenamer: rewrote preset_slug in '{Path}' ('{FolderPath}')", [blueprintPath, folderPath]
+                "BundleSlugRenamer: rewrote preset_slug in '{Path}' ('{FolderPath}')",
+                blueprintPath,
+                folderPath
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                "BundleSlugRenamer: failed to rewrite blueprint '{Path}' in '{FolderPath}': {Message}", [blueprintPath, folderPath, ex.Message]
+                "BundleSlugRenamer: failed to rewrite blueprint '{Path}' in '{FolderPath}': {Message}",
+                blueprintPath,
+                folderPath,
+                ex.Message
             );
         }
     }

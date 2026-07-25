@@ -69,7 +69,7 @@ public class TemplateResolverTests
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
             1920,
             1080,
-            false
+            isHdrOutput: false
         );
         tokens["type"].Should().Be("video");
         tokens["framesize"].Should().Be("1920x1080");
@@ -86,7 +86,7 @@ public class TemplateResolverTests
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
             3840,
             2160,
-            true
+            isHdrOutput: true
         );
         tokens["colorrange"].Should().Be("HDR");
     }
@@ -100,7 +100,7 @@ public class TemplateResolverTests
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
             1920,
             1080,
-            false
+            isHdrOutput: false
         );
         tokens["colorrange"].Should().Be("SDR");
     }
@@ -109,9 +109,9 @@ public class TemplateResolverTests
     public void AudioTokens_IncludesLanguageCodecChannels()
     {
         Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
-            "eng",
-            "eac3",
-            6
+            language: "eng",
+            codecName: "eac3",
+            channels: 6
         );
         tokens["type"].Should().Be("audio");
         tokens["language"].Should().Be("eng");
@@ -123,9 +123,9 @@ public class TemplateResolverTests
     public void SubtitleTokens_IncludesVariantAndFilename()
     {
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
-            "eng",
-            "sign",
-            "movie"
+            language: "eng",
+            variant: "sign",
+            filename: "movie"
         );
         tokens["language"].Should().Be("eng");
         tokens["variant"].Should().Be("sign");
@@ -140,7 +140,7 @@ public class TemplateResolverTests
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
             1280,
             720,
-            false
+            isHdrOutput: false
         );
 
         string resolved = TemplateResolver.Resolve(template, tokens);
@@ -216,7 +216,7 @@ public class TemplateResolverTests
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
             1920,
             795,
-            false
+            isHdrOutput: false
         );
         tokens["label"].Should().Be("1920x795_SDR");
     }
@@ -230,7 +230,7 @@ public class TemplateResolverTests
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
             1920,
             795,
-            true
+            isHdrOutput: true
         );
         tokens["label"].Should().Be("1920x795");
     }
@@ -265,9 +265,9 @@ public class TemplateResolverTests
     public void SubtitleTokens_LangAlias_PresentAndMatchesLanguage()
     {
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
-            "fra",
-            "full",
-            "movie"
+            language: "fra",
+            variant: "full",
+            filename: "movie"
         );
         tokens["lang"].Should().Be("fra");
         tokens["language"].Should().Be("fra");
@@ -282,9 +282,9 @@ public class TemplateResolverTests
         // "subtitles/{filename}.{lang}.{type}" works without per-variant
         // surgery.
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
-            "eng",
-            "sign",
-            "movie"
+            language: "eng",
+            variant: "sign",
+            filename: "movie"
         );
         tokens["type"].Should().Be("sign");
         tokens["variant"].Should().Be("sign");
@@ -294,9 +294,9 @@ public class TemplateResolverTests
     public void Resolve_SubtitleTemplate_EndToEnd()
     {
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
-            "eng",
-            "sdh",
-            "Movie.2024"
+            language: "eng",
+            variant: "sdh",
+            filename: "Movie.2024"
         );
         string template = "subtitles/{filename}.{lang}.{type}.vtt";
 

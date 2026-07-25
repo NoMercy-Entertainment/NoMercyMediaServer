@@ -47,7 +47,7 @@ public sealed class InMemoryStorageDriverStub : IStorageDriver
     {
         if (!_files.TryGetValue(path, out byte[]? bytes))
             throw new FileNotFoundException(path);
-        return new MemoryStream(bytes, false);
+        return new MemoryStream(bytes, writable: false);
     }
 
     public Stream OpenWrite(string path, bool overwrite)

@@ -21,7 +21,7 @@ namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 internal sealed class NoOpCropDetector : ICropDetector
 {
     public Task<CropResult> DetectAsync(string inputPath, CancellationToken ct) =>
-        Task.FromResult(new CropResult(0, 0, 0, 0, false));
+        Task.FromResult(new CropResult(0, 0, 0, 0, ShouldCrop: false));
 
     public Task<CropResult> DetectAsync(
         string inputPath,
@@ -29,7 +29,7 @@ internal sealed class NoOpCropDetector : ICropDetector
         CancellationToken ct
     ) =>
         Task.FromResult(
-            new CropResult(0, 0, 0, 0, false, sourceVideoFileId)
+            new CropResult(0, 0, 0, 0, ShouldCrop: false, SourceVideoFileId: sourceVideoFileId)
         );
 
     public Task<CropResult> DetectAsync(
@@ -39,6 +39,6 @@ internal sealed class NoOpCropDetector : ICropDetector
         CancellationToken ct
     ) =>
         Task.FromResult(
-            new CropResult(0, 0, 0, 0, false, sourceVideoFileId)
+            new CropResult(0, 0, 0, 0, ShouldCrop: false, SourceVideoFileId: sourceVideoFileId)
         );
 }

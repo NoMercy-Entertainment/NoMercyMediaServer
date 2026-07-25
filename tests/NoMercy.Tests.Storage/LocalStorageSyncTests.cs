@@ -89,7 +89,7 @@ public class LocalStorageSyncTests
         storage.Write("nested/file.bin", [0x42, 0x43]);
 
         driver.Verify(b => b.CreateDirectory(It.IsAny<string>()), Times.Once);
-        sink.ToArray().Should().Equal([0x42, 0x43]);
+        sink.ToArray().Should().Equal(0x42, 0x43);
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class LocalStorageSyncTests
                 new StorageEntryInfo(subDir, true, 0, DateTime.UtcNow),
             ]);
 
-        IReadOnlyList<StorageEntry> entries = storage.List(root, "*", false);
+        IReadOnlyList<StorageEntry> entries = storage.List(root, "*", recursive: false);
 
         entries.Should().HaveCount(2);
         // LocalStorage normalizes paths to forward-slash per the IStorage

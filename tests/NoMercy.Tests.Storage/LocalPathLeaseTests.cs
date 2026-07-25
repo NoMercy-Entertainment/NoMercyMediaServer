@@ -42,7 +42,7 @@ public class LocalPathLeaseTests
         int callCount = 0;
         LocalPathLease lease = new(
             "/tmp/remote-staged.mkv",
-            () =>
+            onDispose: () =>
             {
                 callCount++;
                 return ValueTask.CompletedTask;
@@ -63,7 +63,7 @@ public class LocalPathLeaseTests
         int callCount = 0;
         LocalPathLease lease = new(
             "/tmp/remote-staged.mkv",
-            () =>
+            onDispose: () =>
             {
                 callCount++;
                 return ValueTask.CompletedTask;
@@ -96,7 +96,7 @@ public class LocalPathLeaseTests
         // leak stage files.
         LocalPathLease lease = new(
             "/tmp/remote.mkv",
-            () => throw new InvalidOperationException("unlink failed")
+            onDispose: () => throw new InvalidOperationException("unlink failed")
         );
 
         Func<Task> act = async () => await lease.DisposeAsync();

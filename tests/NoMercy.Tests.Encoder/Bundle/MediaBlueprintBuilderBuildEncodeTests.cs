@@ -37,68 +37,72 @@ public class MediaBlueprintBuilderBuildEncodeTests
 
     private static MediaInfo MakeSource() =>
         new(
-            "Download/complete/Show/Show.S01E01.mkv",
-            "matroska,webm",
-            TimeSpan.FromSeconds(1440),
-            8_000,
-            1_500_000_000L,
+            FilePath: "Download/complete/Show/Show.S01E01.mkv",
+            Format: "matroska,webm",
+            Duration: TimeSpan.FromSeconds(1440),
+            OverallBitRateKbps: 8_000,
+            FileSizeBytes: 1_500_000_000L,
+            VideoStreams:
             [
                 new(
-                    VideoIndex,
-                    "hevc",
-                    1920,
-                    1080,
-                    23.976,
-                    8,
-                    "yuv420p",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    6_000
+                    Index: VideoIndex,
+                    Codec: "hevc",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 23.976,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 6_000
                 ),
             ],
+            AudioStreams:
             [
                 new(
-                    TranscodedAudioIndex,
-                    "flac",
-                    2,
-                    48_000,
-                    0,
-                    "jpn",
-                    true,
-                    false
+                    Index: TranscodedAudioIndex,
+                    Codec: "flac",
+                    Channels: 2,
+                    SampleRate: 48_000,
+                    BitRateKbps: 0,
+                    Language: "jpn",
+                    IsDefault: true,
+                    IsForced: false
                 ),
                 new(
-                    DroppedAudioIndex,
-                    "aac",
-                    2,
-                    48_000,
-                    192,
-                    "eng",
-                    false,
-                    false
+                    Index: DroppedAudioIndex,
+                    Codec: "aac",
+                    Channels: 2,
+                    SampleRate: 48_000,
+                    BitRateKbps: 192,
+                    Language: "eng",
+                    IsDefault: false,
+                    IsForced: false
                 ),
             ],
+            SubtitleStreams:
             [
                 new(
-                    SubtitleIndex,
-                    "hdmv_pgs_subtitle",
-                    "eng",
-                    false,
-                    false
+                    Index: SubtitleIndex,
+                    Codec: "hdmv_pgs_subtitle",
+                    Language: "eng",
+                    IsDefault: false,
+                    IsForced: false
                 ),
             ],
-            [],
-            []
+            Chapters: [],
+            Attachments: []
         );
 
     private static OutputPlan MakePlan() =>
         new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
-                    1920,
+                    Width: 1920,
                     Height: 1080,
                     EncoderName: "copy",
                     Crf: 0,
@@ -113,9 +117,10 @@ public class MediaBlueprintBuilderBuildEncodeTests
                     SourceStreamIndex: VideoIndex
                 ),
             ],
+            AudioOutputs:
             [
                 new(
-                    "opus",
+                    EncoderName: "opus",
                     BitrateKbps: 128,
                     Channels: 2,
                     SampleRate: 48_000,
@@ -127,9 +132,10 @@ public class MediaBlueprintBuilderBuildEncodeTests
                 // No output carries DroppedAudioIndex — that stream must
                 // still surface as its own "dropped" track, never vanish.
             ],
+            SubtitleOutputs:
             [
                 new(
-                    SubtitleCodecType.Copy,
+                    OutputCodec: SubtitleCodecType.Copy,
                     Action: StreamAction.Extract,
                     Language: "eng",
                     SourceIndex: SubtitleIndex,
@@ -138,22 +144,22 @@ public class MediaBlueprintBuilderBuildEncodeTests
                     Variant: "full"
                 ),
             ],
-            null
+            Thumbnails: null
         );
 
     private static BundleLayout MakeLayout() =>
         new(
-            "abc123",
-            "anime-1080p",
-            false,
-            "encodes/anime-1080p",
-            "abc123_master.m3u8",
-            "encodes/anime-1080p/manifest.json",
-            "encodes/anime-1080p/reconstruction.json",
-            string.Empty,
-            "01HZPRESET",
-            "Anime 1080p",
-            "hls-fmp4"
+            MediaKey: "abc123",
+            PresetSlug: "anime-1080p",
+            IsSingleFile: false,
+            BundleDirectory: "encodes/anime-1080p",
+            MasterPlaylistName: "abc123_master.m3u8",
+            ManifestPath: "encodes/anime-1080p/manifest.json",
+            ReconstructionPath: "encodes/anime-1080p/reconstruction.json",
+            SingleFileName: string.Empty,
+            PresetId: "01HZPRESET",
+            PresetName: "Anime 1080p",
+            ContainerString: "hls-fmp4"
         );
 
     // Real on-disk listing, relative to the media folder root — mirrors what
@@ -177,11 +183,11 @@ public class MediaBlueprintBuilderBuildEncodeTests
             MakePlan(),
             MakeLayout(),
             MakeOutputFiles(),
-            "Anime/Show/Season 01/Show S01E01",
-            "1.2.3",
-            "fingerprint-abc",
-            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2026, 1, 1, 0, 10, 0, DateTimeKind.Utc)
+            outputLocation: "Anime/Show/Season 01/Show S01E01",
+            encoderVersion: "1.2.3",
+            profileFingerprint: "fingerprint-abc",
+            createdAt: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            completedAt: new DateTime(2026, 1, 1, 0, 10, 0, DateTimeKind.Utc)
         );
 
     [Fact]

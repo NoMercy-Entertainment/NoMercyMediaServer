@@ -34,12 +34,12 @@ public class PlaylistGeneratorTests
         // keying so the lookup in GenerateMasterPlaylist resolves.
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
             VideoVariantKey,
-            _ => new VariantMetrics(5_000_000, 4_500_000)
+            _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
         );
 
         Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
             AudioVariantKey,
-            _ => new VariantMetrics(192_000, 180_000)
+            _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
         );
 
         PlaylistGenerator generator = new();
@@ -102,7 +102,7 @@ public class PlaylistGeneratorTests
     [Fact]
     public void MasterPlaylist_Hevc_CorrectCodecTag()
     {
-        string playlist = Generate(CreatePlan("hevc_nvenc"));
+        string playlist = Generate(CreatePlan(encoderName: "hevc_nvenc"));
 
         playlist.Should().Contain("hvc1.");
     }
@@ -115,7 +115,7 @@ public class PlaylistGeneratorTests
         // spec-accurate HlsCodecsStringBuilder which derives the level index
         // from the plan instead of hard-coding 5.3 (index 15) like the legacy
         // generator did.
-        string playlist = Generate(CreatePlan("libsvtav1", true));
+        string playlist = Generate(CreatePlan(encoderName: "libsvtav1", tenBit: true));
 
         playlist.Should().Contain("av01.0.08M.10");
     }
@@ -126,7 +126,7 @@ public class PlaylistGeneratorTests
         // "copy" is a passthrough — the real codec could be anything. The
         // master must never advertise avc1 (the old H.264-fallback bug) for
         // a copy-mode variant; CODECS should list only the known audio codec.
-        string playlist = Generate(CreatePlan("copy"));
+        string playlist = Generate(CreatePlan(encoderName: "copy"));
 
         playlist.Should().NotContain("avc1.");
         playlist.Should().Contain("CODECS=\"mp4a.40.2\"");
@@ -153,12 +153,12 @@ public class PlaylistGeneratorTests
     // ── ComputeMasterVersion (internal helper) ─────────────────────────────
 
     [Theory]
-    [InlineData([false, false, false, 3])] // mpegts baseline → v3
-    [InlineData([true, false, false, 6])] // subs → v6
-    [InlineData([false, true, false, 7])] // fmp4 → v7
-    [InlineData([true, true, false, 7])] // subs + fmp4 → v7
-    [InlineData([false, false, true, 8])] // chapter date-ranges → v8
-    [InlineData([true, true, true, 8])] // everything → v8
+    [InlineData(false, false, false, 3)] // mpegts baseline → v3
+    [InlineData(true, false, false, 6)] // subs → v6
+    [InlineData(false, true, false, 7)] // fmp4 → v7
+    [InlineData(true, true, false, 7)] // subs + fmp4 → v7
+    [InlineData(false, false, true, 8)] // chapter date-ranges → v8
+    [InlineData(true, true, true, 8)] // everything → v8
     public void ComputeMasterVersion_ReturnsCorrectMinVersion(
         bool hasSubsGroup,
         bool hasFmp4,
@@ -369,7 +369,8 @@ public class PlaylistGeneratorTests
     private static OutputPlan CreatePlan(string encoderName = "libx264", bool tenBit = false)
     {
         return new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920,
@@ -386,16 +387,17 @@ public class PlaylistGeneratorTests
                     new()
                 ),
             ],
-            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
-            [],
-            null
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
     }
 
     private static OutputPlan CreateMultiResPlan()
     {
         return new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920,
@@ -426,9 +428,9 @@ public class PlaylistGeneratorTests
                     new()
                 ),
             ],
-            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
-            [],
-            null
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
     }
 }

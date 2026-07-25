@@ -56,7 +56,8 @@ public class MkvOutputStrategyTests
 
     private static OutputPlan CreateSimplePlan(OutputFormat format) =>
         new(
-            format,
+            Format: format,
+            VideoOutputs:
             [
                 new(
                     1920,
@@ -73,8 +74,8 @@ public class MkvOutputStrategyTests
                     new()
                 ),
             ],
-            [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
-            [],
-            null
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 }

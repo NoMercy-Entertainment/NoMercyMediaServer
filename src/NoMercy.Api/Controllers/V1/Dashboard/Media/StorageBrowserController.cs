@@ -84,11 +84,11 @@ public class StorageBrowserController(
             if (isMountTest)
             {
                 NfsDriverConfig nfsConfig = NfsDriverConfig.For(
-                    request.Config.Server.Trim(),
-                    request.Config.Export!.Trim(),
-                    request.Config.Version ?? 3,
-                    request.Config.Uid,
-                    request.Config.Gid
+                    server: request.Config.Server.Trim(),
+                    export: request.Config.Export!.Trim(),
+                    version: request.Config.Version ?? 3,
+                    uid: request.Config.Uid,
+                    gid: request.Config.Gid
                 );
 
                 using NfsStorageDriver driver = new(nfsConfig);
@@ -145,15 +145,15 @@ public class StorageBrowserController(
         try
         {
             IStorage storage = storageFactory.For(
-                SyntheticBrowseFolderId(driverId),
-                driverId,
-                string.Empty
+                folderId: SyntheticBrowseFolderId(driverId),
+                driverId: driverId,
+                subPath: string.Empty
             );
 
             IReadOnlyList<StorageEntry> entries = storage.List(
                 subPath,
-                null,
-                false
+                pattern: null,
+                recursive: false
             );
 
             List<StorageEntryDto> dtos =
@@ -188,7 +188,10 @@ public class StorageBrowserController(
         {
             logger.LogWarning(
                 ex,
-                "Storage list failed: driver={DriverId} type={Type} path={Path}", [driverId, driver.Type, subPath]
+                "Storage list failed: driver={DriverId} type={Type} path={Path}",
+                driverId,
+                driver.Type,
+                subPath
             );
             return Ok(new StorageListResponse { Ok = false, Error = ex.Message });
         }
@@ -224,9 +227,9 @@ public class StorageBrowserController(
         try
         {
             IStorage storage = storageFactory.For(
-                SyntheticBrowseFolderId(driverId),
-                driverId,
-                string.Empty
+                folderId: SyntheticBrowseFolderId(driverId),
+                driverId: driverId,
+                subPath: string.Empty
             );
 
             await storage.CreateDirectoryAsync(subPath, HttpContext.RequestAborted);
@@ -237,7 +240,10 @@ public class StorageBrowserController(
         {
             logger.LogWarning(
                 ex,
-                "Storage mkdir failed: driver={DriverId} type={Type} path={Path}", [driverId, driver.Type, subPath]
+                "Storage mkdir failed: driver={DriverId} type={Type} path={Path}",
+                driverId,
+                driver.Type,
+                subPath
             );
             return Ok(new StorageMkdirResponse { Ok = false, Error = ex.Message });
         }

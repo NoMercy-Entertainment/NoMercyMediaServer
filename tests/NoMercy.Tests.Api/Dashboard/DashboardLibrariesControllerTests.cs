@@ -9,11 +9,15 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using FluentAssertions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
@@ -46,7 +50,7 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/libraries");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -124,7 +128,7 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
             null
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -156,7 +160,7 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
             null
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -196,8 +200,8 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
     {
         Ulid presetId = await SeedEncodingPresetAsync();
         Ulid libraryId = await SeedIsolatedLibraryAsync(
-            true,
-            presetId
+            autoEncodeOnScan: true,
+            encodePresetId: presetId
         );
 
         HttpResponseMessage response = await PatchAsync(
@@ -240,7 +244,7 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
             $"/api/v1/dashboard/libraries/{NoMercyApiFactory.MovieLibraryId}"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -262,7 +266,7 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
             null
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -292,7 +296,7 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
             null
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -335,7 +339,7 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
             new { path = "/test", driverId = Ulid.NewUlid().ToString() }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
 
     // Adding a brand-new folder full of pre-existing media must import that

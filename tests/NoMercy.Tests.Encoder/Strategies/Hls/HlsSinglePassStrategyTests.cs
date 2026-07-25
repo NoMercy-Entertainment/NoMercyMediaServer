@@ -62,11 +62,11 @@ public class HlsSinglePassStrategyTests
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    "/out",
-                    TimeSpan.FromSeconds(1),
-                    null,
-                    new(1024, 2.0, 24.0, "libx264", null)
+                    Success: true,
+                    OutputPath: "/out",
+                    Duration: TimeSpan.FromSeconds(1),
+                    Error: null,
+                    Metrics: new(1024, 2.0, 24.0, "libx264", null)
                 )
             );
 
@@ -77,22 +77,22 @@ public class HlsSinglePassStrategyTests
         );
 
         EncodingRequest request = new(
-            "/media/test.mkv",
-            "/out",
-            new(
-                Ulid.NewUlid(),
-                "HLS 1080p",
-                Container.HlsTs,
-                null,
-                [],
-                []
+            InputPath: "/media/test.mkv",
+            OutputDirectory: "/out",
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "HLS 1080p",
+                Container: Container.HlsTs,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 
         EncodingResult result = await strategy.EncodeAsync(
             request,
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         Assert.True(result.Success);
@@ -112,11 +112,11 @@ public class HlsSinglePassStrategyTests
     // ── EstimateVideoCost cost-banding through Decompose ───────────────────
 
     [Theory]
-    [InlineData([3840, 8])] // 4K → 8 units
-    [InlineData([1920, 4])] // 1080p → 4 units
-    [InlineData([1280, 2])] // 720p → 2 units
-    [InlineData([854, 1])] // 480p → 1 unit
-    [InlineData([640, 1])] // 360p → 1 unit (default)
+    [InlineData(3840, 8)] // 4K → 8 units
+    [InlineData(1920, 4)] // 1080p → 4 units
+    [InlineData(1280, 2)] // 720p → 2 units
+    [InlineData(854, 1)] // 480p → 1 unit
+    [InlineData(640, 1)] // 360p → 1 unit (default)
     public void Decompose_VideoCostBanding_MatchesResolution(int width, int expectedCost)
     {
         // Cost units gate dispatcher concurrency — wrong banding = wrong
@@ -127,11 +127,11 @@ public class HlsSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video(width, width * 9 / 16)],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(width: width, height: width * 9 / 16)],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] tasks = strategy.Decompose(plan, "g");
@@ -151,11 +151,11 @@ public class HlsSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video(1920, height: 1080, convertHdrToSdr: true)],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(width: 1920, height: 1080, convertHdrToSdr: true)],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask task = strategy
@@ -177,11 +177,11 @@ public class HlsSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video(1920, 1080, "hevc_nvenc")],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video(width: 1920, height: 1080, encoderName: "hevc_nvenc")],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask task = strategy
@@ -203,21 +203,22 @@ public class HlsSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [],
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs:
             [
                 new(
-                    "eac3",
-                    384,
-                    6,
-                    48000,
-                    StreamAction.Transcode,
-                    "eng",
-                    "[a0]"
+                    EncoderName: "eac3",
+                    BitrateKbps: 384,
+                    Channels: 6,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: "eng",
+                    MapLabel: "[a0]"
                 ),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask task = strategy
@@ -237,21 +238,22 @@ public class HlsSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [],
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs:
             [
                 new(
-                    "aac",
-                    192,
-                    2,
-                    48000,
-                    StreamAction.Transcode,
-                    null,
-                    "[a0]"
+                    EncoderName: "aac",
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: null,
+                    MapLabel: "[a0]"
                 ),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask task = strategy
@@ -270,11 +272,11 @@ public class HlsSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [Video()],
-            [],
-            [],
-            new(160, 90, 10)
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video()],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
         );
 
         DecomposedTask[] thumbs = strategy
@@ -297,11 +299,11 @@ public class HlsSinglePassStrategyTests
             TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = new(
-            OutputFormat.Hls,
-            [],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         DecomposedTask[] tasks = strategy.Decompose(plan, "g");
@@ -317,18 +319,18 @@ public class HlsSinglePassStrategyTests
         bool convertHdrToSdr = false
     ) =>
         new(
-            width,
-            height,
-            encoderName,
-            23,
-            0,
-            "medium",
-            "high",
-            "4.0",
-            false,
-            "yuv420p",
-            "[v0]",
-            []
+            Width: width,
+            Height: height,
+            EncoderName: encoderName,
+            Crf: 23,
+            BitrateKbps: 0,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.0",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "[v0]",
+            ExtraFlags: []
         )
         {
             ConvertHdrToSdr = convertHdrToSdr,

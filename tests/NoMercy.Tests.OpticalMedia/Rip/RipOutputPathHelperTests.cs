@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
@@ -29,21 +30,21 @@ public class RipOutputPathHelperTests
 {
     private static RipRequest MakeRequest(CustomMetadata? custom) =>
         new(
-            "D:\\",
-            [1],
-            null,
-            custom,
-            Ulid.NewUlid(),
-            Ulid.NewUlid(),
-            null,
-            [],
-            []
+            DrivePath: "D:\\",
+            SelectedTitleIndices: [1],
+            MetadataId: null,
+            Custom: custom,
+            LibraryId: Ulid.NewUlid(),
+            FolderId: Ulid.NewUlid(),
+            EncodingProfileId: null,
+            AudioTracks: [],
+            Subtitles: []
         );
 
     [Fact]
     public void Build_NoCustomMetadata_FallsBackToDiscRipsTitleIndex()
     {
-        string path = RipOutputPathHelper.Build(MakeRequest(null), "movie", 3, 0);
+        string path = RipOutputPathHelper.Build(MakeRequest(custom: null), "movie", 3, 0);
 
         path.Should().Be("disc-rips/title_03.mkv");
     }
@@ -69,9 +70,9 @@ public class RipOutputPathHelperTests
     }
 
     [Theory]
-    [InlineData(["movie", 0, "Inception (2010)/Inception (2010).mkv"])]
-    [InlineData(["movie", 1, "Inception (2010)/Inception (2010) - Disc 2.mkv"])]
-    [InlineData(["movie", 2, "Inception (2010)/Inception (2010) - Disc 3.mkv"])]
+    [InlineData("movie", 0, "Inception (2010)/Inception (2010).mkv")]
+    [InlineData("movie", 1, "Inception (2010)/Inception (2010) - Disc 2.mkv")]
+    [InlineData("movie", 2, "Inception (2010)/Inception (2010) - Disc 3.mkv")]
     public void Build_MovieLibraryType_BuildsShowRootAndDiscSuffix(
         string libraryType,
         int batchIndex,
@@ -83,7 +84,7 @@ public class RipOutputPathHelperTests
         string path = RipOutputPathHelper.Build(
             MakeRequest(custom),
             libraryType,
-            1,
+            titleIndex: 1,
             batchIndex
         );
 
@@ -110,15 +111,15 @@ public class RipOutputPathHelperTests
             2008,
             MediaType.TvShow,
             null,
-            2,
-            5
+            SeasonNumber: 2,
+            EpisodeStartNumber: 5
         );
 
         string path = RipOutputPathHelper.Build(
             MakeRequest(custom),
             libraryType,
-            1,
-            0
+            titleIndex: 1,
+            batchIndex: 0
         );
 
         path.Should().Be("Breaking Bad (2008)/Season 02/Breaking Bad S02E05.mkv");
@@ -132,15 +133,15 @@ public class RipOutputPathHelperTests
             2020,
             MediaType.TvShow,
             null,
-            1,
-            1
+            SeasonNumber: 1,
+            EpisodeStartNumber: 1
         );
 
         string path = RipOutputPathHelper.Build(
             MakeRequest(custom),
             "tv",
-            1,
-            3
+            titleIndex: 1,
+            batchIndex: 3
         );
 
         path.Should().Be("Show (2020)/Season 01/Show S01E04.mkv");
@@ -149,7 +150,7 @@ public class RipOutputPathHelperTests
     [Fact]
     public void Build_TvShow_NoSeasonNumber_DefaultsToSeasonOne()
     {
-        CustomMetadata custom = new("Show", 2020, MediaType.TvShow, null, null);
+        CustomMetadata custom = new("Show", 2020, MediaType.TvShow, null, SeasonNumber: null);
 
         string path = RipOutputPathHelper.Build(MakeRequest(custom), "tv", 1, 0);
 
@@ -164,8 +165,8 @@ public class RipOutputPathHelperTests
             2020,
             MediaType.TvShow,
             null,
-            1,
-            null
+            SeasonNumber: 1,
+            EpisodeStartNumber: null
         );
 
         string path = RipOutputPathHelper.Build(MakeRequest(custom), "tv", 1, 0);
@@ -174,11 +175,11 @@ public class RipOutputPathHelperTests
     }
 
     [Theory]
-    [InlineData(["Rocky: A Story?", "Rocky A Story"])]
-    [InlineData(["Colon:Test", "Colon Test"])]
-    [InlineData(["Slash/Back\\Slash", "Slash Back Slash"])]
-    [InlineData(["Pipe|Question?Star*", "Pipe Question Star"])]
-    [InlineData(["Quote\"Angle<>Bracket", "Quote Angle Bracket"])]
+    [InlineData("Rocky: A Story?", "Rocky A Story")]
+    [InlineData("Colon:Test", "Colon Test")]
+    [InlineData("Slash/Back\\Slash", "Slash Back Slash")]
+    [InlineData("Pipe|Question?Star*", "Pipe Question Star")]
+    [InlineData("Quote\"Angle<>Bracket", "Quote Angle Bracket")]
     public void Build_SanitizesFilesystemInvalidCharsFromTitle(string rawTitle, string sanitized)
     {
         CustomMetadata custom = new(rawTitle, 2020, MediaType.Movie, null);

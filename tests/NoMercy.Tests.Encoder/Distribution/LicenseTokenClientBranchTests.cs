@@ -259,7 +259,7 @@ public class LicenseTokenClientBranchTests
                 capturedAuth = req.Headers.Authorization?.ToString();
                 return new(HttpStatusCode.Unauthorized);
             },
-            null
+            accessToken: null
         );
 
         await sut.RequestAsync(CancellationToken.None);
@@ -277,7 +277,7 @@ public class LicenseTokenClientBranchTests
                 capturedAuth = req.Headers.Authorization?.ToString();
                 return new(HttpStatusCode.Unauthorized);
             },
-            "   "
+            accessToken: "   "
         );
 
         await sut.RequestAsync(CancellationToken.None);
@@ -295,7 +295,7 @@ public class LicenseTokenClientBranchTests
                 capturedAuth = req.Headers.Authorization?.ToString();
                 return new(HttpStatusCode.Unauthorized);
             },
-            "the-keycloak-token"
+            accessToken: "the-keycloak-token"
         );
 
         await sut.RequestAsync(CancellationToken.None);

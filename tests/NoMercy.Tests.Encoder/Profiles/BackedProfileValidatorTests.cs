@@ -36,25 +36,25 @@ public class BackedProfileValidatorTests
         int bitrate = 0
     ) =>
         new(
-            StreamPolicy.Transcode,
-            codec,
-            width,
-            height,
-            rc,
-            crf,
-            bitrate,
-            null,
-            null,
-            null,
-            CodecProfile.Auto,
-            null,
-            null,
-            8,
-            null,
-            2,
-            false,
-            "video_:framesize:/:framesize:_%05d",
-            "video_:framesize:/playlist"
+            Policy: StreamPolicy.Transcode,
+            Codec: codec,
+            Width: width,
+            Height: height,
+            RateControl: rc,
+            Crf: crf,
+            BitrateKbps: bitrate,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
+            Preset: null,
+            CodecProfile: CodecProfile.Auto,
+            Level: null,
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: null,
+            KeyframeIntervalSeconds: 2,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: "video_:framesize:/:framesize:_%05d",
+            PlaylistNameTemplate: "video_:framesize:/playlist"
         );
 
     private static EncodingProfile Profile(
@@ -63,12 +63,12 @@ public class BackedProfileValidatorTests
         AudioOutput[]? audio = null
     ) =>
         new(
-            Ulid.NewUlid(),
-            "v2-backed-test",
-            container,
-            video,
-            audio ?? [],
-            []
+            Id: Ulid.NewUlid(),
+            Name: "v2-backed-test",
+            Container: container,
+            Video: video,
+            Audio: audio ?? [],
+            Subtitles: []
         );
 
     [Fact]
@@ -89,17 +89,17 @@ public class BackedProfileValidatorTests
         // ValidationError entries with severity Error. The structured
         // ProfileRuleValidator only runs through ValidateAsEnvelope.
         AudioOutput audio = new(
-            StreamPolicy.Transcode,
-            AudioCodecType.Aac,
-            0,
-            2,
-            48000,
-            ["eng"],
-            "eng",
-            null,
-            null,
-            "audio",
-            "audio/p"
+            Policy: StreamPolicy.Transcode,
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 0,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: ["eng"],
+            DefaultLanguage: "eng",
+            Loudness: null,
+            Downmix: null,
+            SegmentNameTemplate: "audio",
+            PlaylistNameTemplate: "audio/p"
         );
         EncodingProfile profile = Profile(Video(), audio: [audio]);
         ValidationResult result = _validator.Validate(profile);
@@ -140,17 +140,17 @@ public class BackedProfileValidatorTests
         // (ValidateAudioBitrate emits a string). That string gets wrapped in
         // an EncoderRule with the generic ProfileNoOutputs bucket id.
         AudioOutput audio = new(
-            StreamPolicy.Transcode,
-            AudioCodecType.Aac,
-            0, // <- triggers legacy string error
-            2,
-            48000,
-            ["eng"],
-            "eng",
-            null,
-            null,
-            "audio",
-            "audio/p"
+            Policy: StreamPolicy.Transcode,
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 0, // <- triggers legacy string error
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: ["eng"],
+            DefaultLanguage: "eng",
+            Loudness: null,
+            Downmix: null,
+            SegmentNameTemplate: "audio",
+            PlaylistNameTemplate: "audio/p"
         );
         EncodingProfile profile = Profile(Video(), audio: [audio]);
         ValidationEnvelope env = _validator.ValidateAsEnvelope(profile);
@@ -171,7 +171,7 @@ public class BackedProfileValidatorTests
     {
         // ProfileNoOutputs is a structured-only rule — only the envelope
         // path catches it (legacy ProfileValidator doesn't have the check).
-        EncodingProfile profile = Profile(null);
+        EncodingProfile profile = Profile(video: null);
         ValidationEnvelope env = _validator.ValidateAsEnvelope(profile);
 
         env.Valid.Should().BeFalse();

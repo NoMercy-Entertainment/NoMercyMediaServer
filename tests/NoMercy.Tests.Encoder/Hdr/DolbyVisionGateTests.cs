@@ -35,11 +35,11 @@ public class DolbyVisionGateTests
     /// </summary>
     private static DolbyVisionInfo DvSource(int profile = 8, int level = 6) =>
         new(
-            profile,
-            level,
-            true,
-            false,
-            DvBlCompatibility.Hdr10
+            Profile: profile,
+            Level: level,
+            HasRpu: true,
+            HasEl: false,
+            BlCompat: DvBlCompatibility.Hdr10
         );
 
     private static ScopedDecisionLog NewLog() => new();
@@ -54,13 +54,13 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            null,
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Mp4,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log
+            source: null,
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log
         );
 
         result.Preserved.Should().BeFalse();
@@ -79,13 +79,13 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Mp4,
-            HdrPolicies.AlwaysTonemap,
-            true,
-            log
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.AlwaysTonemap,
+            videoIsStreamCopy: true,
+            decisions: log
         );
 
         result.Preserved.Should().BeFalse();
@@ -103,13 +103,13 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H264,
-            10,
-            OutputFormat.Mp4,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log
+            source: DvSource(),
+            outputCodec: VideoCodecType.H264,
+            outputBitDepth: 10,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log
         );
 
         result.Preserved.Should().BeFalse();
@@ -123,13 +123,13 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.Vp9,
-            10,
-            OutputFormat.Mp4,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log
+            source: DvSource(),
+            outputCodec: VideoCodecType.Vp9,
+            outputBitDepth: 10,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log
         );
 
         result.Preserved.Should().BeFalse();
@@ -147,13 +147,13 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            8,
-            OutputFormat.Mp4,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 8,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log
         );
 
         result.Preserved.Should().BeFalse();
@@ -171,13 +171,13 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Dash,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Dash,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log
         );
 
         result.Preserved.Should().BeFalse();
@@ -195,13 +195,13 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Mp4,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log
         );
 
         result.Preserved.Should().BeTrue();
@@ -214,13 +214,13 @@ public class DolbyVisionGateTests
     public void Resolve_extra_flags_for_MP4_includes_dvh1_and_iso6_brand()
     {
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Mp4,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            NewLog()
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: NewLog()
         );
 
         result.ExtraFlags["-tag:v"].Should().Be("dvh1");
@@ -237,13 +237,13 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.Av1,
-            10,
-            OutputFormat.Mkv,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log
+            source: DvSource(),
+            outputCodec: VideoCodecType.Av1,
+            outputBitDepth: 10,
+            container: OutputFormat.Mkv,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log
         );
 
         result.Preserved.Should().BeTrue();
@@ -263,14 +263,14 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Hls,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log,
-            true
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Hls,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log,
+            hlsUsesFmp4Segments: true
         );
 
         result.Preserved.Should().BeTrue();
@@ -284,14 +284,14 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Hls,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log,
-            false
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Hls,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log,
+            hlsUsesFmp4Segments: false
         );
 
         result.Preserved.Should().BeFalse();
@@ -314,14 +314,14 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(8, 6),
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Hls,
-            HdrPolicies.PassthroughWhenPossible,
-            false,
-            log,
-            true
+            source: DvSource(profile: 8, level: 6),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Hls,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: false,
+            decisions: log,
+            hlsUsesFmp4Segments: true
         );
 
         result.Preserved.Should().BeFalse();
@@ -340,13 +340,13 @@ public class DolbyVisionGateTests
         ScopedDecisionLog log = NewLog();
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Mp4,
-            HdrPolicies.AlwaysPreserve,
-            true,
-            log
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.AlwaysPreserve,
+            videoIsStreamCopy: true,
+            decisions: log
         );
 
         result.Preserved.Should().BeTrue();

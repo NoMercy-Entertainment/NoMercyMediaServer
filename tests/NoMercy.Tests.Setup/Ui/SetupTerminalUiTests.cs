@@ -180,7 +180,7 @@ public sealed class SetupTerminalUiTests : IDisposable
     {
         string[] lines = SetupTerminalUi.GenerateAsciiQr(
             "https://auth.nomercy.tv/device?code=ABCD",
-            200
+            terminalWidth: 200
         );
 
         Assert.NotEmpty(lines);
@@ -194,7 +194,7 @@ public sealed class SetupTerminalUiTests : IDisposable
     {
         string[] lines = SetupTerminalUi.GenerateAsciiQr(
             "https://auth.nomercy.tv/device?code=ABCD",
-            1
+            terminalWidth: 1
         );
 
         Assert.Empty(lines);
@@ -207,7 +207,7 @@ public sealed class SetupTerminalUiTests : IDisposable
         // valid (near-empty-pattern) QR grid. This documents that behavior rather
         // than asserting the exception-catch branch, which needs a genuinely
         // malformed input to reach (see the next test).
-        string[] lines = SetupTerminalUi.GenerateAsciiQr(string.Empty, 200);
+        string[] lines = SetupTerminalUi.GenerateAsciiQr(string.Empty, terminalWidth: 200);
 
         Assert.NotNull(lines);
     }
@@ -218,7 +218,7 @@ public sealed class SetupTerminalUiTests : IDisposable
         // QR codes cap out at ~2953 bytes for the lowest error-correction level —
         // exceeding it makes QRCodeGenerator.CreateQrCode itself throw, which is what
         // GenerateAsciiQr's own catch(Exception) branch converts into an empty result.
-        string[] lines = SetupTerminalUi.GenerateAsciiQr(new string('x', 5000), 300);
+        string[] lines = SetupTerminalUi.GenerateAsciiQr(new string('x', 5000), terminalWidth: 300);
 
         Assert.Empty(lines);
     }
@@ -229,7 +229,7 @@ public sealed class SetupTerminalUiTests : IDisposable
         string longUrl =
             "https://auth.nomercy.tv/device?code=ABCD-1234&extra_param=" + new string('x', 200);
 
-        string[] lines = SetupTerminalUi.GenerateAsciiQr(longUrl, 300);
+        string[] lines = SetupTerminalUi.GenerateAsciiQr(longUrl, terminalWidth: 300);
 
         // A very long payload produces a bigger QR grid — either it still fits the
         // generous terminal width, or GenerateAsciiQr's own width check empties it.

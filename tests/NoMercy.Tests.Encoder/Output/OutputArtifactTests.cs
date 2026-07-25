@@ -16,33 +16,33 @@ namespace NoMercy.Tests.Encoder.Output;
 public class OutputArtifactTests
 {
     [Theory]
-    [InlineData(["master.m3u8", "application/vnd.apple.mpegurl"])]
-    [InlineData(["stream.mpd", "application/dash+xml"])]
-    [InlineData(["clip.mp4", "video/mp4"])]
-    [InlineData(["movie.mkv", "video/x-matroska"])]
-    [InlineData(["video.webm", "video/webm"])]
-    [InlineData(["segment.ts", "video/mp2t"])]
-    [InlineData(["seg.m4s", "video/iso.segment"])]
-    [InlineData(["audio.m4a", "audio/mp4"])]
-    [InlineData(["track.aac", "audio/aac"])]
-    [InlineData(["track.mp3", "audio/mpeg"])]
-    [InlineData(["audio.ogg", "audio/ogg"])]
-    [InlineData(["track.opus", "audio/opus"])]
-    [InlineData(["audio.flac", "audio/flac"])]
-    [InlineData(["subs.vtt", "text/vtt"])]
-    [InlineData(["subs.srt", "text/plain"])]
-    [InlineData(["subs.ass", "text/plain"])]
-    [InlineData(["subs.ssa", "text/plain"])]
-    [InlineData(["subs.ttml", "application/ttml+xml"])]
-    [InlineData(["thumb.webp", "image/webp"])]
-    [InlineData(["thumb.jpg", "image/jpeg"])]
-    [InlineData(["thumb.jpeg", "image/jpeg"])]
-    [InlineData(["thumb.png", "image/png"])]
-    [InlineData(["meta.json", "application/json"])]
-    [InlineData(["font.ttf", "font/ttf"])]
-    [InlineData(["font.otf", "font/otf"])]
-    [InlineData(["font.woff", "font/woff"])]
-    [InlineData(["font.woff2", "font/woff2"])]
+    [InlineData("master.m3u8", "application/vnd.apple.mpegurl")]
+    [InlineData("stream.mpd", "application/dash+xml")]
+    [InlineData("clip.mp4", "video/mp4")]
+    [InlineData("movie.mkv", "video/x-matroska")]
+    [InlineData("video.webm", "video/webm")]
+    [InlineData("segment.ts", "video/mp2t")]
+    [InlineData("seg.m4s", "video/iso.segment")]
+    [InlineData("audio.m4a", "audio/mp4")]
+    [InlineData("track.aac", "audio/aac")]
+    [InlineData("track.mp3", "audio/mpeg")]
+    [InlineData("audio.ogg", "audio/ogg")]
+    [InlineData("track.opus", "audio/opus")]
+    [InlineData("audio.flac", "audio/flac")]
+    [InlineData("subs.vtt", "text/vtt")]
+    [InlineData("subs.srt", "text/plain")]
+    [InlineData("subs.ass", "text/plain")]
+    [InlineData("subs.ssa", "text/plain")]
+    [InlineData("subs.ttml", "application/ttml+xml")]
+    [InlineData("thumb.webp", "image/webp")]
+    [InlineData("thumb.jpg", "image/jpeg")]
+    [InlineData("thumb.jpeg", "image/jpeg")]
+    [InlineData("thumb.png", "image/png")]
+    [InlineData("meta.json", "application/json")]
+    [InlineData("font.ttf", "font/ttf")]
+    [InlineData("font.otf", "font/otf")]
+    [InlineData("font.woff", "font/woff")]
+    [InlineData("font.woff2", "font/woff2")]
     public void MimeFromPath_maps_known_extensions(string fileName, string expectedMime)
     {
         string mime = OutputArtifact.MimeFromPath(fileName);
@@ -72,10 +72,10 @@ public class OutputArtifactTests
     public void OutputArtifact_construction_round_trips_all_fields()
     {
         OutputArtifact artifact = new(
-            "/out/master.m3u8",
-            4096L,
-            "deadbeef",
-            "application/vnd.apple.mpegurl"
+            Path: "/out/master.m3u8",
+            SizeBytes: 4096L,
+            Sha256: "deadbeef",
+            MediaType: "application/vnd.apple.mpegurl"
         );
 
         Assert.Equal("/out/master.m3u8", artifact.Path);

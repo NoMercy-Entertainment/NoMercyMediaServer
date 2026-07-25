@@ -34,8 +34,8 @@ public sealed class DeriveScanFilterTests
     public void EpisodePath_ReturnsFolderLeaf_NotReconstructedFileName()
     {
         string filter = VideoEncodeJob.DeriveScanFilter(
-            "Helstrom.(2020)/Helstrom.S01E01",
-            "Helstrom.S01E01.Mother.s.Little.Helpers.NoMercy"
+            outputPath: "Helstrom.(2020)/Helstrom.S01E01",
+            fallbackFileName: "Helstrom.S01E01.Mother.s.Little.Helpers.NoMercy"
         );
 
         filter.Should().Be("Helstrom.S01E01");
@@ -45,8 +45,8 @@ public sealed class DeriveScanFilterTests
     public void MoviePath_ReturnsFolderLeaf()
     {
         string filter = VideoEncodeJob.DeriveScanFilter(
-            "Jolt.(2021)",
-            "Jolt.(2021).NoMercy"
+            outputPath: "Jolt.(2021)",
+            fallbackFileName: "Jolt.(2021).NoMercy"
         );
 
         filter.Should().Be("Jolt.(2021)");
@@ -61,7 +61,7 @@ public sealed class DeriveScanFilterTests
     {
         string filter = VideoEncodeJob.DeriveScanFilter(
             outputPath,
-            "Some.Movie.(2021).NoMercy"
+            fallbackFileName: "Some.Movie.(2021).NoMercy"
         );
 
         filter.Should().Be("Some.Movie.(2021).NoMercy");
@@ -71,8 +71,8 @@ public sealed class DeriveScanFilterTests
     public void BackslashSeparators_AreHandled()
     {
         string filter = VideoEncodeJob.DeriveScanFilter(
-            @"Helstrom.(2020)\Helstrom.S01E01",
-            "ignored"
+            outputPath: @"Helstrom.(2020)\Helstrom.S01E01",
+            fallbackFileName: "ignored"
         );
 
         filter.Should().Be("Helstrom.S01E01");

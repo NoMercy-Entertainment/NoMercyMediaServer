@@ -69,7 +69,7 @@ public class BenchmarkJobTrackerTests
 
         BenchmarkJobStatus status = tracker.Start(codecs, resolutions);
 
-        status.RequestedCodecs.Should().BeEquivalentTo(["H264", "Av1"]);
+        status.RequestedCodecs.Should().BeEquivalentTo("H264", "Av1");
         status.RequestedResolutions.Should().BeEquivalentTo([1920, 1280]);
     }
 
@@ -163,14 +163,14 @@ public class BenchmarkJobTrackerTests
         Dictionary<SpeedKey, SpeedMeasurement> measurements = new()
         {
             [new(VideoCodecType.H264, "libx264", 1920, null)] = new(
-                120,
-                4.0,
-                DateTime.UtcNow
+                Fps: 120,
+                SpeedMultiplier: 4.0,
+                MeasuredAt: DateTime.UtcNow
             ),
             [new(VideoCodecType.H265, "libx265", 1920, null)] = new(
-                60,
-                2.0,
-                DateTime.UtcNow
+                Fps: 60,
+                SpeedMultiplier: 2.0,
+                MeasuredAt: DateTime.UtcNow
             ),
         };
 

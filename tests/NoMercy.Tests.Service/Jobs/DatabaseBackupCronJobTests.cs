@@ -9,10 +9,12 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Service.Jobs;
 using NoMercy.Service.Seeds;
+using Xunit;
 
 namespace NoMercy.Tests.Service.Jobs;
 
@@ -41,7 +43,7 @@ public sealed class DatabaseBackupCronJobTests : IDisposable
         DatabaseBackupService.RetainCount = _originalRetainCount;
 
         if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+            Directory.Delete(_tempDir, recursive: true);
     }
 
     // A real SQLite database, not a text file: the service copies through
@@ -70,7 +72,7 @@ public sealed class DatabaseBackupCronJobTests : IDisposable
             [mediaDb, queueDb, appDb]
         );
 
-        await job.ExecuteAsync(string.Empty);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         Directory.GetFiles(_backupDir, "media.*.db").Should().HaveCount(1);
         Directory.GetFiles(_backupDir, "queue.*.db").Should().HaveCount(1);
@@ -88,7 +90,7 @@ public sealed class DatabaseBackupCronJobTests : IDisposable
             [mediaDb, missingDb]
         );
 
-        await job.ExecuteAsync(string.Empty);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         Directory.GetFiles(_backupDir, "media.*.db").Should().HaveCount(1);
         Directory.GetFiles(_backupDir, "queue.*.db").Should().BeEmpty();
@@ -100,9 +102,9 @@ public sealed class DatabaseBackupCronJobTests : IDisposable
         string mediaDb = CreateFakeDb("media.db");
         DatabaseBackupCronJob job = new(NullLogger<DatabaseBackupCronJob>.Instance, [mediaDb]);
 
-        await job.ExecuteAsync(string.Empty);
+        await job.ExecuteAsync(parameters: string.Empty);
         await Task.Delay(1100); // timestamp granularity is 1 second
-        await job.ExecuteAsync(string.Empty);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         Directory.GetFiles(_backupDir, "media.*.db").Should().HaveCount(2);
     }

@@ -43,8 +43,8 @@ public class ChromaprintIntroDetectorTests
     {
         // Frames 0..79 identical (the intro), then content diverges.
         uint[] intro = Enumerable.Range(1, 80).Select(i => (uint)(i * 65537)).ToArray();
-        uint[] showA = intro.Concat(RandomBlock(120, 1)).ToArray();
-        uint[] showB = intro.Concat(RandomBlock(120, 2)).ToArray();
+        uint[] showA = intro.Concat(RandomBlock(120, seed: 1)).ToArray();
+        uint[] showB = intro.Concat(RandomBlock(120, seed: 2)).ToArray();
 
         IntroMarker? marker = new ChromaprintIntroDetector().DetectIntro([
             Print(showA),
@@ -64,8 +64,8 @@ public class ChromaprintIntroDetectorTests
     [Fact]
     public void Detect_NoSharedRegion_ReturnsNull()
     {
-        AudioFingerprint a = Print(RandomBlock(200, 1));
-        AudioFingerprint b = Print(RandomBlock(200, 2));
+        AudioFingerprint a = Print(RandomBlock(200, seed: 1));
+        AudioFingerprint b = Print(RandomBlock(200, seed: 2));
 
         IntroMarker? marker = new ChromaprintIntroDetector().DetectIntro([a, b]);
 
@@ -75,7 +75,7 @@ public class ChromaprintIntroDetectorTests
     [Fact]
     public void Detect_SingleEpisode_ReturnsNull()
     {
-        AudioFingerprint only = Print(RandomBlock(200, 1));
+        AudioFingerprint only = Print(RandomBlock(200, seed: 1));
 
         new ChromaprintIntroDetector().DetectIntro([only]).Should().BeNull();
     }
@@ -83,7 +83,7 @@ public class ChromaprintIntroDetectorTests
     [Fact]
     public void Detect_EmptyFingerprintInList_ReturnsNull()
     {
-        AudioFingerprint real = Print(RandomBlock(200, 1));
+        AudioFingerprint real = Print(RandomBlock(200, seed: 1));
         AudioFingerprint empty = Print([]);
 
         new ChromaprintIntroDetector().DetectIntro([real, empty]).Should().BeNull();
@@ -93,9 +93,9 @@ public class ChromaprintIntroDetectorTests
     public void Detect_ThreeEpisodesSharedIntro_AllAgree()
     {
         uint[] intro = Enumerable.Range(1, 100).Select(i => (uint)(i * 2654435761)).ToArray();
-        uint[] ep1 = intro.Concat(RandomBlock(100, 1)).ToArray();
-        uint[] ep2 = intro.Concat(RandomBlock(100, 2)).ToArray();
-        uint[] ep3 = intro.Concat(RandomBlock(100, 3)).ToArray();
+        uint[] ep1 = intro.Concat(RandomBlock(100, seed: 1)).ToArray();
+        uint[] ep2 = intro.Concat(RandomBlock(100, seed: 2)).ToArray();
+        uint[] ep3 = intro.Concat(RandomBlock(100, seed: 3)).ToArray();
 
         IntroMarker? marker = new ChromaprintIntroDetector().DetectIntro([
             Print(ep1),
@@ -114,12 +114,12 @@ public class ChromaprintIntroDetectorTests
     public void Detect_IntroShiftedOffsetInOneEpisode_StillMatches()
     {
         uint[] intro = Enumerable.Range(1, 80).Select(i => (uint)(i * 3_141_592)).ToArray();
-        uint[] ep1 = intro.Concat(RandomBlock(120, 1)).ToArray();
+        uint[] ep1 = intro.Concat(RandomBlock(120, seed: 1)).ToArray();
         // ep2's intro starts 20 frames later (common in real content —
         // network idents / recaps shift the intro offset).
-        uint[] ep2 = RandomBlock(20, 99)
+        uint[] ep2 = RandomBlock(20, seed: 99)
             .Concat(intro)
-            .Concat(RandomBlock(100, 2))
+            .Concat(RandomBlock(100, seed: 2))
             .ToArray();
 
         IntroMarker? marker = new ChromaprintIntroDetector().DetectIntro([Print(ep1), Print(ep2)]);
@@ -138,8 +138,8 @@ public class ChromaprintIntroDetectorTests
         // marker times should be expressed in source-file coordinates,
         // not relative to the fingerprint window.
         uint[] outro = Enumerable.Range(1, 100).Select(i => (uint)(i * 11_411)).ToArray();
-        uint[] ep1 = RandomBlock(80, 11).Concat(outro).ToArray();
-        uint[] ep2 = RandomBlock(80, 12).Concat(outro).ToArray();
+        uint[] ep1 = RandomBlock(80, seed: 11).Concat(outro).ToArray();
+        uint[] ep2 = RandomBlock(80, seed: 12).Concat(outro).ToArray();
 
         AudioFingerprint p1 = new(ep1, FrameDuration, TimeSpan.FromMinutes(25));
         AudioFingerprint p2 = new(ep2, FrameDuration, TimeSpan.FromMinutes(25));
@@ -168,8 +168,8 @@ public class ChromaprintIntroDetectorTests
     [Fact]
     public void BestAlignment_DisjointInputs_LengthBelowThreshold()
     {
-        uint[] a = RandomBlock(50, 1);
-        uint[] b = RandomBlock(50, 2);
+        uint[] a = RandomBlock(50, seed: 1);
+        uint[] b = RandomBlock(50, seed: 2);
         ChromaprintIntroDetector detector = new();
 
         (_, _, int length) = detector.BestAlignment(a, b);

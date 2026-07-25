@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
@@ -79,7 +80,7 @@ public class SourceToDestinationMatrixTests
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("copy", true));
+            .Returns(BuildResolvedCodec("copy", supports10Bit: true));
 
         _codecResolver
             .Setup(r =>
@@ -89,7 +90,7 @@ public class SourceToDestinationMatrixTests
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("libx265", true));
+            .Returns(BuildResolvedCodec("libx265", supports10Bit: true));
 
         _codecResolver
             .Setup(r =>
@@ -99,7 +100,7 @@ public class SourceToDestinationMatrixTests
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("libx264", false));
+            .Returns(BuildResolvedCodec("libx264", supports10Bit: false));
 
         _codecResolver
             .Setup(r =>
@@ -109,28 +110,28 @@ public class SourceToDestinationMatrixTests
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("libaom-av1", true));
+            .Returns(BuildResolvedCodec("libaom-av1", supports10Bit: true));
     }
 
     private static ResolvedCodec BuildResolvedCodec(string ffmpegName, bool supports10Bit) =>
         new(
-            ffmpegName,
-            new(
-                ffmpegName,
-                null,
-                ffmpegName == "copy" ? [] : ["medium"],
-                ffmpegName == "copy" ? [] : ["main", "main10"],
-                ffmpegName == "copy" ? [] : ["5.1"],
-                new(0, 51, 23),
-                [RateControlMode.Crf],
-                supports10Bit,
-                supports10Bit,
-                int.MaxValue,
-                "yuv420p10le",
-                new()
+            FfmpegEncoderName: ffmpegName,
+            EncoderInfo: new(
+                FfmpegName: ffmpegName,
+                RequiredVendor: null,
+                Presets: ffmpegName == "copy" ? [] : ["medium"],
+                Profiles: ffmpegName == "copy" ? [] : ["main", "main10"],
+                Levels: ffmpegName == "copy" ? [] : ["5.1"],
+                QualityRange: new(0, 51, 23),
+                SupportedRateControl: [RateControlMode.Crf],
+                Supports10Bit: supports10Bit,
+                SupportsHdr: supports10Bit,
+                MaxConcurrentSessions: int.MaxValue,
+                PixelFormat10Bit: "yuv420p10le",
+                VendorSpecificFlags: new()
             ),
-            null,
-            RateControlMode.Crf
+            Device: null,
+            DefaultRateControl: RateControlMode.Crf
         );
 
     private static MediaInfo BuildMedia(
@@ -145,44 +146,45 @@ public class SourceToDestinationMatrixTests
         bool includeAudio = true
     ) =>
         new(
-            "/media/test.mkv",
-            "matroska",
-            TimeSpan.FromHours(2),
-            bitRateKbps + (includeAudio ? audioBitRateKbps : 0),
-            14_400_000_000,
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: bitRateKbps + (includeAudio ? audioBitRateKbps : 0),
+            FileSizeBytes: 14_400_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    videoCodec,
-                    width,
-                    height,
-                    24.0,
-                    bitDepth,
-                    bitDepth >= 10 ? "yuv420p10le" : "yuv420p",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    bitRateKbps
+                    Index: 0,
+                    Codec: videoCodec,
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: bitDepth,
+                    PixelFormat: bitDepth >= 10 ? "yuv420p10le" : "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: bitRateKbps
                 ),
             ],
-            includeAudio
+            AudioStreams: includeAudio
                 ?
                 [
                     new(
-                        0,
-                        audioCodec,
-                        audioChannels,
-                        48000,
-                        audioBitRateKbps,
-                        "eng",
-                        true,
-                        false
+                        Index: 0,
+                        Codec: audioCodec,
+                        Channels: audioChannels,
+                        SampleRate: 48000,
+                        BitRateKbps: audioBitRateKbps,
+                        Language: "eng",
+                        IsDefault: true,
+                        IsForced: false
                     ),
                 ]
                 : [],
-            [],
-            []
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static NoMercy.Encoder.Profiles.VideoOutput BuildVideoOutput(
@@ -193,25 +195,25 @@ public class SourceToDestinationMatrixTests
         StreamPolicy policy = StreamPolicy.Transcode
     ) =>
         new(
-            policy,
-            codec,
-            width,
-            height,
-            V2RateControlMode.Crf,
-            23,
-            6000,
-            null,
-            null,
-            "medium",
-            CodecProfile.Auto,
-            null,
-            null,
-            bitDepth,
-            null,
-            2,
-            false,
-            "video/{label}",
-            "video/{label}/playlist"
+            Policy: policy,
+            Codec: codec,
+            Width: width,
+            Height: height,
+            RateControl: V2RateControlMode.Crf,
+            Crf: 23,
+            BitrateKbps: 6000,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
+            Preset: "medium",
+            CodecProfile: CodecProfile.Auto,
+            Level: null,
+            Tune: null,
+            BitDepth: bitDepth,
+            PixelFormat: null,
+            KeyframeIntervalSeconds: 2,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: "video/{label}",
+            PlaylistNameTemplate: "video/{label}/playlist"
         );
 
     private static NoMercy.Encoder.Profiles.AudioOutput BuildAudioOutput(
@@ -221,17 +223,17 @@ public class SourceToDestinationMatrixTests
         StreamPolicy policy = StreamPolicy.Transcode
     ) =>
         new(
-            policy,
-            codec,
-            bitRateKbps,
-            channels,
-            48000,
-            [],
-            null,
-            null,
-            null,
-            "audio/{lang}/{codec}",
-            "audio/{lang}/{codec}/playlist"
+            Policy: policy,
+            Codec: codec,
+            BitrateKbps: bitRateKbps,
+            Channels: channels,
+            SampleRateHz: 48000,
+            AllowedLanguages: [],
+            DefaultLanguage: null,
+            Loudness: null,
+            Downmix: null,
+            SegmentNameTemplate: "audio/{lang}/{codec}",
+            PlaylistNameTemplate: "audio/{lang}/{codec}/playlist"
         );
 
     private static EncodingProfile BuildProfile(
@@ -240,12 +242,12 @@ public class SourceToDestinationMatrixTests
         Container container = Container.HlsFmp4
     ) =>
         new(
-            Ulid.NewUlid(),
-            "TestProfile",
-            container,
-            video,
-            audio ?? [],
-            []
+            Id: Ulid.NewUlid(),
+            Name: "TestProfile",
+            Container: container,
+            Video: video,
+            Audio: audio ?? [],
+            Subtitles: []
         );
 
     private async Task<OutputPlan> RunPlanStage(MediaInfo media, EncodingProfile profile)
@@ -261,9 +263,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_MatchingResolutionAndCodecAndBitrate_CopiesStream()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", 8, 6000);
+        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8)
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -276,9 +278,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_DifferentCodec_H264ToHevc_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "h264", 8, 4000);
+        MediaInfo media = BuildMedia(1920, 1080, "h264", bitDepth: 8, bitRateKbps: 4000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8)
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -290,9 +292,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_SourceUpscale_1080pSourceTo2160pProfile_ClampsToSourceHeight()
     {
-        MediaInfo media = BuildMedia(3840, 1080, "hevc", 8, 6000);
+        MediaInfo media = BuildMedia(3840, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 3840, 2160, 8)
+            BuildVideoOutput(VideoCodecType.H265, 3840, 2160, bitDepth: 8)
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -307,9 +309,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_10BitSourceTo8BitProfile_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", 10, 6000);
+        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 10, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8)
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -321,9 +323,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_8BitSourceTo10BitProfile_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", 8, 6000);
+        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 10)
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 10)
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -335,9 +337,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_HevcSourceInHlsTs_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", 8, 6000);
+        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8),
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8),
             container: Container.HlsTs
         );
 
@@ -353,9 +355,9 @@ public class SourceToDestinationMatrixTests
         // Source bitrate must be >= the profile target for smart-copy (spec
         // §video passthrough); 20 Mbps clears any default so codec+res+depth
         // match is the only remaining gate → copy.
-        MediaInfo media = BuildMedia(1920, 1080, "h264", 8, 20000);
+        MediaInfo media = BuildMedia(1920, 1080, "h264", bitDepth: 8, bitRateKbps: 20000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H264, 1920, 1080, 8),
+            BuildVideoOutput(VideoCodecType.H264, 1920, 1080, bitDepth: 8),
             container: Container.HlsTs
         );
 
@@ -370,9 +372,9 @@ public class SourceToDestinationMatrixTests
     {
         // Smart-copy needs source bitrate >= target. A source BELOW the target
         // is insufficient → transcode up to meet it.
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", 8, 2000);
+        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 2000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8) with
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8) with
             {
                 BitrateKbps = 3000,
             }
@@ -390,9 +392,9 @@ public class SourceToDestinationMatrixTests
         // Documented contract: a source richer than the target is COPYABLE —
         // the target bitrate is a transcode ceiling, not a mandate to shrink a
         // good source (that would only lose quality).
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", 8, 6000);
+        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8) with
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8) with
             {
                 BitrateKbps = 3000,
             }
@@ -409,12 +411,12 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Ladder_SourceHeightRungCopies_HigherRungsTranscode()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", 10, 6000);
+        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 10, bitRateKbps: 6000);
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "LadderTest",
             Container: Container.HlsFmp4,
-            Video: BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 10),
+            Video: BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 10),
             Audio: [],
             Subtitles: [],
             Ladder: new LadderConfig
@@ -423,30 +425,30 @@ public class SourceToDestinationMatrixTests
                 Rungs =
                 [
                     new LadderRung(
-                        1920,
-                        1080,
-                        VideoCodecType.H265,
-                        6000,
-                        9000,
-                        12000,
-                        24.0,
-                        "medium",
-                        CodecProfile.Auto,
-                        10,
-                        "yuv420p10le"
+                        Width: 1920,
+                        Height: 1080,
+                        Codec: VideoCodecType.H265,
+                        BitrateKbps: 6000,
+                        MaxBitrateKbps: 9000,
+                        BufferSizeKbps: 12000,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.Auto,
+                        BitDepth: 10,
+                        PixelFormat: "yuv420p10le"
                     ),
                     new LadderRung(
-                        1280,
-                        720,
-                        VideoCodecType.H265,
-                        3000,
-                        4500,
-                        6000,
-                        24.0,
-                        "medium",
-                        CodecProfile.Auto,
-                        10,
-                        "yuv420p10le"
+                        Width: 1280,
+                        Height: 720,
+                        Codec: VideoCodecType.H265,
+                        BitrateKbps: 3000,
+                        MaxBitrateKbps: 4500,
+                        BufferSizeKbps: 6000,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.Auto,
+                        BitDepth: 10,
+                        PixelFormat: "yuv420p10le"
                     ),
                 ],
             }
@@ -464,12 +466,12 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Ladder_AllRungsAboveSourceHeight_NoRungsAdded()
     {
-        MediaInfo media = BuildMedia(1920, 720, "hevc", 8, 3000);
+        MediaInfo media = BuildMedia(1920, 720, "hevc", bitDepth: 8, bitRateKbps: 3000);
         EncodingProfile profile = new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: "LadderAboveSource",
             Container: Container.HlsFmp4,
-            Video: BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8),
+            Video: BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8),
             Audio: [],
             Subtitles: [],
             Ladder: new LadderConfig
@@ -478,30 +480,30 @@ public class SourceToDestinationMatrixTests
                 Rungs =
                 [
                     new LadderRung(
-                        3840,
-                        2160,
-                        VideoCodecType.H265,
-                        15000,
-                        0,
-                        0,
-                        24.0,
-                        "medium",
-                        CodecProfile.Auto,
-                        8,
-                        null
+                        Width: 3840,
+                        Height: 2160,
+                        Codec: VideoCodecType.H265,
+                        BitrateKbps: 15000,
+                        MaxBitrateKbps: 0,
+                        BufferSizeKbps: 0,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.Auto,
+                        BitDepth: 8,
+                        PixelFormat: null
                     ),
                     new LadderRung(
-                        1920,
-                        1080,
-                        VideoCodecType.H265,
-                        6000,
-                        0,
-                        0,
-                        24.0,
-                        "medium",
-                        CodecProfile.Auto,
-                        8,
-                        null
+                        Width: 1920,
+                        Height: 1080,
+                        Codec: VideoCodecType.H265,
+                        BitrateKbps: 6000,
+                        MaxBitrateKbps: 0,
+                        BufferSizeKbps: 0,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.Auto,
+                        BitDepth: 8,
+                        PixelFormat: null
                     ),
                 ],
             }
@@ -522,14 +524,14 @@ public class SourceToDestinationMatrixTests
     {
         MediaInfo media = BuildMedia(
             1920,
-            height: 1080,
+            1080,
             audioCodec: "aac",
             audioChannels: 2,
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            null,
-            [BuildAudioOutput(AudioCodecType.Aac, 192, 2)]
+            video: null,
+            audio: [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 192, channels: 2)]
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -544,14 +546,14 @@ public class SourceToDestinationMatrixTests
     {
         MediaInfo media = BuildMedia(
             1920,
-            height: 1080,
+            1080,
             audioCodec: "aac",
             audioChannels: 2,
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            null,
-            [BuildAudioOutput(AudioCodecType.Opus, 128, 2)]
+            video: null,
+            audio: [BuildAudioOutput(AudioCodecType.Opus, bitRateKbps: 128, channels: 2)]
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -567,14 +569,14 @@ public class SourceToDestinationMatrixTests
         // (spec §35.1: copy requires source bitrate >= profile bitrate).
         MediaInfo media = BuildMedia(
             1920,
-            height: 1080,
+            1080,
             audioCodec: "aac",
             audioChannels: 2,
             audioBitRateKbps: 96
         );
         EncodingProfile profile = BuildProfile(
-            null,
-            [BuildAudioOutput(AudioCodecType.Aac, 128, 2)]
+            video: null,
+            audio: [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -591,14 +593,14 @@ public class SourceToDestinationMatrixTests
         // sufficient so the channel count is the only gate.
         MediaInfo media = BuildMedia(
             1920,
-            height: 1080,
+            1080,
             audioCodec: "aac",
             audioChannels: 1,
             audioBitRateKbps: 384
         );
         EncodingProfile profile = BuildProfile(
-            null,
-            [BuildAudioOutput(AudioCodecType.Aac, 128, 2)]
+            video: null,
+            audio: [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -612,14 +614,14 @@ public class SourceToDestinationMatrixTests
     {
         MediaInfo media = BuildMedia(
             1920,
-            height: 1080,
+            1080,
             audioCodec: "aac",
             audioChannels: 2,
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            null,
-            [BuildAudioOutput(AudioCodecType.Aac, 128, 2)]
+            video: null,
+            audio: [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -633,15 +635,15 @@ public class SourceToDestinationMatrixTests
     {
         MediaInfo media = BuildMedia(
             1920,
-            height: 1080,
+            1080,
             audioCodec: "opus",
             audioChannels: 2,
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H264, 1920, 1080, 8),
-            [BuildAudioOutput(AudioCodecType.Opus, 192, 2)],
-            Container.HlsTs
+            video: BuildVideoOutput(VideoCodecType.H264, 1920, 1080, bitDepth: 8),
+            audio: [BuildAudioOutput(AudioCodecType.Opus, bitRateKbps: 192, channels: 2)],
+            container: Container.HlsTs
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -655,15 +657,15 @@ public class SourceToDestinationMatrixTests
     {
         MediaInfo media = BuildMedia(
             1920,
-            height: 1080,
+            1080,
             audioCodec: "aac",
             audioChannels: 2,
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H264, 1920, 1080, 8),
-            [BuildAudioOutput(AudioCodecType.Aac, 128, 2)],
-            Container.HlsTs
+            video: BuildVideoOutput(VideoCodecType.H264, 1920, 1080, bitDepth: 8),
+            audio: [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)],
+            container: Container.HlsTs
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -679,16 +681,16 @@ public class SourceToDestinationMatrixTests
     {
         MediaInfo media = BuildMedia(
             1920,
-            height: 1080,
-            videoCodec: "hevc",
+            1080,
+            "hevc",
             bitDepth: 8,
             bitRateKbps: 6000,
             audioCodec: "aac",
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8),
-            [BuildAudioOutput(AudioCodecType.Aac, 128, 2)]
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8),
+            [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -704,16 +706,16 @@ public class SourceToDestinationMatrixTests
     {
         MediaInfo media = BuildMedia(
             1920,
-            height: 1080,
-            videoCodec: "hevc",
+            1080,
+            "hevc",
             bitDepth: 8,
             bitRateKbps: 6000,
             audioCodec: "aac",
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8),
-            [BuildAudioOutput(AudioCodecType.Opus, 128, 2)]
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8),
+            [BuildAudioOutput(AudioCodecType.Opus, bitRateKbps: 128, channels: 2)]
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -729,16 +731,16 @@ public class SourceToDestinationMatrixTests
     {
         MediaInfo media = BuildMedia(
             1920,
-            height: 1080,
-            videoCodec: "h264",
+            1080,
+            "h264",
             bitDepth: 8,
             bitRateKbps: 4000,
             audioCodec: "aac",
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8),
-            [BuildAudioOutput(AudioCodecType.Aac, 128, 2)]
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8),
+            [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -754,9 +756,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_H265SourceToAv1Profile_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", 8, 6000);
+        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.Av1, 1920, 1080, 8)
+            BuildVideoOutput(VideoCodecType.Av1, 1920, 1080, bitDepth: 8)
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -768,9 +770,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_H264ToH265_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "h264", 8, 4000);
+        MediaInfo media = BuildMedia(1920, 1080, "h264", bitDepth: 8, bitRateKbps: 4000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8)
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -784,9 +786,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_ExactHeightMatch_Copies()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", 8, 6000);
+        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8)
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -799,9 +801,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_SourceHeightAboveProfile_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1440, "hevc", 8, 9000);
+        MediaInfo media = BuildMedia(1920, 1440, "hevc", bitDepth: 8, bitRateKbps: 9000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8)
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);
@@ -813,9 +815,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_ProfileHeightNull_KeepsSourceHeight()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", 8, 6000);
+        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8) with
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8) with
             {
                 Height = null,
             }
@@ -830,9 +832,9 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_720pSourceTo1080p_OutputNotUpscaled()
     {
-        MediaInfo media = BuildMedia(1280, 720, "hevc", 8, 3000);
+        MediaInfo media = BuildMedia(1280, 720, "hevc", bitDepth: 8, bitRateKbps: 3000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, 8)
+            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
         );
 
         OutputPlan plan = await RunPlanStage(media, profile);

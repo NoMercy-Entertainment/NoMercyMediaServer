@@ -146,14 +146,21 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     {
                         _log.LogDebug(
                             ex,
-                            "NFS keep-alive remount failed on {Server}:{Export}", [_config.Server, _config.Export]
+                            "NFS keep-alive remount failed on {Server}:{Export}",
+                            _config.Server,
+                            _config.Export
                         );
                     }
                 }
                 else
                 {
                     _log.LogDebug(
-                        "NFS keep-alive stat / failed on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", [_config.Server, _config.Export, _config.Version, rc, err]
+                        "NFS keep-alive stat / failed on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
+                        _config.Server,
+                        _config.Export,
+                        _config.Version,
+                        rc,
+                        err
                     );
                 }
             }
@@ -258,7 +265,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 );
 
             _log.LogWarning(
-                "NFS{Version} mount attempt {Attempt}/{Max} failed for {Server}:{Export} — {Error}; retrying", [_config.Version, attempt, MountAttempts, _config.Server, _config.Export, err]
+                "NFS{Version} mount attempt {Attempt}/{Max} failed for {Server}:{Export} — {Error}; retrying",
+                _config.Version,
+                attempt,
+                MountAttempts,
+                _config.Server,
+                _config.Export,
+                err
             );
 
             Thread.Sleep(TimeSpan.FromMilliseconds(250 * attempt));
@@ -317,7 +330,10 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
         _nfs = ctx;
         _log.LogWarning(
-            "NFS session expired; reconnected to {Server}:{Export} (v{Version})", [_config.Server, _config.Export, _config.Version]
+            "NFS session expired; reconnected to {Server}:{Export} (v{Version})",
+            _config.Server,
+            _config.Export,
+            _config.Version
         );
     }
 
@@ -456,7 +472,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 if (rc != -2)
                 {
                     _log.LogDebug(
-                        "NFS stat (file) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", [nfsPath, _config.Server, _config.Export, _config.Version, rc, _libNfs.GetError(_nfs)]
+                        "NFS stat (file) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
+                        nfsPath,
+                        _config.Server,
+                        _config.Export,
+                        _config.Version,
+                        rc,
+                        _libNfs.GetError(_nfs)
                     );
                 }
                 return false;
@@ -484,7 +506,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 if (rc != -2)
                 {
                     _log.LogDebug(
-                        "NFS stat (dir) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", [nfsPath, _config.Server, _config.Export, _config.Version, rc, _libNfs.GetError(_nfs)]
+                        "NFS stat (dir) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
+                        nfsPath,
+                        _config.Server,
+                        _config.Export,
+                        _config.Version,
+                        rc,
+                        _libNfs.GetError(_nfs)
                     );
                 }
                 return false;
@@ -896,7 +924,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             );
 
         using Stream src = OpenRead(source);
-        using Stream dst = OpenWrite(destination, true);
+        using Stream dst = OpenWrite(destination, overwrite: true);
         src.CopyTo(dst);
     }
 
@@ -1025,7 +1053,9 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         catch (OperationCanceledException)
         {
             log.LogWarning(
-                "NFS export discovery timed out after {Timeout}ms for {Server}", [timeoutMs, server]
+                "NFS export discovery timed out after {Timeout}ms for {Server}",
+                timeoutMs,
+                server
             );
             return null;
         }
@@ -1048,7 +1078,9 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         if (v3 is { Count: > 0 })
         {
             log.LogInformation(
-                "NFS export discovery: v3 mount-protocol returned {Count} exports for {Server}", [v3.Count, server]
+                "NFS export discovery: v3 mount-protocol returned {Count} exports for {Server}",
+                v3.Count,
+                server
             );
             return v3;
         }
@@ -1154,7 +1186,9 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             if (LibNfs.SetVersion(ctx, 4) != 0)
             {
                 log.LogWarning(
-                    "NFSv4 export discovery: nfs_set_version(4) failed for {Server} — {Error}", [server, LibNfs.GetError(ctx)]
+                    "NFSv4 export discovery: nfs_set_version(4) failed for {Server} — {Error}",
+                    server,
+                    LibNfs.GetError(ctx)
                 );
                 return null;
             }
@@ -1164,7 +1198,9 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             if (LibNfs.Mount(ctx, server, "/") != 0)
             {
                 log.LogWarning(
-                    "NFSv4 export discovery: nfs_mount({Server}, '/') failed — {Error}", [server, LibNfs.GetError(ctx)]
+                    "NFSv4 export discovery: nfs_mount({Server}, '/') failed — {Error}",
+                    server,
+                    LibNfs.GetError(ctx)
                 );
                 return null;
             }
@@ -1177,18 +1213,23 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             foreach (string probeRoot in CommonV4Roots)
             {
                 List<string> roots = [];
-                CollectV4Children(ctx, probeRoot, 3, roots);
+                CollectV4Children(ctx, probeRoot, maxDepth: 3, roots);
                 if (roots.Count > 0)
                 {
                     log.LogInformation(
-                        "NFSv4 export discovery: walked {Probe} on {Server}, found {Count} dirs", [probeRoot, server, roots.Count]
+                        "NFSv4 export discovery: walked {Probe} on {Server}, found {Count} dirs",
+                        probeRoot,
+                        server,
+                        roots.Count
                     );
                     return roots;
                 }
             }
 
             log.LogWarning(
-                "NFSv4 export discovery: walked v4 root + {Count} fallback paths on {Server}, all empty — server may only expose explicit export paths (try entering manually)", [CommonV4Roots.Length - 1, server]
+                "NFSv4 export discovery: walked v4 root + {Count} fallback paths on {Server}, all empty — server may only expose explicit export paths (try entering manually)",
+                CommonV4Roots.Length - 1,
+                server
             );
             return null;
         }
@@ -1480,7 +1521,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             // not a real failure, and noisy at Warning level.
             if (openRc != -20)
                 _log.LogWarning(
-                    "NFS opendir failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}", [nfsDir, _config.Server, _config.Export, _config.Version, openRc, _libNfs.GetError(_nfs)]
+                    "NFS opendir failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
+                    nfsDir,
+                    _config.Server,
+                    _config.Export,
+                    _config.Version,
+                    openRc,
+                    _libNfs.GetError(_nfs)
                 );
             return;
         }

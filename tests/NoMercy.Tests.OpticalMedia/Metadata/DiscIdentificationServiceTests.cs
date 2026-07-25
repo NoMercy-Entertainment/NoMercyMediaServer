@@ -22,11 +22,11 @@ public class DiscIdentificationServiceTests
 {
     private static DiscInfo MakeDisc(OpticalDiscType type) =>
         new(
-            type,
-            "TEST_DISC",
-            [],
-            null,
-            TimeSpan.FromMinutes(90)
+            Type: type,
+            DiscLabel: "TEST_DISC",
+            Titles: [],
+            AudioTracks: null,
+            TotalDuration: TimeSpan.FromMinutes(90)
         );
 
     private static DiscIdentification MakeIdentification(
@@ -34,24 +34,24 @@ public class DiscIdentificationServiceTests
         bool needsManual = false
     ) =>
         new(
-            kind,
-            needsManual
+            Kind: kind,
+            Candidates: needsManual
                 ? []
                 :
                 [
                     new(
-                        "tmdb",
-                        "12345",
-                        "Test",
-                        2024,
-                        null,
-                        null,
-                        0.9
+                        Source: "tmdb",
+                        StableId: "12345",
+                        Title: "Test",
+                        Year: 2024,
+                        PosterUrl: null,
+                        BackdropUrl: null,
+                        Confidence: 0.9
                     ),
                 ],
-            needsManual ? 0 : 0.9,
-            !needsManual,
-            needsManual
+            TopConfidence: needsManual ? 0 : 0.9,
+            AutoApply: !needsManual,
+            NeedsManualAssignment: needsManual
         );
 
     // ── Dispatcher routing ────────────────────────────────────────────────

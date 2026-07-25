@@ -43,7 +43,7 @@ public sealed class SmbStreamingTests(StorageBackendsFixture fix)
         // the whole payload never exists in the test's memory as one array either.
         using (IncrementalHash writeHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
         {
-            await using Stream w = driver.OpenWrite(path, true);
+            await using Stream w = driver.OpenWrite(path, overwrite: true);
             byte[] block = new byte[1024 * 1024];
             int written = 0;
             int seed = 0;

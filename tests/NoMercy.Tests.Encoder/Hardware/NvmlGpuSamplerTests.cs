@@ -20,10 +20,10 @@ namespace NoMercy.Tests.Encoder.Hardware;
 public class NvmlGpuSamplerTests
 {
     private static ProcessResult SuccessResult(string stdOut) =>
-        new(0, stdOut, "", TimeSpan.Zero);
+        new(ExitCode: 0, StdOut: stdOut, StdErr: "", Duration: TimeSpan.Zero);
 
     private static ProcessResult FailureResult() =>
-        new(1, "", "nvidia-smi not found", TimeSpan.Zero);
+        new(ExitCode: 1, StdOut: "", StdErr: "nvidia-smi not found", Duration: TimeSpan.Zero);
 
     // ------------------------------------------------------------------
     // Graceful degradation — nvidia-smi absent or failing

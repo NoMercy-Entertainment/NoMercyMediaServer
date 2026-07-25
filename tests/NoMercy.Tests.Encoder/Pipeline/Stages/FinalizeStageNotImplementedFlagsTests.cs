@@ -41,15 +41,15 @@ namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 public class FinalizeStageNotImplementedFlagsTests
 {
     private static ExecutionResult SuccessResult =>
-        new(true, 0, string.Empty, TimeSpan.Zero, null);
+        new(Success: true, ExitCode: 0, StdErr: string.Empty, Duration: TimeSpan.Zero, Error: null);
 
     private static OutputPlan HlsOutputPlan() =>
         new(
-            OutputFormat.Hls,
-            [],
-            [],
-            [],
-            null
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
     private static (
@@ -95,7 +95,7 @@ public class FinalizeStageNotImplementedFlagsTests
 
     private static FinalizeInput MakeInput(HlsDerivatives derivatives) =>
         new(
-            [SuccessResult],
+            Results: [SuccessResult],
             Plan: HlsOutputPlan(),
             OutputDirectory: "out",
             MediaTitle: "Test",
@@ -222,7 +222,7 @@ public class FinalizeStageNotImplementedFlagsTests
         // FinalizeAsync MUST be called.
         (FinalizeStage stage, Mock<IOutputStrategy> strategyMock, _) = BuildStage();
         FinalizeInput input = new(
-            [SuccessResult],
+            Results: [SuccessResult],
             Plan: HlsOutputPlan(),
             OutputDirectory: "out",
             MediaTitle: "Test",

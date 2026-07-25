@@ -36,12 +36,12 @@ public class WorkerAssignerTests
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             [],
             [
-                new("a", 2.0, 4),
-                new("b", 1.0, 2),
+                new("a", SpeedMultiplier: 2.0, AvailableSlots: 4),
+                new("b", SpeedMultiplier: 1.0, AvailableSlots: 2),
             ]
         );
 
-        result.Keys.Should().BeEquivalentTo(["a", "b"]);
+        result.Keys.Should().BeEquivalentTo("a", "b");
         result["a"].Should().BeEmpty();
         result["b"].Should().BeEmpty();
     }
@@ -61,8 +61,8 @@ public class WorkerAssignerTests
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             tasks,
             [
-                new("beast", 4.0, 4),
-                new("laptop", 1.0, 2),
+                new("beast", SpeedMultiplier: 4.0, AvailableSlots: 4),
+                new("laptop", SpeedMultiplier: 1.0, AvailableSlots: 2),
             ]
         );
 
@@ -85,8 +85,8 @@ public class WorkerAssignerTests
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             tasks,
             [
-                new("a", 2.0, 2),
-                new("b", 2.0, 2),
+                new("a", SpeedMultiplier: 2.0, AvailableSlots: 2),
+                new("b", SpeedMultiplier: 2.0, AvailableSlots: 2),
             ]
         );
 
@@ -101,7 +101,7 @@ public class WorkerAssignerTests
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             [MakeTask("t0", EncodeTaskType.QualityVariant)],
-            [new("only", 1.5, 0)]
+            [new("only", SpeedMultiplier: 1.5, AvailableSlots: 0)]
         );
 
         result["only"].Should().HaveCount(1);
@@ -123,8 +123,8 @@ public class WorkerAssignerTests
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             tasks,
             [
-                new("beast", 4.0, 4),
-                new("slow", 1.0, 2),
+                new("beast", SpeedMultiplier: 4.0, AvailableSlots: 4),
+                new("slow", SpeedMultiplier: 1.0, AvailableSlots: 2),
             ]
         );
 
@@ -152,15 +152,15 @@ public class WorkerAssignerTests
         );
 
         HashSet<string> placed = result.Values.SelectMany(v => v).Select(t => t.TaskId).ToHashSet();
-        placed.Should().BeEquivalentTo(["t0", "t1", "t2", "t3", "t4"]);
+        placed.Should().BeEquivalentTo("t0", "t1", "t2", "t3", "t4");
     }
 
     private static EncodeTask MakeTask(string id, EncodeTaskType type) =>
         new(
-            id,
-            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
-            $"/out/{id}",
-            type
+            TaskId: id,
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            OutputPath: $"/out/{id}",
+            Type: type
         );
 
     private static EncodeTask MakeGpuTask(
@@ -170,7 +170,7 @@ public class WorkerAssignerTests
         string variantId = ""
     ) =>
         new(
-            id,
+            TaskId: id,
             Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: $"/out/{id}",
             Type: EncodeTaskType.QualityVariant,
@@ -185,10 +185,10 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            [MakeGpuTask("gpu-task", true)],
+            [MakeGpuTask("gpu-task", requiresGpu: true)],
             [
-                new("cpu-only", 4.0, 8, false),
-                new("gpu-box", 2.0, 2, true),
+                new("cpu-only", SpeedMultiplier: 4.0, AvailableSlots: 8, HasGpu: false),
+                new("gpu-box", SpeedMultiplier: 2.0, AvailableSlots: 2, HasGpu: true),
             ]
         );
 
@@ -202,8 +202,8 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            [MakeGpuTask("gpu-task", true)],
-            [new("cpu-only", 1.0, 4, false)]
+            [MakeGpuTask("gpu-task", requiresGpu: true)],
+            [new("cpu-only", SpeedMultiplier: 1.0, AvailableSlots: 4, HasGpu: false)]
         );
 
         result["cpu-only"].Select(t => t.TaskId).Should().Contain("gpu-task");
@@ -216,14 +216,14 @@ public class WorkerAssignerTests
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             [
-                MakeGpuTask("heavy", false, 8),
-                MakeGpuTask("a", false, 1),
-                MakeGpuTask("b", false, 1),
-                MakeGpuTask("c", false, 1),
+                MakeGpuTask("heavy", requiresGpu: false, cost: 8),
+                MakeGpuTask("a", requiresGpu: false, cost: 1),
+                MakeGpuTask("b", requiresGpu: false, cost: 1),
+                MakeGpuTask("c", requiresGpu: false, cost: 1),
             ],
             [
-                new("fast", 2.0, 2, false),
-                new("slow", 1.0, 2, false),
+                new("fast", SpeedMultiplier: 2.0, AvailableSlots: 2, HasGpu: false),
+                new("slow", SpeedMultiplier: 1.0, AvailableSlots: 2, HasGpu: false),
             ]
         );
 

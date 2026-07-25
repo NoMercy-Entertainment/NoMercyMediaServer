@@ -41,7 +41,7 @@ public class WebDavWriteStreamTests
             WebDavWriteStream upload = new(
                 client.Object,
                 "https://nas.local/dav/f.bin",
-                true
+                overwrite: true
             )
         )
         {
@@ -72,7 +72,7 @@ public class WebDavWriteStreamTests
             WebDavWriteStream upload = new(
                 client.Object,
                 "https://nas.local/dav/f.bin",
-                false
+                overwrite: false
             )
         )
         {

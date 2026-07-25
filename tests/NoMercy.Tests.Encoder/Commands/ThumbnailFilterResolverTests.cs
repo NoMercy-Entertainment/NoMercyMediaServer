@@ -23,10 +23,10 @@ public class ThumbnailFilterResolverTests
     public void Resolve_SdrSource_NoTonemap()
     {
         string filter = ThumbnailFilterResolver.Resolve(
-            10,
-            320,
-            false,
-            Tonemap
+            intervalSeconds: 10,
+            width: 320,
+            sourceIsHdr: false,
+            tonemapChain: Tonemap
         );
 
         filter.Should().Be("format=yuvj420p,fps=1/10,scale=320:-2");
@@ -37,10 +37,10 @@ public class ThumbnailFilterResolverTests
     public void Resolve_HdrSource_PrependsTonemap()
     {
         string filter = ThumbnailFilterResolver.Resolve(
-            10,
-            320,
-            true,
-            Tonemap
+            intervalSeconds: 10,
+            width: 320,
+            sourceIsHdr: true,
+            tonemapChain: Tonemap
         );
 
         filter.Should().StartWith(Tonemap + ",");
@@ -54,10 +54,10 @@ public class ThumbnailFilterResolverTests
         // No video branch supplied a chain (e.g. all-HDR-preserve ladder) but the
         // sprite still must be SDR — use the built-in hable chain.
         string filter = ThumbnailFilterResolver.Resolve(
-            5,
-            240,
-            true,
-            null
+            intervalSeconds: 5,
+            width: 240,
+            sourceIsHdr: true,
+            tonemapChain: null
         );
 
         filter.Should().Contain("tonemap=hable");

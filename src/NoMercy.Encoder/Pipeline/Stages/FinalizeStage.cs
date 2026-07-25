@@ -102,12 +102,14 @@ public class FinalizeStage(
                     input.OutputDirectory,
                     context.MediaInfo.Chapters,
                     ct,
-                    derivatives.GenerateChapterThumbs
+                    includeThumbUris: derivatives.GenerateChapterThumbs
                 );
                 input.Progress?.OnStageCompleted("Extracting chapters", TimeSpan.Zero);
 
                 logger.LogDebug(
-                    "[{CorrelationId}] Wrote {Count} chapters to chapters.vtt", [context.CorrelationId, context.MediaInfo.Chapters.Count]
+                    "[{CorrelationId}] Wrote {Count} chapters to chapters.vtt",
+                    context.CorrelationId,
+                    context.MediaInfo.Chapters.Count
                 );
             }
 
@@ -134,8 +136,8 @@ public class FinalizeStage(
                         new(
                             EncodingErrorKind.Unknown,
                             $"Font extraction incomplete: source has {expectedFonts} embedded font(s) "
-                                     + $"but only {fontsWritten} were extracted. Subtitle rendering would be "
-                                     + "missing fonts, so the output is not published.",
+                                + $"but only {fontsWritten} were extracted. Subtitle rendering would be "
+                                + "missing fonts, so the output is not published.",
                             null,
                             Name,
                             true
@@ -159,13 +161,13 @@ public class FinalizeStage(
             if (derivatives.GenerateIFramePlaylists)
                 throw new NotSupportedException(
                     "HlsDerivatives.GenerateIFramePlaylists is set but no IFramePlaylistGenerator "
-                             + "is wired. Leave it false until I-frame playlist support lands."
+                        + "is wired. Leave it false until I-frame playlist support lands."
                 );
 
             if (derivatives.ExtractClosedCaptions)
                 throw new NotSupportedException(
                     "HlsDerivatives.ExtractClosedCaptions is set but no CcExtractor is wired. "
-                             + "Leave it false until CEA-608/708 extraction lands."
+                        + "Leave it false until CEA-608/708 extraction lands."
                 );
 
             // SubtitleImsc is reserved for future work — log a warning instead
@@ -182,7 +184,7 @@ public class FinalizeStage(
             IReadOnlyList<StorageEntry> allEntries = effectiveStorage.List(
                 input.OutputDirectory,
                 "*",
-                true
+                recursive: true
             );
 
             long totalSize = allEntries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
@@ -277,17 +279,22 @@ public class FinalizeStage(
             plan,
             layout,
             relFiles,
-            mediaRoot,
-            encoderVersion,
-            profile is not null ? ProfileFingerprint.Compute(profile) : null,
-            DateTime.UtcNow,
-            DateTime.UtcNow,
+            outputLocation: mediaRoot,
+            encoderVersion: encoderVersion,
+            profileFingerprint: profile is not null ? ProfileFingerprint.Compute(profile) : null,
+            createdAt: DateTime.UtcNow,
+            completedAt: DateTime.UtcNow,
             ct,
-            context.OriginalInputPath
+            originalSourcePath: context.OriginalInputPath
         );
 
         logger.LogInformation(
-            "[{CorrelationId}] Wrote {FileName} into staging {StagingDir} ({FileCount} files); publishes to media root {MediaRoot}", [context.CorrelationId, MediaBlueprintWriter.FileName, outputDirectory, relFiles.Count, mediaRoot]
+            "[{CorrelationId}] Wrote {FileName} into staging {StagingDir} ({FileCount} files); publishes to media root {MediaRoot}",
+            context.CorrelationId,
+            MediaBlueprintWriter.FileName,
+            outputDirectory,
+            relFiles.Count,
+            mediaRoot
         );
     }
 }

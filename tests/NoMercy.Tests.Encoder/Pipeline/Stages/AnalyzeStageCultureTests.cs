@@ -59,7 +59,7 @@ public class AnalyzeStageCultureTests
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(BuildMediaInfo(30.0, 24.0));
+                .ReturnsAsync(BuildMediaInfo(realFps: 30.0, avgFps: 24.0));
 
             await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
 
@@ -75,33 +75,34 @@ public class AnalyzeStageCultureTests
 
     private static MediaInfo BuildMediaInfo(double? realFps = null, double? avgFps = null) =>
         new(
-            "/movies/x.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(90),
-            8000,
-            7_200_000_000,
+            FilePath: "/movies/x.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 8000,
+            FileSizeBytes: 7_200_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    1920,
-                    1080,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    null,
-                    null,
-                    null,
-                    true,
-                    6000,
-                    avgFps,
-                    realFps
+                    Index: 0,
+                    Codec: "h264",
+                    Width: 1920,
+                    Height: 1080,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: null,
+                    ColorTransfer: null,
+                    ColorSpace: null,
+                    IsDefault: true,
+                    BitRateKbps: 6000,
+                    AverageFrameRate: avgFps,
+                    RealFrameRate: realFps
                 ),
             ],
-            [],
-            [],
-            [],
-            [],
-            null
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: [],
+            Attachments: [],
+            DolbyVision: null
         );
 }

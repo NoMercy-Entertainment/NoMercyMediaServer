@@ -14,6 +14,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.LiveTranscode;
 
@@ -27,7 +28,7 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_cacheRoot))
-            Directory.Delete(_cacheRoot, true);
+            Directory.Delete(_cacheRoot, recursive: true);
     }
 
     private static IStorage MakeStorage() =>

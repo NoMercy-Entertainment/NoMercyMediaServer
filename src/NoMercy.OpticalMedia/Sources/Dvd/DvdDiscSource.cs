@@ -65,8 +65,8 @@ public sealed class DvdDiscSource(
                     "-i",
                     drivePath,
                 ],
-                null,
-                ct
+                workingDirectory: null,
+                cancellationToken: ct
             );
 
             // Capture protection state from the first probe — same stderr
@@ -110,15 +110,15 @@ public sealed class DvdDiscSource(
 
                 titles.Add(
                     new(
-                        titleIdx,
-                        $"Title {titleIdx:D2}",
-                        duration,
-                        [],
-                        [],
-                        [],
-                        [],
-                        0,
-                        false
+                        Index: titleIdx,
+                        Name: $"Title {titleIdx:D2}",
+                        Duration: duration,
+                        VideoStreams: [],
+                        AudioStreams: [],
+                        Subtitles: [],
+                        Chapters: [],
+                        EstimatedSizeBytes: 0,
+                        IsMainFeature: false
                     )
                 );
             }
@@ -126,7 +126,9 @@ public sealed class DvdDiscSource(
             {
                 logger.LogInformation(
                     ex,
-                    "DVD title {Title} probe parse failed for {Drive}", [titleIdx, drive.Path]
+                    "DVD title {Title} probe parse failed for {Drive}",
+                    titleIdx,
+                    drive.Path
                 );
             }
         }
@@ -134,7 +136,9 @@ public sealed class DvdDiscSource(
         if (titles.Count == 0)
         {
             logger.LogInformation(
-                "DVD probe found 0 titles for {Drive}: {Protection}", [drive.Path, protection?.Message ?? "(no protection detected)"]
+                "DVD probe found 0 titles for {Drive}: {Protection}",
+                drive.Path,
+                protection?.Message ?? "(no protection detected)"
             );
             return new(OpticalDiscType.Dvd, drive.Label, [], null, TimeSpan.Zero, protection);
         }
@@ -147,14 +151,14 @@ public sealed class DvdDiscSource(
             .ToArray();
 
         return new(
-            OpticalDiscType.Dvd,
-            drive.Label,
-            flagged,
-            null,
-            flagged.Sum(t => t.Duration.Ticks) is long ticks
+            Type: OpticalDiscType.Dvd,
+            DiscLabel: drive.Label,
+            Titles: flagged,
+            AudioTracks: null,
+            TotalDuration: flagged.Sum(t => t.Duration.Ticks) is long ticks
                 ? TimeSpan.FromTicks(ticks)
                 : TimeSpan.Zero,
-            protection
+            Protection: protection
         );
     }
 
@@ -191,20 +195,20 @@ public sealed class DvdDiscSource(
                 "-i",
                 drivePath,
             ],
-            null,
-            ct
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
         DiscTitle empty = new(
-            titleIndex,
-            $"Title {titleIndex:D2}",
-            TimeSpan.Zero,
-            [],
-            [],
-            [],
-            [],
-            0,
-            false
+            Index: titleIndex,
+            Name: $"Title {titleIndex:D2}",
+            Duration: TimeSpan.Zero,
+            VideoStreams: [],
+            AudioStreams: [],
+            Subtitles: [],
+            Chapters: [],
+            EstimatedSizeBytes: 0,
+            IsMainFeature: false
         );
 
         if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
@@ -229,7 +233,9 @@ public sealed class DvdDiscSource(
             // otherwise always returns on failure.
             logger.LogInformation(
                 ex,
-                "DVD per-title probe parse failed for {Drive} title {Title}", [drive.Path, titleIndex]
+                "DVD per-title probe parse failed for {Drive} title {Title}",
+                drive.Path,
+                titleIndex
             );
             return empty;
         }
@@ -254,9 +260,9 @@ public sealed class DvdDiscSource(
         )
         {
             return new(
-                "CSS",
-                null,
-                "DVD CSS handshake failed. The drive's region may not match the disc's region, "
+                Kind: "CSS",
+                VolumeId: null,
+                Message: "DVD CSS handshake failed. The drive's region may not match the disc's region, "
                     + "or libdvdcss could not derive a valid key from the disc."
             );
         }
@@ -264,9 +270,9 @@ public sealed class DvdDiscSource(
         if (stderr.Contains("region code mismatch", StringComparison.OrdinalIgnoreCase))
         {
             return new(
-                "RegionLock",
-                null,
-                "DVD region does not match the drive region — change the drive region or use a region-free drive."
+                Kind: "RegionLock",
+                VolumeId: null,
+                Message: "DVD region does not match the drive region — change the drive region or use a region-free drive."
             );
         }
 
@@ -281,7 +287,7 @@ public sealed class DvdDiscSource(
         // SCSI MMC interface (virtual drives, some USB enclosures).
         if (mountPath.StartsWith("dvd:", StringComparison.OrdinalIgnoreCase))
             return mountPath;
-        string trimmed = mountPath.TrimEnd(['\\', '/']);
+        string trimmed = mountPath.TrimEnd('\\', '/');
         return $"{trimmed}/VIDEO_TS/";
     }
 }

@@ -52,16 +52,17 @@ public class PlaylistGeneratorCodecHandlingTests
     public void GenerateMasterPlaylist_H264VideoOnly_OmitsCodecsAttribute()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
-            [],
-            [],
-            null
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -74,16 +75,17 @@ public class PlaylistGeneratorCodecHandlingTests
     public void GenerateMasterPlaylist_HevcVideoOnly_IncludesHevcCodec()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx265", 23, 8000, "medium", "main", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
-            [],
-            [],
-            null
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -95,16 +97,17 @@ public class PlaylistGeneratorCodecHandlingTests
     public void GenerateMasterPlaylist_Av1VideoOnly_IncludesAv1Codec()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libsvtav1", 23, 8000, "medium", null, "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
-            [],
-            [],
-            null
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -116,18 +119,20 @@ public class PlaylistGeneratorCodecHandlingTests
     public void GenerateMasterPlaylist_VideoAndAudio_CombinesCodecStrings()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -139,18 +144,20 @@ public class PlaylistGeneratorCodecHandlingTests
     public void GenerateMasterPlaylist_CopyModeVideo_OmitsCodecTag()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "copy", 23, 0, null, null, null, false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -165,18 +172,20 @@ public class PlaylistGeneratorCodecHandlingTests
     public void GenerateMasterPlaylist_CopyModeAudioOnly_OmitsCodecTag()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("copy", 0, 2, 48000, StreamAction.Copy, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -191,18 +200,20 @@ public class PlaylistGeneratorCodecHandlingTests
     {
         PlaylistGenerator generator = new();
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
@@ -224,16 +235,17 @@ public class PlaylistGeneratorCodecHandlingTests
     public void GenerateMasterPlaylist_TenBitHevc_IncludesBitDepthInCodec()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx265", 23, 8000, "medium", "main10", "4.1", true,
                     "yuv420p10le", "[v0]", new()
                 ),
             ],
-            [],
-            [],
-            null
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -246,7 +258,8 @@ public class PlaylistGeneratorCodecHandlingTests
     public void GenerateMasterPlaylist_MultipleVideoResolutions_BandwidthsDistinct()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
@@ -257,11 +270,12 @@ public class PlaylistGeneratorCodecHandlingTests
                     "yuv420p", "[v1]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         Dictionary<string, VariantMetrics> videoMetrics = new()

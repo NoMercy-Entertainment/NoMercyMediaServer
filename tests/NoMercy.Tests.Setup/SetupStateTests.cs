@@ -227,25 +227,25 @@ public class SetupStateTests
     // --- IsValidTransition ---
 
     [Theory]
-    [InlineData([SetupPhase.Unauthenticated, SetupPhase.Authenticating, true])]
-    [InlineData([SetupPhase.Authenticating, SetupPhase.Authenticated, true])]
-    [InlineData([SetupPhase.Authenticated, SetupPhase.Registering, true])]
-    [InlineData([SetupPhase.Registering, SetupPhase.Registered, true])]
-    [InlineData([SetupPhase.Registered, SetupPhase.CertificateAcquired, true])]
-    [InlineData([SetupPhase.CertificateAcquired, SetupPhase.Complete, true])]
-    [InlineData([SetupPhase.Authenticating, SetupPhase.Unauthenticated, true])]
-    [InlineData([SetupPhase.Registering, SetupPhase.Authenticated, true])]
-    [InlineData([SetupPhase.Unauthenticated, SetupPhase.Complete, false])]
-    [InlineData([SetupPhase.Unauthenticated, SetupPhase.Registered, false])]
-    [InlineData([SetupPhase.Complete, SetupPhase.Unauthenticated, false])]
+    [InlineData(SetupPhase.Unauthenticated, SetupPhase.Authenticating, true)]
+    [InlineData(SetupPhase.Authenticating, SetupPhase.Authenticated, true)]
+    [InlineData(SetupPhase.Authenticated, SetupPhase.Registering, true)]
+    [InlineData(SetupPhase.Registering, SetupPhase.Registered, true)]
+    [InlineData(SetupPhase.Registered, SetupPhase.CertificateAcquired, true)]
+    [InlineData(SetupPhase.CertificateAcquired, SetupPhase.Complete, true)]
+    [InlineData(SetupPhase.Authenticating, SetupPhase.Unauthenticated, true)]
+    [InlineData(SetupPhase.Registering, SetupPhase.Authenticated, true)]
+    [InlineData(SetupPhase.Unauthenticated, SetupPhase.Complete, false)]
+    [InlineData(SetupPhase.Unauthenticated, SetupPhase.Registered, false)]
+    [InlineData(SetupPhase.Complete, SetupPhase.Unauthenticated, false)]
     // Degraded-complete: BootOrchestrator.RunRegistrationAsync reaches Complete even
     // when the certificate isn't ready yet (Registered, no cert) or registration
     // itself failed (still at Registering when its own catch block runs) — see the
     // BootOrchestratorAdditionalTests that exercise these two call sites directly.
     // Regression coverage for a real bug: before these were added, both call sites'
     // TransitionTo(Complete) was silently rejected and left setup permanently stuck.
-    [InlineData([SetupPhase.Registered, SetupPhase.Complete, true])]
-    [InlineData([SetupPhase.Registering, SetupPhase.Complete, true])]
+    [InlineData(SetupPhase.Registered, SetupPhase.Complete, true)]
+    [InlineData(SetupPhase.Registering, SetupPhase.Complete, true)]
     public void IsValidTransition_ReturnsExpected(SetupPhase from, SetupPhase to, bool expected)
     {
         Assert.Equal(expected, SetupState.IsValidTransition(from, to));
@@ -305,7 +305,9 @@ public class SetupStateTests
 
         state.TransitionTo(SetupPhase.Authenticating);
 
-        await Task.WhenAll([wait1.WaitAsync(TimeSpan.FromSeconds(1)), wait2.WaitAsync(TimeSpan.FromSeconds(1))]
+        await Task.WhenAll(
+            wait1.WaitAsync(TimeSpan.FromSeconds(1)),
+            wait2.WaitAsync(TimeSpan.FromSeconds(1))
         );
 
         Assert.True(wait1.IsCompleted);
@@ -371,7 +373,7 @@ public class SetupStateTests
     public async Task WaitForSetupCompleteAsync_CompletesImmediatelyWhenAlreadyComplete()
     {
         SetupState state = new();
-        state.DetermineInitialPhase(true, true);
+        state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
 
         Task waitTask = state.WaitForSetupCompleteAsync();
 
@@ -407,7 +409,9 @@ public class SetupStateTests
         state.TransitionTo(SetupPhase.CertificateAcquired);
         state.TransitionTo(SetupPhase.Complete);
 
-        await Task.WhenAll([wait1.WaitAsync(TimeSpan.FromSeconds(1)), wait2.WaitAsync(TimeSpan.FromSeconds(1))]
+        await Task.WhenAll(
+            wait1.WaitAsync(TimeSpan.FromSeconds(1)),
+            wait2.WaitAsync(TimeSpan.FromSeconds(1))
         );
 
         Assert.True(wait1.IsCompleted);
@@ -437,7 +441,7 @@ public class SetupStateTests
     public void DetermineInitialPhase_ValidTokenRegistered_SetsComplete()
     {
         SetupState state = new();
-        SetupPhase phase = state.DetermineInitialPhase(true, true);
+        SetupPhase phase = state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
         Assert.Equal(SetupPhase.Complete, phase);
         Assert.Equal(SetupPhase.Complete, state.CurrentPhase);
     }
@@ -446,7 +450,7 @@ public class SetupStateTests
     public void DetermineInitialPhase_ValidTokenNotRegistered_SetsAuthenticated()
     {
         SetupState state = new();
-        SetupPhase phase = state.DetermineInitialPhase(true, false);
+        SetupPhase phase = state.DetermineInitialPhase(hasValidToken: true, isRegistered: false);
         Assert.Equal(SetupPhase.Authenticated, phase);
     }
 
@@ -454,7 +458,7 @@ public class SetupStateTests
     public void DetermineInitialPhase_NoToken_StaysUnauthenticated()
     {
         SetupState state = new();
-        SetupPhase phase = state.DetermineInitialPhase(false);
+        SetupPhase phase = state.DetermineInitialPhase(hasValidToken: false);
         Assert.Equal(SetupPhase.Unauthenticated, phase);
     }
 }

@@ -55,7 +55,9 @@ public class LiveTranscodeHub(
         if (!string.Equals(ownerId, callerId, StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning(
-                "SubscribeToSession: caller {CallerId} is not the owner of session {SessionId}", [callerId, sessionId]
+                "SubscribeToSession: caller {CallerId} is not the owner of session {SessionId}",
+                callerId,
+                sessionId
             );
             return;
         }
@@ -64,7 +66,9 @@ public class LiveTranscodeHub(
         presenceTracker.OnSubscribed(Context.ConnectionId, sessionId);
 
         logger.LogDebug(
-            "Client {ConnectionId} subscribed to live session {SessionId}", [Context.ConnectionId, sessionId]
+            "Client {ConnectionId} subscribed to live session {SessionId}",
+            Context.ConnectionId,
+            sessionId
         );
     }
 
@@ -124,7 +128,7 @@ public class LiveTranscodeHub(
 
         runtime.Session.ReportPlaybackPosition(
             TimeSpan.FromSeconds(Math.Max(0, currentTimeSeconds)),
-            true
+            authoritative: true
         );
         runtime.TouchLastAccess();
     }

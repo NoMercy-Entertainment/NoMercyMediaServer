@@ -30,7 +30,7 @@ public class EncoderAuxOnlyBundleTests
         bool partial = false
     ) =>
         new(
-            "task-0",
+            TaskId: "task-0",
             ParentJobId: 1,
             GroupTag: "group",
             Kind: kind,
@@ -52,7 +52,7 @@ public class EncoderAuxOnlyBundleTests
     {
         // What the coordinator dispatches when only the thumbnail strip is
         // missing: a Whole bundle covering no streams at all.
-        Is(Task(EncodeTaskKind.Whole, [], [], true)).Should().BeTrue();
+        Is(Task(EncodeTaskKind.Whole, video: [], audio: [], thumbs: true)).Should().BeTrue();
     }
 
     [Fact]
@@ -66,14 +66,14 @@ public class EncoderAuxOnlyBundleTests
     [Fact]
     public void BundleCarryingVideo_IsNotAuxOnly()
     {
-        Is(Task(EncodeTaskKind.Whole, [0], [])).Should().BeFalse();
+        Is(Task(EncodeTaskKind.Whole, video: [0], audio: [])).Should().BeFalse();
     }
 
     [Fact]
     public void BundleCarryingAudio_IsNotAuxOnly()
     {
         // Audio alone still produces a variant playlist the master must list.
-        Is(Task(EncodeTaskKind.Whole, [], [0])).Should().BeFalse();
+        Is(Task(EncodeTaskKind.Whole, video: [], audio: [0])).Should().BeFalse();
     }
 
     // ── Leaving the master alone: aux-only OR a partial top-up ───────────────
@@ -103,7 +103,7 @@ public class EncoderAuxOnlyBundleTests
     [Fact]
     public void AuxOnlyBundle_LeavesTheMasterAlone_EvenWhenNotFlaggedPartial()
     {
-        LeavesMaster(Task(EncodeTaskKind.Whole, [], [], true))
+        LeavesMaster(Task(EncodeTaskKind.Whole, video: [], audio: [], thumbs: true))
             .Should()
             .BeTrue();
     }
@@ -112,7 +112,7 @@ public class EncoderAuxOnlyBundleTests
     public void FullBundle_WritesTheMaster()
     {
         // Not a top-up and not aux-only: the ordinary full encode owns the master.
-        LeavesMaster(Task(EncodeTaskKind.Whole, [0], [0])).Should().BeFalse();
+        LeavesMaster(Task(EncodeTaskKind.Whole, video: [0], audio: [0])).Should().BeFalse();
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class EncoderAuxOnlyBundleTests
         // Only Whole-kind bundles reach the finalize branch this guards; a
         // per-stream task already defers to the coordinator's FinalizeOnly pass,
         // and must not be mistaken for a bundle.
-        Is(Task(EncodeTaskKind.Thumbnails, [], [])).Should().BeFalse();
+        Is(Task(EncodeTaskKind.Thumbnails, video: [], audio: [])).Should().BeFalse();
     }
 
     [Fact]

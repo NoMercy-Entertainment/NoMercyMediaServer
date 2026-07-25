@@ -45,7 +45,7 @@ public sealed class FileManagerGetFilesTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, true);
+            Directory.Delete(_tempRoot, recursive: true);
     }
 
     private static async Task<ConcurrentBag<MediaFolderExtend>> InvokeGetFiles(

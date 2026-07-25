@@ -51,14 +51,14 @@ public class WhisperProgressObserverTests
         SignalRProgressObserver observer = new(hubContextMock.Object, "test-file-id");
 
         EncodingProgress progress = new(
-            "c1",
-            42.5,
-            TimeSpan.FromSeconds(5),
-            null,
-            null,
-            null,
-            null,
-            null
+            CorrelationId: "c1",
+            PercentComplete: 42.5,
+            Elapsed: TimeSpan.FromSeconds(5),
+            EstimatedRemaining: null,
+            CurrentFps: null,
+            CurrentSpeed: null,
+            CurrentStage: null,
+            CurrentOperation: null
         );
 
         observer.OnProgress(progress);

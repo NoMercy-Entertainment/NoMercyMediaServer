@@ -19,6 +19,7 @@ using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Encoder.Storage;
 using Container = NoMercy.Encoder.Profiles.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Strategies;
 
@@ -60,7 +61,7 @@ public class CrashSweepTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, true);
+            Directory.Delete(_tempRoot, recursive: true);
 
         GC.SuppressFinalize(this);
     }
@@ -85,17 +86,17 @@ public class CrashSweepTests : IDisposable
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    false,
-                    string.Empty,
-                    TimeSpan.Zero,
-                    new(
-                        EncodingErrorKind.ProcessCrashed,
-                        "ffmpeg crashed",
-                        null,
-                        "Execute",
-                        true
+                    Success: false,
+                    OutputPath: string.Empty,
+                    Duration: TimeSpan.Zero,
+                    Error: new(
+                        Kind: EncodingErrorKind.ProcessCrashed,
+                        Message: "ffmpeg crashed",
+                        FfmpegStderr: null,
+                        StageName: "Execute",
+                        Recoverable: true
                     ),
-                    null
+                    Metrics: null
                 )
             );
 
@@ -104,22 +105,22 @@ public class CrashSweepTests : IDisposable
             .ReturnsAsync((JobCheckpoint?)null);
 
         EncodingRequest request = new(
-            "/media/source.mkv",
-            outputDir,
-            new(
-                Ulid.NewUlid(),
-                "Test HLS",
-                Container.HlsTs,
-                null,
-                [],
-                []
+            InputPath: "/media/source.mkv",
+            OutputDirectory: outputDir,
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "Test HLS",
+                Container: Container.HlsTs,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 
         EncodingResult result = await _strategy.EncodeAsync(
             request,
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         result.Success.Should().BeFalse();
@@ -150,17 +151,17 @@ public class CrashSweepTests : IDisposable
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    false,
-                    string.Empty,
-                    TimeSpan.Zero,
-                    new(
-                        EncodingErrorKind.ProcessCrashed,
-                        "crashed",
-                        null,
-                        "Execute",
-                        true
+                    Success: false,
+                    OutputPath: string.Empty,
+                    Duration: TimeSpan.Zero,
+                    Error: new(
+                        Kind: EncodingErrorKind.ProcessCrashed,
+                        Message: "crashed",
+                        FfmpegStderr: null,
+                        StageName: "Execute",
+                        Recoverable: true
                     ),
-                    null
+                    Metrics: null
                 )
             );
 
@@ -169,19 +170,19 @@ public class CrashSweepTests : IDisposable
             .ReturnsAsync((JobCheckpoint?)null);
 
         EncodingRequest request = new(
-            "/media/source.mkv",
-            outputDir,
-            new(
-                Ulid.NewUlid(),
-                "Test HLS",
-                Container.HlsTs,
-                null,
-                [],
-                []
+            InputPath: "/media/source.mkv",
+            OutputDirectory: outputDir,
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "Test HLS",
+                Container: Container.HlsTs,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 
-        await _strategy.EncodeAsync(request, null, CancellationToken.None);
+        await _strategy.EncodeAsync(request, progress: null, ct: CancellationToken.None);
 
         // Checkpoint survives the sweep — the resume path needs it.
         File.Exists(checkpointFile).Should().BeTrue("crash checkpoint must survive the sweep");
@@ -208,11 +209,11 @@ public class CrashSweepTests : IDisposable
             )
             .ReturnsAsync(
                 new EncodingResult(
-                    true,
-                    outputDir,
-                    TimeSpan.FromSeconds(10),
-                    null,
-                    null
+                    Success: true,
+                    OutputPath: outputDir,
+                    Duration: TimeSpan.FromSeconds(10),
+                    Error: null,
+                    Metrics: null
                 )
             );
 
@@ -221,19 +222,19 @@ public class CrashSweepTests : IDisposable
             .ReturnsAsync((JobCheckpoint?)null);
 
         EncodingRequest request = new(
-            "/media/source.mkv",
-            outputDir,
-            new(
-                Ulid.NewUlid(),
-                "Test HLS",
-                Container.HlsTs,
-                null,
-                [],
-                []
+            InputPath: "/media/source.mkv",
+            OutputDirectory: outputDir,
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "Test HLS",
+                Container: Container.HlsTs,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 
-        await _strategy.EncodeAsync(request, null, CancellationToken.None);
+        await _strategy.EncodeAsync(request, progress: null, ct: CancellationToken.None);
 
         File.Exists(finalSegment).Should().BeTrue("success must never delete output files");
     }

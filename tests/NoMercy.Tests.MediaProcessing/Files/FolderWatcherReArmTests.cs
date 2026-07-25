@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.MediaProcessing.Files;
+using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing.Files;
 
@@ -40,7 +41,7 @@ public class FolderWatcherReArmTests
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 

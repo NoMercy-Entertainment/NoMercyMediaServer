@@ -47,7 +47,7 @@ public class WorkerSelfRegistrationServiceTests
     public async Task ExecuteAsync_Enabled_PostsRegistrationOnStart()
     {
         TaskCompletionSource registerSeen = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        RecordingHandler handler = new(req =>
+        RecordingHandler handler = new(respond: req =>
         {
             if (req.RequestUri!.ToString().Contains("register"))
                 registerSeen.TrySetResult();
@@ -82,7 +82,7 @@ public class WorkerSelfRegistrationServiceTests
     public async Task ExecuteAsync_Shutdown_SendsUnregisterDelete()
     {
         TaskCompletionSource registerSeen = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        RecordingHandler handler = new(req =>
+        RecordingHandler handler = new(respond: req =>
         {
             if (req.RequestUri!.ToString().Contains("register") && req.Method == HttpMethod.Post)
                 registerSeen.TrySetResult();
@@ -122,7 +122,7 @@ public class WorkerSelfRegistrationServiceTests
         TaskCompletionSource secondRegister = new(
             TaskCreationOptions.RunContinuationsAsynchronously
         );
-        RecordingHandler handler = new(req =>
+        RecordingHandler handler = new(respond: req =>
         {
             if (req.RequestUri!.ToString().Contains("register"))
             {

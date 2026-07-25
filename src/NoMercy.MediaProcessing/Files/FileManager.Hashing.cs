@@ -34,7 +34,7 @@ public partial class FileManager
         // V3 encoder creates directories like video_1920x1080/ with .m3u8 playlist inside
         foreach (
             StorageEntry dir in storage
-                .List(hostFolder, null, false)
+                .List(hostFolder, null, recursive: false)
                 .Where(e => e.IsDirectory && storage.GetName(e.Path).StartsWith("video_"))
         )
         {
@@ -50,7 +50,7 @@ public partial class FileManager
             // summing the segment sizes. Over NFS each listing enumerates every
             // segment in the quality dir, so a second List here doubled the scan
             // cost per file for no new information.
-            IReadOnlyList<StorageEntry> dirEntries = storage.List(dir.Path, null, false);
+            IReadOnlyList<StorageEntry> dirEntries = storage.List(dir.Path, null, recursive: false);
 
             StorageEntry? playlist = dirEntries.FirstOrDefault(e =>
                 !e.IsDirectory
@@ -87,7 +87,7 @@ public partial class FileManager
         // Encoder creates directories like audio_eng_aac/ with .m3u8 playlist inside
         foreach (
             StorageEntry dir in storage
-                .List(hostFolder, null, false)
+                .List(hostFolder, null, recursive: false)
                 .Where(e => e.IsDirectory && storage.GetName(e.Path).StartsWith("audio_"))
         )
         {
@@ -102,7 +102,7 @@ public partial class FileManager
             string codec = match.Groups["codec"].Success ? match.Groups["codec"].Value : "aac";
 
             // Single listing for playlist lookup and size sum — see GetVideoHashList.
-            IReadOnlyList<StorageEntry> dirEntries = storage.List(dir.Path, null, false);
+            IReadOnlyList<StorageEntry> dirEntries = storage.List(dir.Path, null, recursive: false);
 
             StorageEntry? playlist = dirEntries.FirstOrDefault(e =>
                 !e.IsDirectory
@@ -141,7 +141,7 @@ public partial class FileManager
         IReadOnlyList<StorageEntry> subtitleFiles = storage.List(
             subtitleFolder,
             null,
-            false
+            recursive: false
         );
         foreach (StorageEntry subtitleEntry in subtitleFiles.Where(e => !e.IsDirectory))
         {
@@ -257,7 +257,7 @@ public partial class FileManager
         if (!storage.Exists(fontFolder))
             return fonts;
 
-        IReadOnlyList<StorageEntry> fontFiles = storage.List(fontFolder, null, false);
+        IReadOnlyList<StorageEntry> fontFiles = storage.List(fontFolder, null, recursive: false);
         foreach (StorageEntry fontEntry in fontFiles.Where(e => !e.IsDirectory))
         {
             string path = fontEntry.Path;
@@ -328,8 +328,8 @@ public partial class FileManager
 
         IReadOnlyList<StorageEntry> entries = sourceStorage.List(
             sourceFolder,
-            null,
-            true
+            pattern: null,
+            recursive: true
         );
 
         foreach (StorageEntry entry in entries)
@@ -338,11 +338,13 @@ public partial class FileManager
                 continue;
 
             string relativePath = entry.Path.StartsWith(sourceFolder, StringComparison.Ordinal)
-                ? entry.Path[sourceFolder.Length..].TrimStart(['/', '\\'])
+                ? entry.Path[sourceFolder.Length..].TrimStart('/', '\\')
                 : entry.Path;
 
             string destPath = string.Join(
-                '/', [destinationFolder.TrimEnd('/'), relativePath.Replace('\\', '/')]
+                '/',
+                destinationFolder.TrimEnd('/'),
+                relativePath.Replace('\\', '/')
             );
 
             string? parentDir = destinationStorage.GetParent(destPath);
@@ -352,12 +354,12 @@ public partial class FileManager
             await using Stream readStream = sourceStorage.OpenRead(entry.Path);
             await using Stream writeStream = destinationStorage.OpenWrite(
                 destPath,
-                true
+                overwrite: true
             );
             await readStream.CopyToAsync(writeStream);
         }
 
-        sourceStorage.DeleteDirectory(sourceFolder, true);
+        sourceStorage.DeleteDirectory(sourceFolder, recursive: true);
 
         Logger.App($"Cross-backend move: {sourceFolder} to {destinationFolder}");
     }
@@ -566,7 +568,7 @@ public partial class FileManager
     {
         List<VideoTrack> tracks = [];
 
-        IReadOnlyList<StorageEntry> files = storage.List(hostFolder, null, false);
+        IReadOnlyList<StorageEntry> files = storage.List(hostFolder, null, recursive: false);
 
         // Index every thumb/sprite candidate first so we can pair a VTT with
         // a same-stem WEBP. Stale VTT files from a previous re-encode (e.g.
@@ -629,7 +631,7 @@ public partial class FileManager
         IReadOnlyList<StorageEntry> subtitleFiles = storage.List(
             subtitleFolder,
             null,
-            false
+            recursive: false
         );
 
         // First pass: index every .vtt by {lang}|{type} so we can spot bitmap subs

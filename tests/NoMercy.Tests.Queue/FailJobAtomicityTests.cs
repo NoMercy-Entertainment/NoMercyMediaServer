@@ -76,7 +76,7 @@ public class FailJobAtomicityTests
     public void AddFailedJobAndRemoveJob_SaveChangesFails_NeitherChangeIsPersisted()
     {
         string dbName = $"AtomicityTest_{Guid.NewGuid()}";
-        int jobId = SeedJob(dbName, 3);
+        int jobId = SeedJob(dbName, attempts: 3);
 
         DbContextOptions<QueueContext> throwingOptions = new DbContextOptionsBuilder<QueueContext>()
             .UseInMemoryDatabase(dbName)
@@ -118,7 +118,7 @@ public class FailJobAtomicityTests
     public void SeparateAddThenRemoveCalls_SecondCallFails_LeavesJobCountedInBothTables()
     {
         string dbName = $"AtomicityContrast_{Guid.NewGuid()}";
-        int jobId = SeedJob(dbName, 3);
+        int jobId = SeedJob(dbName, attempts: 3);
 
         DbContextOptions<QueueContext> throwingOptions = new DbContextOptionsBuilder<QueueContext>()
             .UseInMemoryDatabase(dbName)

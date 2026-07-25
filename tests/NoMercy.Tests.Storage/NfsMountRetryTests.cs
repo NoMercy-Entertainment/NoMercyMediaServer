@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Storage;
 public class NfsMountRetryTests
 {
     private static NfsDriverConfig Config() =>
-        NfsDriverConfig.For("fake-server", "/export", 4);
+        NfsDriverConfig.For("fake-server", "/export", version: 4);
 
     [Fact]
     public void Mount_succeeds_first_attempt_without_retry()

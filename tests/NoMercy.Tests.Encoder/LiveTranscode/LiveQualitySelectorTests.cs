@@ -20,20 +20,21 @@ public class LiveQualitySelectorTests
 {
     private static IHardwareCapabilities MakeGpuHardware() =>
         new HardwareCapabilities(
+            Gpus:
             [
                 new(
-                    GpuVendor.Nvidia,
-                    "RTX 4090",
-                    24576,
-                    12,
-                    [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
+                    Vendor: GpuVendor.Nvidia,
+                    Name: "RTX 4090",
+                    VramMb: 24576,
+                    MaxEncoderSessions: 12,
+                    SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
                 ),
             ],
-            16
+            CpuCores: 16
         );
 
     private static IHardwareCapabilities MakeSoftwareHardware() =>
-        new HardwareCapabilities([], 8);
+        new HardwareCapabilities(Gpus: [], CpuCores: 8);
 
     private static IResourceBudget MakeBudget(IHardwareCapabilities hardware) =>
         new ResourceBudget(hardware.Gpus, hardware.CpuCores);
@@ -54,42 +55,43 @@ public class LiveQualitySelectorTests
 
     private static MediaInfo MakeMedia(int width, int height) =>
         new(
-            "/media/test.mkv",
-            "matroska,webm",
-            TimeSpan.FromMinutes(90),
-            15000,
-            10_000_000_000L,
+            FilePath: "/media/test.mkv",
+            Format: "matroska,webm",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 15000,
+            FileSizeBytes: 10_000_000_000L,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "h264",
-                    width,
-                    height,
-                    24.0,
-                    8,
-                    "yuv420p",
-                    "bt709",
-                    "bt709",
-                    "bt709",
-                    true,
-                    15000
+                    Index: 0,
+                    Codec: "h264",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: 8,
+                    PixelFormat: "yuv420p",
+                    ColorPrimaries: "bt709",
+                    ColorTransfer: "bt709",
+                    ColorSpace: "bt709",
+                    IsDefault: true,
+                    BitRateKbps: 15000
                 ),
             ],
-            [],
-            [],
-            []
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
         );
 
     private static ClientCapabilities MakeClient(int maxWidth = 7680, int maxHeight = 4320) =>
         new(
-            [VideoCodecType.H264, VideoCodecType.H265],
-            [AudioCodecType.Aac],
-            ["mp4", "mkv"],
-            maxWidth,
-            maxHeight,
-            false,
-            false,
-            0
+            SupportedVideoCodecs: [VideoCodecType.H264, VideoCodecType.H265],
+            SupportedAudioCodecs: [AudioCodecType.Aac],
+            SupportedContainers: ["mp4", "mkv"],
+            MaxWidth: maxWidth,
+            MaxHeight: maxHeight,
+            SupportsHdr: false,
+            Supports10Bit: false,
+            MaxBitrateKbps: 0
         );
 
     private static SpeedIndex MakeFastGpuSpeedIndex() =>
@@ -267,7 +269,7 @@ public class LiveQualitySelectorTests
     {
         IHardwareCapabilities hardware = MakeGpuHardware();
         MediaInfo media = MakeMedia(1920, 1080);
-        ClientCapabilities client = MakeClient(1280, 720);
+        ClientCapabilities client = MakeClient(maxWidth: 1280, maxHeight: 720);
         SpeedIndex speeds = MakeFastGpuSpeedIndex();
         IResourceBudget budget = MakeBudget(hardware);
 
@@ -337,16 +339,16 @@ public class LiveQualitySelectorTests
 
     private static LiveQuality MakeTier(string id, int bitrateKbps) =>
         new(
-            id,
-            id,
-            1920,
-            1080,
-            VideoCodecType.H264,
-            bitrateKbps,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: id,
+            Label: id,
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: bitrateKbps,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     private static readonly LiveQuality Tier1080 = MakeTier("1080p", 8000);

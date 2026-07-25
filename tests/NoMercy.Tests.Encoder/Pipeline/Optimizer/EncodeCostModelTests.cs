@@ -24,8 +24,8 @@ public class EncodeCostModelTests
     {
         EncodeCostModel model = new(EmptySpeed);
 
-        double uhd = model.RungCost(3840, 2160, VideoCodecType.H265, "libx265", 1);
-        double fhd = model.RungCost(1920, 1080, VideoCodecType.H265, "libx265", 1);
+        double uhd = model.RungCost(3840, 2160, VideoCodecType.H265, "libx265", passes: 1);
+        double fhd = model.RungCost(1920, 1080, VideoCodecType.H265, "libx265", passes: 1);
 
         uhd.Should().BeGreaterThan(fhd, "more pixels = more encode work");
     }
@@ -35,8 +35,8 @@ public class EncodeCostModelTests
     {
         EncodeCostModel model = new(EmptySpeed);
 
-        double single = model.RungCost(1920, 1080, VideoCodecType.H264, "libx264", 1);
-        double twoPass = model.RungCost(1920, 1080, VideoCodecType.H264, "libx264", 2);
+        double single = model.RungCost(1920, 1080, VideoCodecType.H264, "libx264", passes: 1);
+        double twoPass = model.RungCost(1920, 1080, VideoCodecType.H264, "libx264", passes: 2);
 
         twoPass.Should().BeApproximately(single * 2, 0.001);
     }
@@ -49,17 +49,17 @@ public class EncodeCostModelTests
             new()
             {
                 [new(VideoCodecType.H265, "hevc_nvenc", 1920, null)] = new(
-                    120,
-                    4.0,
-                    default
+                    Fps: 120,
+                    SpeedMultiplier: 4.0,
+                    MeasuredAt: default
                 ),
             }
         );
         EncodeCostModel hw = new(fast);
         EncodeCostModel sw = new(EmptySpeed);
 
-        double hwCost = hw.RungCost(1920, 1080, VideoCodecType.H265, "hevc_nvenc", 1);
-        double swCost = sw.RungCost(1920, 1080, VideoCodecType.H265, "libx265", 1);
+        double hwCost = hw.RungCost(1920, 1080, VideoCodecType.H265, "hevc_nvenc", passes: 1);
+        double swCost = sw.RungCost(1920, 1080, VideoCodecType.H265, "libx265", passes: 1);
 
         hwCost.Should().BeLessThan(swCost, "a 4x-realtime encoder costs less wall-time");
     }
@@ -70,18 +70,20 @@ public class EncodeCostModelTests
         EncodeCostModel model = new(EmptySpeed);
 
         double withTonemap = model.TotalCost(
-            3840,
-            2160,
-            true,
+            sourceWidth: 3840,
+            sourceHeight: 2160,
+            sourceIsHdr: true,
+            rungs:
             [
                 new(1920, 1080, VideoCodecType.H265, "libx265", 1),
                 new(1280, 720, VideoCodecType.H265, "libx265", 1),
             ]
         );
         double withoutTonemap = model.TotalCost(
-            3840,
-            2160,
-            false,
+            sourceWidth: 3840,
+            sourceHeight: 2160,
+            sourceIsHdr: false,
+            rungs:
             [
                 new(1920, 1080, VideoCodecType.H265, "libx265", 1),
                 new(1280, 720, VideoCodecType.H265, "libx265", 1),

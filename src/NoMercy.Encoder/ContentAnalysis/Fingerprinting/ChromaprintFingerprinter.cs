@@ -117,14 +117,17 @@ public class ChromaprintFingerprinter(
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
             args.ToArray(),
-            null,
-            ct
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
         if (!result.IsSuccess)
         {
             logger.LogWarning(
-                "chromaprint fingerprinting failed for {Path} (exit {Exit}): {Stderr}", [filePath, result.ExitCode, result.StdErr]
+                "chromaprint fingerprinting failed for {Path} (exit {Exit}): {Stderr}",
+                filePath,
+                result.ExitCode,
+                result.StdErr
             );
             observer.Report(jobId, "fingerprint", 100, "failed");
             return Empty(window);

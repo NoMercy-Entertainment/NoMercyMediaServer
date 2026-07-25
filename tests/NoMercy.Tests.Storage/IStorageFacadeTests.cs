@@ -40,8 +40,8 @@ public class IStorageFacadeTests
                         return parent;
                     if (string.IsNullOrEmpty(parent))
                         return child;
-                    string trimmedParent = parent.TrimEnd(['/', '\\']);
-                    string trimmedChild = child.TrimStart(['/', '\\']);
+                    string trimmedParent = parent.TrimEnd('/', '\\');
+                    string trimmedChild = child.TrimStart('/', '\\');
                     return $"{trimmedParent}/{trimmedChild}";
                 }
             );
@@ -111,7 +111,7 @@ public class IStorageFacadeTests
             IStorage storage = new LocalStorage(driver.Object, guard);
 
             // Empty path should not throw; instead it should resolve to the root
-            IReadOnlyList<StorageEntry> result = storage.List("", null, false);
+            IReadOnlyList<StorageEntry> result = storage.List("", null, recursive: false);
 
             result.Should().NotBeNull("empty path should not throw");
             driver.Verify(
@@ -129,7 +129,7 @@ public class IStorageFacadeTests
         {
             try
             {
-                Directory.Delete(root, true);
+                Directory.Delete(root, recursive: true);
             }
             catch { }
         }
@@ -402,10 +402,10 @@ public class IStorageFacadeTests
     // ────────────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(["file.txt", "file.txt"])]
-    [InlineData(["dir/file.txt", "file.txt"])]
-    [InlineData(["a/b/c/d.mkv", "d.mkv"])]
-    [InlineData(["a/b/c/d.mkv/", "d.mkv"])] // trailing slash should be ignored
+    [InlineData("file.txt", "file.txt")]
+    [InlineData("dir/file.txt", "file.txt")]
+    [InlineData("a/b/c/d.mkv", "d.mkv")]
+    [InlineData("a/b/c/d.mkv/", "d.mkv")] // trailing slash should be ignored
     public void GetName_returns_last_segment_of_path(string path, string expectedName)
     {
         // GetName must work on scope-relative paths without touching the filesystem.
@@ -420,10 +420,10 @@ public class IStorageFacadeTests
     }
 
     [Theory]
-    [InlineData(["file.txt", null])]
-    [InlineData(["dir/file.txt", "dir"])]
-    [InlineData(["a/b/c/d.mkv", "a/b/c"])]
-    [InlineData(["", null])]
+    [InlineData("file.txt", null)]
+    [InlineData("dir/file.txt", "dir")]
+    [InlineData("a/b/c/d.mkv", "a/b/c")]
+    [InlineData("", null)]
     public void GetParent_returns_parent_directory_segment(string path, string? expectedParent)
     {
         // GetParent returns the directory containing the path,
@@ -441,10 +441,10 @@ public class IStorageFacadeTests
     }
 
     [Theory]
-    [InlineData(["file.txt", "file"])]
-    [InlineData(["archive.tar.gz", "archive.tar"])]
-    [InlineData(["dir/noext", "noext"])]
-    [InlineData(["dir/multi.dot.txt", "multi.dot"])]
+    [InlineData("file.txt", "file")]
+    [InlineData("archive.tar.gz", "archive.tar")]
+    [InlineData("dir/noext", "noext")]
+    [InlineData("dir/multi.dot.txt", "multi.dot")]
     public void GetNameWithoutExtension_strips_extension_from_name(string path, string expectedName)
     {
         // This is GetName + extension stripping: get the last segment, then strip its extension.
@@ -511,7 +511,7 @@ public class IStorageFacadeTests
 
         Stream result = await storage.OpenWriteAsync(
             "dir/subdir/file.mp4",
-            true,
+            overwrite: true,
             CancellationToken.None
         );
 
@@ -608,7 +608,7 @@ public class IStorageFacadeTests
         StoragePathGuard guard = new([root], driver.Object);
         IStorage storage = new LocalStorage(driver.Object, guard);
 
-        IReadOnlyList<StorageEntry> result = storage.List("", null, false);
+        IReadOnlyList<StorageEntry> result = storage.List("", null, recursive: false);
 
         result.Should().HaveCount(2, "all entries must be returned");
         result[0].Path.Should().NotStartWith("/", "scope-relative paths must not start with /");
@@ -641,7 +641,7 @@ public class IStorageFacadeTests
         StoragePathGuard guard = new([root], driver.Object);
         IStorage storage = new LocalStorage(driver.Object, guard);
 
-        IReadOnlyList<StorageEntry> result = storage.List("", "*.mkv", false);
+        IReadOnlyList<StorageEntry> result = storage.List("", "*.mkv", recursive: false);
 
         result.Should().ContainSingle("pattern filter must be applied");
         result[0].Path.Should().EndWith(".mkv", "only matching files must be returned");
@@ -685,7 +685,7 @@ public class IStorageFacadeTests
         StoragePathGuard guard = new([root], driver.Object);
         IStorage storage = new LocalStorage(driver.Object, guard);
 
-        IReadOnlyList<StorageEntry> result = storage.List("", null, true);
+        IReadOnlyList<StorageEntry> result = storage.List("", null, recursive: true);
 
         result.Should().HaveCount(3, "all files in the tree must be returned");
         driver.Verify(
@@ -851,7 +851,7 @@ public class IStorageFacadeTests
         StoragePathGuard guard = new([root], driver.Object);
         IStorage storage = new LocalStorage(driver.Object, guard);
 
-        storage.DeleteDirectory("old-library", true);
+        storage.DeleteDirectory("old-library", recursive: true);
 
         driver.Verify(
             d => d.DeleteDirectory(It.IsAny<string>(), true),

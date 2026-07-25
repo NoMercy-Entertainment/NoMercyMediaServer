@@ -37,7 +37,7 @@ public class HlsTwoPassStrategyTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_outputDir))
-            Directory.Delete(_outputDir, true);
+            Directory.Delete(_outputDir, recursive: true);
         GC.SuppressFinalize(this);
     }
 
@@ -61,8 +61,8 @@ public class HlsTwoPassStrategyTests : IDisposable
         HlsTwoPassStrategy strategy = BuildStrategy();
         EncodingResult result = await strategy.EncodeAsync(
             BuildRequest(),
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         Assert.True(result.Success);
@@ -215,15 +215,15 @@ public class HlsTwoPassStrategyTests : IDisposable
         await File.WriteAllTextAsync($"{statsFile}_v0-0.log", "pass1 done");
 
         JobCheckpoint existing = new(
-            "job-1",
-            "/media/src.mkv",
-            _outputDir,
-            [],
-            DateTime.UtcNow,
-            statsFile,
-            true,
-            -1,
-            "TwoPass"
+            JobId: "job-1",
+            InputPath: "/media/src.mkv",
+            OutputDirectory: _outputDir,
+            CompletedGroupIndices: [],
+            LastUpdated: DateTime.UtcNow,
+            StatsFilePath: statsFile,
+            Pass1Completed: true,
+            LastCompletedSegment: -1,
+            EncodeMode: "TwoPass"
         );
 
         _checkpointStore
@@ -263,15 +263,15 @@ public class HlsTwoPassStrategyTests : IDisposable
         // Checkpoint claims pass 1 done but the stats file doesn't exist on disk
         // — pretend a previous run was interrupted mid-cleanup. Must re-run.
         JobCheckpoint stale = new(
-            "job-1",
-            "/media/src.mkv",
-            _outputDir,
-            [],
-            DateTime.UtcNow,
-            Path.Combine(_outputDir, "nonexistent-stats"),
-            true,
-            -1,
-            "TwoPass"
+            JobId: "job-1",
+            InputPath: "/media/src.mkv",
+            OutputDirectory: _outputDir,
+            CompletedGroupIndices: [],
+            LastUpdated: DateTime.UtcNow,
+            StatsFilePath: Path.Combine(_outputDir, "nonexistent-stats"),
+            Pass1Completed: true,
+            LastCompletedSegment: -1,
+            EncodeMode: "TwoPass"
         );
 
         _checkpointStore
@@ -308,20 +308,20 @@ public class HlsTwoPassStrategyTests : IDisposable
 
     private static EncodingResult Success() =>
         new(
-            true,
-            "/out",
-            TimeSpan.FromSeconds(1),
-            null,
-            new(1024, 2.0, 24.0, "libx264", null)
+            Success: true,
+            OutputPath: "/out",
+            Duration: TimeSpan.FromSeconds(1),
+            Error: null,
+            Metrics: new(1024, 2.0, 24.0, "libx264", null)
         );
 
     private static EncodingResult Fail(string message) =>
         new(
-            false,
-            string.Empty,
-            TimeSpan.Zero,
-            new(EncodingErrorKind.ProcessCrashed, message, null, "Pass1", false),
-            new(0, 0, 0, string.Empty, null)
+            Success: false,
+            OutputPath: string.Empty,
+            Duration: TimeSpan.Zero,
+            Error: new(EncodingErrorKind.ProcessCrashed, message, null, "Pass1", false),
+            Metrics: new(0, 0, 0, string.Empty, null)
         );
 
     private HlsTwoPassStrategy BuildStrategy() =>
@@ -334,10 +334,10 @@ public class HlsTwoPassStrategyTests : IDisposable
 
     private EncodingRequest BuildRequest() =>
         new(
-            "/media/src.mkv",
-            _outputDir,
-            new(
-                Ulid.NewUlid(),
+            InputPath: "/media/src.mkv",
+            OutputDirectory: _outputDir,
+            Profile: new(
+                Id: Ulid.NewUlid(),
                 Name: "HLS 2-pass 1080p",
                 Container: Container.HlsTs,
                 Video: null,

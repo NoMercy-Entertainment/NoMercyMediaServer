@@ -54,7 +54,7 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Opening"),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: "Opening"),
         ];
 
         await _writer.WriteChaptersAsync(_tempDir, chapters, default);
@@ -72,8 +72,8 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new(TimeSpan.Zero, TimeSpan.FromSeconds(90), "Part 1"),
-            new(TimeSpan.FromSeconds(90), TimeSpan.FromMinutes(30), "Part 2"),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromSeconds(90), Title: "Part 1"),
+            new(Start: TimeSpan.FromSeconds(90), End: TimeSpan.FromMinutes(30), Title: "Part 2"),
         ];
 
         await _writer.WriteChaptersAsync(_tempDir, chapters, default);
@@ -93,11 +93,11 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Opening Credits"),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: "Opening Credits"),
             new(
-                TimeSpan.FromMinutes(5),
-                TimeSpan.FromMinutes(60),
-                "Main Feature"
+                Start: TimeSpan.FromMinutes(5),
+                End: TimeSpan.FromMinutes(60),
+                Title: "Main Feature"
             ),
         ];
 
@@ -118,7 +118,7 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new(TimeSpan.Zero, TimeSpan.FromMinutes(5), null),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: null),
         ];
 
         await _writer.WriteChaptersAsync(_tempDir, chapters, default);
@@ -160,9 +160,9 @@ public class ChapterWriterTests : IDisposable
         ChapterInfo[] chapters =
         [
             new(
-                TimeSpan.FromHours(1) + TimeSpan.FromMinutes(30),
-                TimeSpan.FromHours(2),
-                "Act 3"
+                Start: TimeSpan.FromHours(1) + TimeSpan.FromMinutes(30),
+                End: TimeSpan.FromHours(2),
+                Title: "Act 3"
             ),
         ];
 

@@ -113,18 +113,18 @@ public class LiveStreamingService(
             ILiveSession session = kv.Value.Session;
             snapshots.Add(
                 new(
-                    session.SessionId,
-                    session.State,
-                    session.CurrentQuality.Id,
-                    session.CurrentQuality.Label,
-                    session.CurrentQuality.Width,
-                    session.CurrentQuality.Height,
-                    session.CurrentQuality.BitrateKbps,
-                    session.TranscodedPosition.TotalSeconds,
-                    session.BufferAhead.TotalSeconds,
-                    kv.Value.HighestSegmentIndex + 1,
-                    kv.Value.IsComplete,
-                    kv.Value.LastAccess
+                    SessionId: session.SessionId,
+                    State: session.State,
+                    QualityId: session.CurrentQuality.Id,
+                    QualityLabel: session.CurrentQuality.Label,
+                    Width: session.CurrentQuality.Width,
+                    Height: session.CurrentQuality.Height,
+                    BitrateKbps: session.CurrentQuality.BitrateKbps,
+                    PositionSeconds: session.TranscodedPosition.TotalSeconds,
+                    BufferAheadSeconds: session.BufferAhead.TotalSeconds,
+                    SegmentCount: kv.Value.HighestSegmentIndex + 1,
+                    IsComplete: kv.Value.IsComplete,
+                    LastAccess: kv.Value.LastAccess
                 )
             );
         }
@@ -229,9 +229,11 @@ public class LiveStreamingService(
         {
             if (storage.Exists(scratchDirectory))
             {
-                storage.DeleteDirectory(scratchDirectory, true);
+                storage.DeleteDirectory(scratchDirectory, recursive: true);
                 logger.LogDebug(
-                    "Deleted live session scratch {Dir} for {SessionId}", [scratchDirectory, sessionId]
+                    "Deleted live session scratch {Dir} for {SessionId}",
+                    scratchDirectory,
+                    sessionId
                 );
             }
         }
@@ -242,7 +244,9 @@ public class LiveStreamingService(
             // up on the next server start or by the OS temp sweep.
             logger.LogWarning(
                 ex,
-                "Could not delete scratch {Dir} for live session {SessionId}", [scratchDirectory, sessionId]
+                "Could not delete scratch {Dir} for live session {SessionId}",
+                scratchDirectory,
+                sessionId
             );
         }
     }
@@ -263,7 +267,9 @@ public class LiveStreamingService(
 
             runtime.MarkComplete();
             logger.LogDebug(
-                "Drainer for {SessionId} completed — buffered {Count} segments", [runtime.Session.SessionId, runtime.HighestSegmentIndex + 1]
+                "Drainer for {SessionId} completed — buffered {Count} segments",
+                runtime.Session.SessionId,
+                runtime.HighestSegmentIndex + 1
             );
         }
         catch (OperationCanceledException)
@@ -291,11 +297,11 @@ public class LiveStreamingService(
             $"/api/v1/streaming/live/sessions/{sessionId}/segment/{runtime.CurrentEpoch}/{segment.Index}.ts";
 
         SegmentReadyMessage message = new(
-            segment.Index,
-            segment.StartTime.TotalSeconds,
-            segment.Duration.TotalSeconds,
-            relativeUrl,
-            segment.SizeBytes
+            Index: segment.Index,
+            StartTimeSeconds: segment.StartTime.TotalSeconds,
+            DurationSeconds: segment.Duration.TotalSeconds,
+            RelativeUrl: relativeUrl,
+            SizeBytes: segment.SizeBytes
         );
 
         try

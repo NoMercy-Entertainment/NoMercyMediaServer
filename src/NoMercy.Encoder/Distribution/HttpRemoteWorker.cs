@@ -122,15 +122,17 @@ public class HttpRemoteWorker : IRemoteWorker
         {
             _logger.LogWarning(
                 ex,
-                "HTTP error dispatching task {TaskId} to worker {WorkerId}", [task.TaskId, WorkerId]
+                "HTTP error dispatching task {TaskId} to worker {WorkerId}",
+                task.TaskId,
+                WorkerId
             );
             return new(
-                task.TaskId,
-                false,
-                task.OutputPath,
-                TimeSpan.Zero,
-                $"HTTP error: {ex.Message}",
-                WorkerId
+                TaskId: task.TaskId,
+                Success: false,
+                OutputPath: task.OutputPath,
+                Duration: TimeSpan.Zero,
+                Error: $"HTTP error: {ex.Message}",
+                WorkerId: WorkerId
             );
         }
 
@@ -138,15 +140,19 @@ public class HttpRemoteWorker : IRemoteWorker
         {
             string body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             _logger.LogWarning(
-                "Worker {WorkerId} returned {StatusCode} for task {TaskId}: {Body}", [WorkerId, (int)response.StatusCode, task.TaskId, Truncate(body, 500)]
+                "Worker {WorkerId} returned {StatusCode} for task {TaskId}: {Body}",
+                WorkerId,
+                (int)response.StatusCode,
+                task.TaskId,
+                Truncate(body, 500)
             );
             return new(
-                task.TaskId,
-                false,
-                task.OutputPath,
-                TimeSpan.Zero,
-                $"Worker returned HTTP {(int)response.StatusCode}",
-                WorkerId
+                TaskId: task.TaskId,
+                Success: false,
+                OutputPath: task.OutputPath,
+                Duration: TimeSpan.Zero,
+                Error: $"Worker returned HTTP {(int)response.StatusCode}",
+                WorkerId: WorkerId
             );
         }
 
@@ -155,15 +161,17 @@ public class HttpRemoteWorker : IRemoteWorker
         if (result is null)
         {
             _logger.LogWarning(
-                "Worker {WorkerId} returned an unsignable / expired response for task {TaskId}", [WorkerId, task.TaskId]
+                "Worker {WorkerId} returned an unsignable / expired response for task {TaskId}",
+                WorkerId,
+                task.TaskId
             );
             return new(
-                task.TaskId,
-                false,
-                task.OutputPath,
-                TimeSpan.Zero,
-                "Worker response failed HMAC verification",
-                WorkerId
+                TaskId: task.TaskId,
+                Success: false,
+                OutputPath: task.OutputPath,
+                Duration: TimeSpan.Zero,
+                Error: "Worker response failed HMAC verification",
+                WorkerId: WorkerId
             );
         }
 
@@ -190,18 +198,18 @@ public class HttpRemoteWorker : IRemoteWorker
         );
         return Task.FromResult(
             new RemoteEncodingResult(
-                false,
-                WorkerId,
-                string.Empty,
-                TimeSpan.Zero,
-                new(
-                    EncodingErrorKind.Unknown,
-                    "Job-level remote dispatch not supported — use task-level",
-                    null,
-                    null,
-                    false
+                Success: false,
+                WorkerId: WorkerId,
+                OutputPath: string.Empty,
+                Duration: TimeSpan.Zero,
+                Error: new(
+                    Kind: EncodingErrorKind.Unknown,
+                    Message: "Job-level remote dispatch not supported — use task-level",
+                    FfmpegStderr: null,
+                    StageName: null,
+                    Recoverable: false
                 ),
-                null
+                Metrics: null
             )
         );
     }

@@ -44,7 +44,7 @@ public class QueueEngineEndToEndTests : IDisposable
     public QueueEngineEndToEndTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(_adapter, 3);
+        _jobQueue = new(_adapter, maxAttempts: 3);
     }
 
     public void Dispose()
@@ -61,7 +61,7 @@ public class QueueEngineEndToEndTests : IDisposable
         JobDispatcher dispatcher = new(_jobQueue, NullLogger<JobDispatcher>.Instance);
         NamedQueueStubJob job = new() { TargetQueue = QueueNames.Library };
 
-        dispatcher.Dispatch(job, QueueNames.Library, 5);
+        dispatcher.Dispatch(job, QueueNames.Library, priority: 5);
 
         QueueJob? stored = _context.QueueJobs.SingleOrDefault();
         stored.Should().NotBeNull("the job must be persisted");
@@ -78,8 +78,8 @@ public class QueueEngineEndToEndTests : IDisposable
         NamedQueueStubJob libraryJob = new() { TargetQueue = QueueNames.Library };
         NamedQueueStubJob imageJob = new() { TargetQueue = QueueNames.Image };
 
-        dispatcher.Dispatch(libraryJob, QueueNames.Library, 1);
-        dispatcher.Dispatch(imageJob, QueueNames.Image, 1);
+        dispatcher.Dispatch(libraryJob, QueueNames.Library, priority: 1);
+        dispatcher.Dispatch(imageJob, QueueNames.Image, priority: 1);
 
         _context.QueueJobs.Count().Should().Be(2);
 
@@ -145,7 +145,7 @@ public class QueueEngineEndToEndTests : IDisposable
     {
         SemaphoreSlim done = new(0, 1);
         string jobKey = Guid.NewGuid().ToString("N");
-        FailOnceThenSucceedJob.Configure(jobKey, 1, () => done.Release());
+        FailOnceThenSucceedJob.Configure(jobKey, failCount: 1, onSuccess: () => done.Release());
 
         FailOnceThenSucceedJob stub = new() { JobKey = jobKey };
         _jobQueue.Enqueue(
@@ -187,7 +187,7 @@ public class QueueEngineEndToEndTests : IDisposable
     public async Task Worker_JobExhaustsRetries_TransitionsToTerminalFailedState()
     {
         string jobKey = Guid.NewGuid().ToString("N");
-        FailOnceThenSucceedJob.Configure(jobKey, 99);
+        FailOnceThenSucceedJob.Configure(jobKey, failCount: 99);
 
         FailOnceThenSucceedJob stub = new() { JobKey = jobKey };
         _jobQueue.Enqueue(
@@ -460,7 +460,7 @@ public class QueueEngineEndToEndTests : IDisposable
             ReservedAt = null,
             Attempts = 0,
         };
-        _context.QueueJobs.AddRange([job1, job2, job3]);
+        _context.QueueJobs.AddRange(job1, job2, job3);
         _context.SaveChanges();
 
         _jobQueue.ResetAllReservedJobs();

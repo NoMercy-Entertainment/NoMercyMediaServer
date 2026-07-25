@@ -18,10 +18,10 @@ namespace NoMercy.Tests.Monitoring;
 public class MemoryPercentageTests
 {
     [Theory]
-    [InlineData([6.0, 2.0, 75.0])]
-    [InlineData([0.0, 16.0, 0.0])]
-    [InlineData([8.0, 8.0, 50.0])]
-    [InlineData([15.0, 1.0, 93.75])]
+    [InlineData(6.0, 2.0, 75.0)]
+    [InlineData(0.0, 16.0, 0.0)]
+    [InlineData(8.0, 8.0, 50.0)]
+    [InlineData(15.0, 1.0, 93.75)]
     public void Memory_Percentage_ComputedCorrectly(
         double use,
         double available,
@@ -30,7 +30,7 @@ public class MemoryPercentageTests
     {
         Memory memory = new() { Use = use, Available = available };
 
-        memory.Percentage.Should().BeApproximately(expectedPercent, 0.01);
+        memory.Percentage.Should().BeApproximately(expectedPercent, precision: 0.01);
     }
 
     [Fact]
@@ -56,14 +56,14 @@ public class MemoryPercentageTests
         };
 
         memory.Total.Should().Be(16.0);
-        memory.Percentage.Should().BeApproximately(25.0, 0.01);
+        memory.Percentage.Should().BeApproximately(25.0, precision: 0.01);
     }
 
     [Theory]
-    [InlineData([100.0f, 50.0f, 50.0f])]
-    [InlineData([200.0f, 100.0f, 50.0f])]
-    [InlineData([500.0f, 450.0f, 90.0f])]
-    [InlineData([0.0f, 0.0f, 0.0f])]
+    [InlineData(100.0f, 50.0f, 50.0f)]
+    [InlineData(200.0f, 100.0f, 50.0f)]
+    [InlineData(500.0f, 450.0f, 90.0f)]
+    [InlineData(0.0f, 0.0f, 0.0f)]
     public void ResourceMonitorDto_Percentage_ComputedCorrectly(
         float total,
         float available,
@@ -72,7 +72,7 @@ public class MemoryPercentageTests
     {
         ResourceMonitorDto dto = new() { Total = total, Available = available };
 
-        dto.Percentage.Should().BeApproximately(expectedPercent, 0.01f);
+        dto.Percentage.Should().BeApproximately(expectedPercent, precision: 0.01f);
     }
 
     [Fact]

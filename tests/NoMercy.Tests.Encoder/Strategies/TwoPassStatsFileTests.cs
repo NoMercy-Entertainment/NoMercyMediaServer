@@ -60,24 +60,24 @@ public class TwoPassStatsFileTests
                 (EncodingRequest _, IProgressObserver? _, CancellationToken _) =>
                     failPass
                         ? new(
-                            false,
-                            string.Empty,
-                            TimeSpan.Zero,
-                            new(
+                            Success: false,
+                            OutputPath: string.Empty,
+                            Duration: TimeSpan.Zero,
+                            Error: new(
                                 EncodingErrorKind.Unknown,
                                 "simulated failure",
                                 null,
                                 "test",
                                 false
                             ),
-                            null
+                            Metrics: null
                         )
                         : new EncodingResult(
-                            true,
-                            "/out",
-                            TimeSpan.Zero,
-                            null,
-                            new(0, 0, 0, "test", null)
+                            Success: true,
+                            OutputPath: "/out",
+                            Duration: TimeSpan.Zero,
+                            Error: null,
+                            Metrics: new(0, 0, 0, "test", null)
                         )
             );
         return mock;
@@ -107,35 +107,35 @@ public class TwoPassStatsFileTests
 
     private static EncodingRequest FakeRequest(string outputDir = "/out/movie") =>
         new(
-            "/media/movie.mkv",
-            outputDir,
-            new(
-                Ulid.NewUlid(),
-                "Test",
-                Container.HlsTs,
-                new(
-                    StreamPolicy.Transcode,
-                    VideoCodecType.H264,
-                    1920,
-                    null,
-                    V2RateControlMode.Crf,
-                    22,
-                    0,
-                    null,
-                    null,
-                    "fast",
-                    CodecProfile.Auto,
-                    null,
-                    null,
-                    8,
-                    null,
-                    2,
-                    false,
-                    "video/{label}",
-                    "video/{label}/playlist"
+            InputPath: "/media/movie.mkv",
+            OutputDirectory: outputDir,
+            Profile: new(
+                Id: Ulid.NewUlid(),
+                Name: "Test",
+                Container: Container.HlsTs,
+                Video: new(
+                    Policy: StreamPolicy.Transcode,
+                    Codec: VideoCodecType.H264,
+                    Width: 1920,
+                    Height: null,
+                    RateControl: V2RateControlMode.Crf,
+                    Crf: 22,
+                    BitrateKbps: 0,
+                    MaxBitrateKbps: null,
+                    BufferSizeKbps: null,
+                    Preset: "fast",
+                    CodecProfile: CodecProfile.Auto,
+                    Level: null,
+                    Tune: null,
+                    BitDepth: 8,
+                    PixelFormat: null,
+                    KeyframeIntervalSeconds: 2,
+                    ConvertHdrToSdr: false,
+                    SegmentNameTemplate: "video/{label}",
+                    PlaylistNameTemplate: "video/{label}/playlist"
                 ),
-                [],
-                []
+                Audio: [],
+                Subtitles: []
             )
         );
 
@@ -186,7 +186,7 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<HlsTwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), null, CancellationToken.None);
+        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
             r.Options is { Pass: EncodingPass.One }
@@ -200,7 +200,7 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<HlsTwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), null, CancellationToken.None);
+        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
             r.Options is { Pass: EncodingPass.One }
@@ -223,8 +223,8 @@ public class TwoPassStatsFileTests
 
         await strategy.EncodeAsync(
             FakeRequest(outputDir),
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         EncodingRequest pass1 = captured.First(r =>
@@ -248,7 +248,7 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<Mp4TwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), null, CancellationToken.None);
+        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
             r.Options is { Pass: EncodingPass.One }
@@ -262,7 +262,7 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<Mp4TwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), null, CancellationToken.None);
+        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
             r.Options is { Pass: EncodingPass.One }
@@ -283,8 +283,8 @@ public class TwoPassStatsFileTests
 
         await strategy.EncodeAsync(
             FakeRequest(outputDir),
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         EncodingRequest pass1 = captured.First(r =>
@@ -306,7 +306,7 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<DashTwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), null, CancellationToken.None);
+        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
             r.Options is { Pass: EncodingPass.One }
@@ -320,7 +320,7 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<DashTwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), null, CancellationToken.None);
+        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
             r.Options is { Pass: EncodingPass.One }
@@ -341,8 +341,8 @@ public class TwoPassStatsFileTests
 
         await strategy.EncodeAsync(
             FakeRequest(outputDir),
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         EncodingRequest pass1 = captured.First(r =>
@@ -362,7 +362,7 @@ public class TwoPassStatsFileTests
     public async Task TwoPassStrategy_pass1_failure_does_not_invoke_pass2()
     {
         List<EncodingRequest> captured = [];
-        Mock<IEncoder> encoder = BuildCapturingEncoder(captured, true);
+        Mock<IEncoder> encoder = BuildCapturingEncoder(captured, failPass: true);
         Mock<ICheckpointStore> checkpoint = BuildNoOpCheckpointStore();
         Mock<IStorage> storage = BuildPermissiveStorage();
 
@@ -375,8 +375,8 @@ public class TwoPassStatsFileTests
 
         EncodingResult result = await strategy.EncodeAsync(
             FakeRequest(),
-            null,
-            CancellationToken.None
+            progress: null,
+            ct: CancellationToken.None
         );
 
         result.Success.Should().BeFalse();

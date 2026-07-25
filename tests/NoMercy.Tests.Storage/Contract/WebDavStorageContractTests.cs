@@ -44,7 +44,7 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
             ),
             PreAuthenticate = true,
         };
-        return new(handler, true);
+        return new(handler, disposeHandler: true);
     }
 
     // -----------------------------------------------------------------------

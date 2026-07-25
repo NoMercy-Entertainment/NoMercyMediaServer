@@ -52,16 +52,17 @@ public class PlaylistGeneratorAudioGroupTests
     public void GenerateMasterPlaylist_VideoOnlyNoAudio_OmitsAudioGroupAndAudioAttribute()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
-            [],
-            [],
-            null
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -75,18 +76,20 @@ public class PlaylistGeneratorAudioGroupTests
     public void GenerateMasterPlaylist_WithAudioRendition_EmitsAudioGroupAndAttribute()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -101,18 +104,20 @@ public class PlaylistGeneratorAudioGroupTests
     public void GenerateMasterPlaylist_MultipleAudioCodecs_KeepsDistinctGroupIds()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -127,18 +132,20 @@ public class PlaylistGeneratorAudioGroupTests
     public void GenerateMasterPlaylist_OpusAudio_UsesOpusGroupId()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("libopus", 128, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -151,18 +158,20 @@ public class PlaylistGeneratorAudioGroupTests
     public void GenerateMasterPlaylist_Eac3Audio_UsesEac3GroupId()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("eac3", 384, 6, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -176,18 +185,20 @@ public class PlaylistGeneratorAudioGroupTests
     {
         PlaylistGenerator generator = new();
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         Dictionary<string, VariantMetrics> vidMetrics = new()
@@ -210,19 +221,21 @@ public class PlaylistGeneratorAudioGroupTests
     public void GenerateMasterPlaylist_MultipleAudioLanguages_EachEmitsOwnMediaLine()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "fra", "0:a:1"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
@@ -253,18 +266,20 @@ public class PlaylistGeneratorAudioGroupTests
     public void GenerateMasterPlaylist_AudioCopyAction_IncludedInGroup()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 0, 2, 48000, StreamAction.Copy, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -278,18 +293,20 @@ public class PlaylistGeneratorAudioGroupTests
     public void GenerateMasterPlaylist_AudioOtherAction_NotIncludedInGroup()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 192, 2, 48000, StreamAction.Drop, "eng", "0:a:0"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         string master = Generate(plan);
@@ -301,19 +318,21 @@ public class PlaylistGeneratorAudioGroupTests
     public void GenerateMasterPlaylist_DefaultAudioFlag_FirstRenditionOnly()
     {
         OutputPlan plan = new(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
+            VideoOutputs:
             [
                 new(
                     1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
                     "yuv420p", "[v0]", new()
                 ),
             ],
+            AudioOutputs:
             [
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
                 new("aac", 192, 2, 48000, StreamAction.Transcode, "fra", "0:a:1"),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(

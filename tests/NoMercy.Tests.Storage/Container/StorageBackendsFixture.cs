@@ -157,7 +157,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             await WaitForHttpAsync(
                 WebDavBaseUrl,
                 TimeSpan.FromSeconds(20),
-                true
+                expectAnyResponse: true
             );
             await SeedAsync();
             // Samba listens on 1445 (445 is taken by the Windows SMB server).
@@ -205,7 +205,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
         try
         {
             if (!string.IsNullOrEmpty(MediaDir) && Directory.Exists(MediaDir))
-                Directory.Delete(MediaDir, true);
+                Directory.Delete(MediaDir, recursive: true);
         }
         catch
         {
@@ -228,12 +228,12 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
 
     public S3StorageDriver BuildS3Driver(string? prefix = null) =>
         new(
-            S3Bucket,
-            "us-east-1",
-            prefix,
-            S3Endpoint,
-            S3AccessKey,
-            S3SecretKey
+            bucket: S3Bucket,
+            region: "us-east-1",
+            prefix: prefix,
+            endpoint: S3Endpoint,
+            accessKey: S3AccessKey,
+            secretKey: S3SecretKey
         );
 
     public WebDavStorageDriver BuildWebDavDriver()
@@ -251,7 +251,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
     public SmbStorageDriver BuildSmbDriver(string basePath = "")
     {
         SmbDriverConfig config = SmbDriverConfig.For(
-            SmbHost,
+            host: SmbHost,
             share: SmbShare,
             username: SmbUser,
             password: SmbPassword,
@@ -270,7 +270,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
     {
         try
         {
-            NfsDriverConfig config = NfsDriverConfig.For(NfsHost, NfsExport, version);
+            NfsDriverConfig config = NfsDriverConfig.For(NfsHost, NfsExport, version: version);
             return new(config);
         }
         catch (DllNotFoundException)
@@ -300,24 +300,24 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
         // SD 480p
         await FfmpegAsync(
             "-y -f lavfi -i testsrc2=size=854x480:rate=25:duration=5 "
-                  + "-f lavfi -i sine=frequency=440:duration=5 "
-                  + "-c:v libx264 -preset ultrafast -crf 30 -c:a aac -b:a 96k "
-                  + "/media/video-sd480p.mkv"
+                + "-f lavfi -i sine=frequency=440:duration=5 "
+                + "-c:v libx264 -preset ultrafast -crf 30 -c:a aac -b:a 96k "
+                + "/media/video-sd480p.mkv"
         );
         // 1080p
         await FfmpegAsync(
             "-y -f lavfi -i testsrc2=size=1920x1080:rate=25:duration=5 "
-                  + "-f lavfi -i sine=frequency=440:duration=5 "
-                  + "-c:v libx264 -preset ultrafast -crf 30 -c:a aac -b:a 96k "
-                  + "/media/video-1080p.mkv"
+                + "-f lavfi -i sine=frequency=440:duration=5 "
+                + "-c:v libx264 -preset ultrafast -crf 30 -c:a aac -b:a 96k "
+                + "/media/video-1080p.mkv"
         );
         // HDR10 (PQ / BT.2020) — color-tag the stream so MediaAnalyzer classifies it HDR.
         await FfmpegAsync(
             "-y -f lavfi -i testsrc2=size=1920x1080:rate=25:duration=5 "
-                  + "-vf format=yuv420p10le,setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc "
-                  + "-c:v libx265 -preset ultrafast -x265-params hdr10=1:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc "
-                  + "-color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc "
-                  + "/media/video-hdr10.mkv"
+                + "-vf format=yuv420p10le,setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc "
+                + "-c:v libx265 -preset ultrafast -x265-params hdr10=1:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc "
+                + "-color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc "
+                + "/media/video-hdr10.mkv"
         );
         // Audio-only FLAC
         await FfmpegAsync(
@@ -326,7 +326,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
     }
 
     private Task FfmpegAsync(string args) =>
-        ExecAsync(["bash", "-c", $"ffmpeg {args} >/dev/null 2>&1"]);
+        ExecAsync("bash", "-c", $"ffmpeg {args} >/dev/null 2>&1");
 
     private async Task ExecAsync(params string[] command)
     {
@@ -337,9 +337,9 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             );
     }
 
-    private Task CreateNfsVolumeAsync() => DockerCliAsync(["volume", "create", NfsVolumeName]);
+    private Task CreateNfsVolumeAsync() => DockerCliAsync("volume", "create", NfsVolumeName);
 
-    private Task RemoveNfsVolumeAsync() => DockerCliAsync(["volume", "rm", "-f", NfsVolumeName]);
+    private Task RemoveNfsVolumeAsync() => DockerCliAsync("volume", "rm", "-f", NfsVolumeName);
 
     private static async Task DockerCliAsync(params string[] args)
     {
@@ -379,7 +379,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             try
             {
                 using NfsStorageDriver probe = new(
-                    NfsDriverConfig.For(NfsHost, NfsExport, 4)
+                    NfsDriverConfig.For(NfsHost, NfsExport, version: 4)
                 );
                 // Read-only readiness: the seeded /Music must be visible.
                 if (probe.DirectoryExists("/Music"))
@@ -455,7 +455,12 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             if (File.Exists(candidate))
                 return Path.Combine(dir, "Container");
 
-            string srcCandidate = Path.Combine([dir, "tests", "NoMercy.Tests.Storage", "Container", "Dockerfile"]
+            string srcCandidate = Path.Combine(
+                dir,
+                "tests",
+                "NoMercy.Tests.Storage",
+                "Container",
+                "Dockerfile"
             );
             if (File.Exists(srcCandidate))
                 return Path.GetDirectoryName(srcCandidate)!;
@@ -465,7 +470,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
 
         throw new FileNotFoundException(
             "Could not locate the storage-backends Container/Dockerfile relative to "
-                     + AppContext.BaseDirectory
+                + AppContext.BaseDirectory
         );
     }
 }

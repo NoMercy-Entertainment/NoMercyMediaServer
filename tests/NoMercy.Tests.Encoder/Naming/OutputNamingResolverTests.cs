@@ -98,7 +98,7 @@ public class OutputNamingResolverTests
     public void VideoVariantPath_HlsFmp4_ProducesNestedPath()
     {
         BundleLayout layout = WebHls1080pLayoutForFightClub();
-        string path = _resolver.VideoVariantPath(layout, "1080p", "init.mp4");
+        string path = _resolver.VideoVariantPath(layout, label: "1080p", filename: "init.mp4");
         path.Should().Be("encodes/web-1080p/video/1080p/mfa_1080p_init.mp4");
     }
 
@@ -106,7 +106,7 @@ public class OutputNamingResolverTests
     public void VideoVariantSegmentPath_AppliesSeqFormatter()
     {
         BundleLayout layout = WebHls1080pLayoutForFightClub();
-        string path = _resolver.VideoSegmentPath(layout, "1080p", 1);
+        string path = _resolver.VideoSegmentPath(layout, label: "1080p", seq: 1);
         path.Should().Be("encodes/web-1080p/video/1080p/mfa_1080p_00001.m4s");
     }
 
@@ -114,7 +114,7 @@ public class OutputNamingResolverTests
     public void AudioRenditionPath_UsesLangAndCodecFolder()
     {
         BundleLayout layout = WebHls1080pLayoutForFightClub();
-        string path = _resolver.AudioPlaylistPath(layout, "eng", "aac");
+        string path = _resolver.AudioPlaylistPath(layout, language: "eng", codec: "aac");
         path.Should().Be("encodes/web-1080p/audio/eng-aac/mfa_eng_aac.m3u8");
     }
 
@@ -122,7 +122,7 @@ public class OutputNamingResolverTests
     public void SubtitlePath_FlatSubsFolder()
     {
         BundleLayout layout = WebHls1080pLayoutForFightClub();
-        string path = _resolver.SubtitlePath(layout, "eng", "vtt");
+        string path = _resolver.SubtitlePath(layout, language: "eng", extension: "vtt");
         path.Should().Be("encodes/web-1080p/subs/mfa_eng.vtt");
     }
 
@@ -142,7 +142,7 @@ public class OutputNamingResolverTests
     public void AudioInitPath_UsesLangAndCodecFolder()
     {
         BundleLayout layout = WebHls1080pLayoutForFightClub();
-        string path = _resolver.AudioInitPath(layout, "eng", "aac");
+        string path = _resolver.AudioInitPath(layout, language: "eng", codec: "aac");
         path.Should().Be("encodes/web-1080p/audio/eng-aac/mfa_eng_aac_init.mp4");
     }
 
@@ -150,20 +150,20 @@ public class OutputNamingResolverTests
     public void AudioSegmentPath_AppliesSeqFormatter()
     {
         BundleLayout layout = WebHls1080pLayoutForFightClub();
-        string path = _resolver.AudioSegmentPath(layout, "fra", "opus", 42);
+        string path = _resolver.AudioSegmentPath(layout, language: "fra", codec: "opus", seq: 42);
         path.Should().Be("encodes/web-1080p/audio/fra-opus/mfa_fra_opus_00042.m4s");
     }
 
     // ── single-file container variants ──────────────────────────────────────
 
     [Theory]
-    [InlineData([Container.Mp3, "mp3"])]
-    [InlineData([Container.Flac, "flac"])]
-    [InlineData([Container.Aac, "aac"])]
-    [InlineData([Container.Ogg, "ogg"])]
-    [InlineData([Container.Mka, "mka"])]
-    [InlineData([Container.Mp4, "mp4"])]
-    [InlineData([Container.Mkv, "mkv"])]
+    [InlineData(Container.Mp3, "mp3")]
+    [InlineData(Container.Flac, "flac")]
+    [InlineData(Container.Aac, "aac")]
+    [InlineData(Container.Ogg, "ogg")]
+    [InlineData(Container.Mka, "mka")]
+    [InlineData(Container.Mp4, "mp4")]
+    [InlineData(Container.Mkv, "mkv")]
     public void Resolve_SingleFileContainer_UsesContainerExtension(
         Container container,
         string expectedExt
@@ -205,11 +205,11 @@ public class OutputNamingResolverTests
     }
 
     [Theory]
-    [InlineData([Container.HlsTs, "hls-ts"])]
-    [InlineData([Container.HlsFmp4, "hls-fmp4"])]
-    [InlineData([Container.Dash, "dash"])]
-    [InlineData([Container.AudioHlsTs, "audio-hls-ts"])]
-    [InlineData([Container.AudioHlsFmp4, "audio-hls-fmp4"])]
+    [InlineData(Container.HlsTs, "hls-ts")]
+    [InlineData(Container.HlsFmp4, "hls-fmp4")]
+    [InlineData(Container.Dash, "dash")]
+    [InlineData(Container.AudioHlsTs, "audio-hls-ts")]
+    [InlineData(Container.AudioHlsFmp4, "audio-hls-fmp4")]
     public void Resolve_ContainerString_DashedFriendlyForm(Container container, string expected)
     {
         EncodingProfile profile = TestProfiles.WithContainer(container);

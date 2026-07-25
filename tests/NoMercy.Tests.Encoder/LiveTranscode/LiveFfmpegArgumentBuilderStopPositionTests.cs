@@ -23,16 +23,16 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
 {
     private static LiveQuality MakeQuality() =>
         new(
-            "1080p",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     [Fact]
@@ -42,11 +42,11 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
         // unbounded one token-for-token: bounding a run may add "-t" and nothing
         // else, so the unbounded path every existing session takes is unchanged.
         LiveRunInput baseInput = new(
-            "/media/in.mkv",
-            "/tmp/live",
-            TimeSpan.FromSeconds(120),
-            MakeQuality(),
-            6
+            InputPath: "/media/in.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.FromSeconds(120),
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 6
         );
         LiveRunInput unbounded = baseInput with { StopPosition = null };
         LiveRunInput bounded = baseInput with { StopPosition = TimeSpan.FromSeconds(180) };
@@ -71,7 +71,7 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
         // Start segment index 20 (120s / 6s) — offset is 120s. Stop at 180s means
         // the pre-offset duration ffmpeg must run for is 180 - 120 = 60s.
         LiveRunInput input = new(
-            "/media/in.mkv",
+            InputPath: "/media/in.mkv",
             OutputDirectory: "/tmp/live",
             StartPosition: TimeSpan.FromSeconds(120),
             Quality: MakeQuality(),
@@ -101,7 +101,7 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
         // index 10, offset 60s exactly), so a StopPosition at or before it yields
         // a non-positive duration — must never emit "-t 0" or negative.
         LiveRunInput input = new(
-            "/media/in.mkv",
+            InputPath: "/media/in.mkv",
             OutputDirectory: "/tmp/live",
             StartPosition: TimeSpan.FromSeconds(60),
             Quality: MakeQuality(),

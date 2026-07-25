@@ -19,7 +19,7 @@ public class ProfileDifferTests
 {
     private static EncodingProfile Profile(string name = "p") =>
         new(
-            Ulid.NewUlid(),
+            Id: Ulid.NewUlid(),
             Name: name,
             Container: Container.HlsFmp4,
             Video: null,

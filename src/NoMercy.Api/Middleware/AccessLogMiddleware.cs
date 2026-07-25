@@ -119,15 +119,17 @@ public class AccessLogMiddleware
             }
 
             _logger.LogInformation(
-                "Unknown: {RemoteIpAddress}: {Path} (No GUID)", [context.Connection.RemoteIpAddress, path]
+                "Unknown: {RemoteIpAddress}: {Path} (No GUID)",
+                context.Connection.RemoteIpAddress,
+                path
             );
             await WriteProblemAsync(
                 context,
-                401,
-                "https://nomercy.tv/problems/no-token",
-                "Authentication required",
-                "No bearer token was provided. Include a valid JWT in the Authorization header.",
-                "NO_TOKEN"
+                statusCode: 401,
+                type: "https://nomercy.tv/problems/no-token",
+                title: "Authentication required",
+                detail: "No bearer token was provided. Include a valid JWT in the Authorization header.",
+                authError: "NO_TOKEN"
             );
             return;
         }
@@ -141,15 +143,17 @@ public class AccessLogMiddleware
             }
 
             _logger.LogInformation(
-                "Unknown: {RemoteIpAddress}: {Path} (Malformed or empty GUID)", [context.Connection.RemoteIpAddress, path]
+                "Unknown: {RemoteIpAddress}: {Path} (Malformed or empty GUID)",
+                context.Connection.RemoteIpAddress,
+                path
             );
             await WriteProblemAsync(
                 context,
-                401,
-                "https://nomercy.tv/problems/invalid-token",
-                "Invalid token",
-                "The token subject (sub) is not a valid GUID. The token may be malformed.",
-                "INVALID_TOKEN"
+                statusCode: 401,
+                type: "https://nomercy.tv/problems/invalid-token",
+                title: "Invalid token",
+                detail: "The token subject (sub) is not a valid GUID. The token may be malformed.",
+                authError: "INVALID_TOKEN"
             );
             return;
         }
@@ -176,15 +180,17 @@ public class AccessLogMiddleware
         if (user is null)
         {
             _logger.LogInformation(
-                "Unknown: {RemoteIpAddress}: {Path} (User not found)", [context.Connection.RemoteIpAddress, path]
+                "Unknown: {RemoteIpAddress}: {Path} (User not found)",
+                context.Connection.RemoteIpAddress,
+                path
             );
             await WriteProblemAsync(
                 context,
-                401,
-                "https://nomercy.tv/problems/user-not-found",
-                "User not found",
-                "The authenticated user is not registered on this server. Ask the server owner to add your account.",
-                "USER_NOT_FOUND"
+                statusCode: 401,
+                type: "https://nomercy.tv/problems/user-not-found",
+                title: "User not found",
+                detail: "The authenticated user is not registered on this server. Ask the server owner to add your account.",
+                authError: "USER_NOT_FOUND"
             );
             return;
         }
@@ -195,7 +201,7 @@ public class AccessLogMiddleware
         // events. The whack-a-mole ignore lists above only ever caught the
         // pollers someone noticed. Auth failures above stay at Information — those
         // are rare and worth surfacing.
-        _logger.LogDebug("{Name}: {Path}", [user.Name, path]);
+        _logger.LogDebug("{Name}: {Path}", user.Name, path);
 
         await _next(context);
     }

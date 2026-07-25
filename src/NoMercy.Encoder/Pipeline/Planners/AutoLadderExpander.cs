@@ -92,17 +92,17 @@ public static class AutoLadderExpander
                 .Select(v => new LadderRung(
                     // v.Width null (or legacy 0) means "keep source width" —
                     // a ladder rung always carries a concrete resolution.
-                    v.Width is int w and > 0 ? w : media.VideoStreams[0].Width,
-                    v.Height ?? 0,
-                    v.Codec,
-                    v.BitrateKbps,
-                    v.MaxBitrateKbps ?? 0,
-                    v.BufferSizeKbps ?? 0,
-                    0,
-                    v.Preset,
-                    v.CodecProfile,
-                    v.BitDepth,
-                    v.PixelFormat
+                    Width: v.Width is int w and > 0 ? w : media.VideoStreams[0].Width,
+                    Height: v.Height ?? 0,
+                    Codec: v.Codec,
+                    BitrateKbps: v.BitrateKbps,
+                    MaxBitrateKbps: v.MaxBitrateKbps ?? 0,
+                    BufferSizeKbps: v.BufferSizeKbps ?? 0,
+                    Framerate: 0,
+                    Preset: v.Preset,
+                    CodecProfile: v.CodecProfile,
+                    BitDepth: v.BitDepth,
+                    PixelFormat: v.PixelFormat
                 ))
                 .ToArray();
         }
@@ -111,7 +111,9 @@ public static class AutoLadderExpander
             return profile;
 
         logger.LogInformation(
-            "AutoLadder expanded 1 reference profile → {Count} variants for {Source}", [rungs.Length, media.FilePath]
+            "AutoLadder expanded 1 reference profile → {Count} variants for {Source}",
+            rungs.Length,
+            media.FilePath
         );
 
         return profile with

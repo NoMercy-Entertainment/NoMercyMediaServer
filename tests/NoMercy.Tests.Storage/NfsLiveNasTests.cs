@@ -209,7 +209,7 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
         using NfsStorageDriver driver = Mount();
         RemoteStorage rs = new(driver);
 
-        IReadOnlyList<StorageEntry> entries = rs.List("Music", null, false);
+        IReadOnlyList<StorageEntry> entries = rs.List("Music", pattern: null, recursive: false);
         entries.Should().NotBeEmpty();
 
         // 'Music' on the export contains alphabet directories (A, B, ...).
@@ -219,7 +219,7 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
             .HaveCountGreaterThan(
                 0,
                 "RemoteStorage.List uses driver.DirectoryExists(entryPath) to set IsDirectory; "
-                         + "if Stat64 returns wrong mode bits or fails for nested paths, this stays empty"
+                    + "if Stat64 returns wrong mode bits or fails for nested paths, this stays empty"
             );
     }
 

@@ -75,7 +75,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
             .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
             .Returns(
                 (string parent, string child) =>
-                    $"{parent.TrimEnd(['/', '\\'])}/{child.TrimStart(['/', '\\'])}"
+                    $"{parent.TrimEnd('/', '\\')}/{child.TrimStart('/', '\\')}"
             );
 
         NonDisposingMemoryStream stream = new();
@@ -125,7 +125,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
                 p.DownloadSubtitleAsync(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>(),
-                    true
+                    priority: true
                 )
             )
             .ReturnsAsync(downloadPayload);
@@ -156,7 +156,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
 
     // =========================================================================
@@ -287,7 +287,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
                 p.DownloadSubtitleAsync(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>(),
-                    true
+                    priority: true
                 )
             )
             .ThrowsAsync(new OpenSubtitlesRateLimitException());

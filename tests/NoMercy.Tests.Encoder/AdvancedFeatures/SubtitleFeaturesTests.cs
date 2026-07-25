@@ -17,14 +17,14 @@ namespace NoMercy.Tests.Encoder.AdvancedFeatures;
 public class SubtitleFeaturesTests
 {
     [Theory]
-    [InlineData(["srt", true])]
-    [InlineData(["SRT", true])]
-    [InlineData(["subrip", true])]
-    [InlineData(["ass", true])]
-    [InlineData(["ssa", true])]
-    [InlineData(["webvtt", true])]
-    [InlineData(["mov_text", true])]
-    [InlineData(["text", true])]
+    [InlineData("srt", true)]
+    [InlineData("SRT", true)]
+    [InlineData("subrip", true)]
+    [InlineData("ass", true)]
+    [InlineData("ssa", true)]
+    [InlineData("webvtt", true)]
+    [InlineData("mov_text", true)]
+    [InlineData("text", true)]
     public void SubtitleClassifier_TextBased_ReturnsTrue(string codec, bool expected)
     {
         bool result = SubtitleClassifier.IsTextBased(codec);
@@ -32,10 +32,10 @@ public class SubtitleFeaturesTests
     }
 
     [Theory]
-    [InlineData(["hdmv_pgs_subtitle", true])]
-    [InlineData(["HDMV_PGS_SUBTITLE", true])]
-    [InlineData(["dvd_subtitle", true])]
-    [InlineData(["dvb_subtitle", true])]
+    [InlineData("hdmv_pgs_subtitle", true)]
+    [InlineData("HDMV_PGS_SUBTITLE", true)]
+    [InlineData("dvd_subtitle", true)]
+    [InlineData("dvb_subtitle", true)]
     public void SubtitleClassifier_BitmapBased_ReturnsTrue(string codec, bool expected)
     {
         bool result = SubtitleClassifier.IsBitmapBased(codec);
@@ -84,7 +84,7 @@ public class SubtitleFeaturesTests
     [Fact]
     public void WhisperOptions_ConstructsWithDefaults()
     {
-        WhisperOptions options = new("/models/whisper-large-v3.bin");
+        WhisperOptions options = new(ModelPath: "/models/whisper-large-v3.bin");
 
         options.ModelPath.Should().Be("/models/whisper-large-v3.bin");
         options.ModelSize.Should().Be(WhisperModelSize.LargeV3);
@@ -96,10 +96,10 @@ public class SubtitleFeaturesTests
     public void WhisperOptions_ConstructsWithCustomValues()
     {
         WhisperOptions options = new(
-            "/models/whisper-tiny.bin",
-            WhisperModelSize.Tiny,
-            true,
-            5000
+            ModelPath: "/models/whisper-tiny.bin",
+            ModelSize: WhisperModelSize.Tiny,
+            TranslateToEnglish: true,
+            MaxSegmentLengthMs: 5000
         );
 
         options.ModelPath.Should().Be("/models/whisper-tiny.bin");
@@ -112,10 +112,10 @@ public class SubtitleFeaturesTests
     public void SubtitleTrack_ConstructsCorrectly()
     {
         SubtitleTrack track = new(
-            "/output/subtitles/en.vtt",
-            "en",
-            SubtitleCodecType.WebVtt,
-            482
+            FilePath: "/output/subtitles/en.vtt",
+            Language: "en",
+            Format: SubtitleCodecType.WebVtt,
+            CueCount: 482
         );
 
         track.FilePath.Should().Be("/output/subtitles/en.vtt");
@@ -128,10 +128,10 @@ public class SubtitleFeaturesTests
     public void SubtitleTrack_SrtFormat_ConstructsCorrectly()
     {
         SubtitleTrack track = new(
-            "/output/subs/fr.srt",
-            "fr",
-            SubtitleCodecType.Srt,
-            120
+            FilePath: "/output/subs/fr.srt",
+            Language: "fr",
+            Format: SubtitleCodecType.Srt,
+            CueCount: 120
         );
 
         track.Format.Should().Be(SubtitleCodecType.Srt);
@@ -142,10 +142,10 @@ public class SubtitleFeaturesTests
     public void SubtitleTrack_AssFormat_ConstructsCorrectly()
     {
         SubtitleTrack track = new(
-            "/output/subs/ja.ass",
-            "ja",
-            SubtitleCodecType.Ass,
-            300
+            FilePath: "/output/subs/ja.ass",
+            Language: "ja",
+            Format: SubtitleCodecType.Ass,
+            CueCount: 300
         );
 
         track.Format.Should().Be(SubtitleCodecType.Ass);

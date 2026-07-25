@@ -179,8 +179,8 @@ public class WebDavDriverConfigParsingTests
     {
         WebDavDriverConfig config = WebDavDriverConfig.For(
             "http://dav.example.com/",
-            "alice",
-            "s3cr3t"
+            username: "alice",
+            password: "s3cr3t"
         );
 
         config.Username.Should().Be("alice");
@@ -280,7 +280,7 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string path = $"roundtrip-{Ulid.NewUlid()}.txt";
         byte[] data = "hello webdav"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(path, true))
+        await using (Stream w = driver.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
         await using Stream r = driver.OpenRead(path);
@@ -303,7 +303,7 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
         byte[] data = new byte[12 * 1024 * 1024];
         new Random(99).NextBytes(data);
 
-        await using (Stream w = driver.OpenWrite(path, true))
+        await using (Stream w = driver.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
         long size = driver.GetFileSize(path);
@@ -323,7 +323,7 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
         driver.CreateDirectory(dir);
         driver.DirectoryExists(dir).Should().BeTrue();
 
-        driver.DeleteDirectory($"a-{dir.Split('/')[0]}", true);
+        driver.DeleteDirectory($"a-{dir.Split('/')[0]}", recursive: true);
     }
 
     [SkippableFact]
@@ -340,11 +340,11 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string fileC = $"{dirName}/c.bin";
         byte[] bytes = "x"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(fileA, true))
+        await using (Stream w = driver.OpenWrite(fileA, overwrite: true))
             await w.WriteAsync(bytes);
-        await using (Stream w2 = driver.OpenWrite(fileB, true))
+        await using (Stream w2 = driver.OpenWrite(fileB, overwrite: true))
             await w2.WriteAsync(bytes);
-        await using (Stream w3 = driver.OpenWrite(fileC, true))
+        await using (Stream w3 = driver.OpenWrite(fileC, overwrite: true))
             await w3.WriteAsync(bytes);
 
         IEnumerable<string> entries = driver.EnumerateFileSystemEntries(
@@ -355,7 +355,7 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
 
         entries.Should().HaveCount(2);
 
-        driver.DeleteDirectory(dirName, true);
+        driver.DeleteDirectory(dirName, recursive: true);
     }
 
     [SkippableFact]
@@ -368,7 +368,7 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string dst = $"move-dst-{Ulid.NewUlid()}.txt";
         byte[] data = "move me"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(src, true))
+        await using (Stream w = driver.OpenWrite(src, overwrite: true))
             await w.WriteAsync(data);
 
         driver.MoveFile(src, dst);
@@ -389,10 +389,10 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string dst = $"copy-dst-{Ulid.NewUlid()}.txt";
         byte[] data = "copy me"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(src, true))
+        await using (Stream w = driver.OpenWrite(src, overwrite: true))
             await w.WriteAsync(data);
 
-        driver.CopyFile(src, dst, true);
+        driver.CopyFile(src, dst, overwrite: true);
 
         driver.FileExists(src).Should().BeTrue();
         driver.FileExists(dst).Should().BeTrue();
@@ -462,9 +462,9 @@ public class WebDavEnumerateContractTests
         PropfindResponse enumResponse = MakePropfindResponse(
             207,
             [
-                MakeResource("https://nas.local/dav/", true), // dir itself — skipped
-                MakeResource("https://nas.local/dav/folder/file.mp3", false),
-                MakeResource("https://nas.local/dav/folder/", true),
+                MakeResource("https://nas.local/dav/", isCollection: true), // dir itself — skipped
+                MakeResource("https://nas.local/dav/folder/file.mp3", isCollection: false),
+                MakeResource("https://nas.local/dav/folder/", isCollection: true),
             ]
         );
 
@@ -497,8 +497,8 @@ public class WebDavEnumerateContractTests
         PropfindResponse enumResponse = MakePropfindResponse(
             207,
             [
-                MakeResource("https://nas.local/dav/", true),
-                MakeResource("https://nas.local/dav/music/", true),
+                MakeResource("https://nas.local/dav/", isCollection: true),
+                MakeResource("https://nas.local/dav/music/", isCollection: true),
             ]
         );
 
@@ -515,7 +515,7 @@ public class WebDavEnumerateContractTests
         // DirectoryExists calls Propfind on "https://nas.local/dav/music/" with ResourceOnly
         PropfindResponse existsResponse = MakePropfindResponse(
             207,
-            [MakeResource("https://nas.local/dav/music/", true)]
+            [MakeResource("https://nas.local/dav/music/", isCollection: true)]
         );
 
         mock.Setup(c =>

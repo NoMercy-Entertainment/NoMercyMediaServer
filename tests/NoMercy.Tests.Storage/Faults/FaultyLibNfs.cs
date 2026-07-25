@@ -347,7 +347,7 @@ internal sealed class FaultyLibNfs : ILibNfs
             Type = isDir ? 2u : 1u,
         };
         IntPtr entryPtr = Marshal.AllocHGlobal(Marshal.SizeOf<LibNfs.NfsDirent>());
-        Marshal.StructureToPtr(entry, entryPtr, false);
+        Marshal.StructureToPtr(entry, entryPtr, fDeleteOld: false);
         iter.ScratchEntry = entryPtr;
 
         return entryPtr;

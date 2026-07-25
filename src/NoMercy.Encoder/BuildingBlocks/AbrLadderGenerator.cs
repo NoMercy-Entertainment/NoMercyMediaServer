@@ -39,12 +39,12 @@ public class AbrLadderGenerator : IAbrLadderGenerator
 
     private static readonly LegacyTierDef[] LegacyTiers =
     [
-        new(360, 800),
-        new(480, 1400),
-        new(720, 3000),
-        new(1080, 6000),
-        new(1440, 9000),
-        new(2160, 15000),
+        new(Height: 360, DefaultBitrateKbps: 800),
+        new(Height: 480, DefaultBitrateKbps: 1400),
+        new(Height: 720, DefaultBitrateKbps: 3000),
+        new(Height: 1080, DefaultBitrateKbps: 6000),
+        new(Height: 1440, DefaultBitrateKbps: 9000),
+        new(Height: 2160, DefaultBitrateKbps: 15000),
     ];
 
     // ── IAbrLadderGenerator — legacy path ──────────────────────────────────
@@ -145,19 +145,19 @@ public class AbrLadderGenerator : IAbrLadderGenerator
             double ratio = refPx == 0 ? 1.0 : (double)srcPx / refPx;
 
             LadderTier sourceRung = new(
-                source.Width,
-                source.Height,
-                "source",
-                referenceTier.RecommendedBitrateH264Kbps is int h264
+                Width: source.Width,
+                Height: source.Height,
+                Label: "source",
+                RecommendedBitrateH264Kbps: referenceTier.RecommendedBitrateH264Kbps is int h264
                     ? (int)Math.Round(h264 * ratio)
                     : null,
-                referenceTier.RecommendedBitrateHevcKbps is int hevc
+                RecommendedBitrateHevcKbps: referenceTier.RecommendedBitrateHevcKbps is int hevc
                     ? (int)Math.Round(hevc * ratio)
                     : null,
-                referenceTier.RecommendedBitrateAv1Kbps is int av1
+                RecommendedBitrateAv1Kbps: referenceTier.RecommendedBitrateAv1Kbps is int av1
                     ? (int)Math.Round(av1 * ratio)
                     : null,
-                referenceTier.RecommendedBitrateVp9Kbps is int vp9
+                RecommendedBitrateVp9Kbps: referenceTier.RecommendedBitrateVp9Kbps is int vp9
                     ? (int)Math.Round(vp9 * ratio)
                     : null
             );
@@ -224,17 +224,17 @@ public class AbrLadderGenerator : IAbrLadderGenerator
 
             rungs.Add(
                 new(
-                    tier.Width,
-                    ComputeAspectAwareHeight(tier.Width, source),
-                    codec,
-                    bitrate,
-                    maxBitrate,
-                    bufSize,
-                    framerate,
-                    reference?.Preset,
-                    codecProfile,
-                    bitDepth,
-                    pixelFormat
+                    Width: tier.Width,
+                    Height: ComputeAspectAwareHeight(tier.Width, source),
+                    Codec: codec,
+                    BitrateKbps: bitrate,
+                    MaxBitrateKbps: maxBitrate,
+                    BufferSizeKbps: bufSize,
+                    Framerate: framerate,
+                    Preset: reference?.Preset,
+                    CodecProfile: codecProfile,
+                    BitDepth: bitDepth,
+                    PixelFormat: pixelFormat
                 )
             );
         }
@@ -277,17 +277,17 @@ public class AbrLadderGenerator : IAbrLadderGenerator
 
                 rungs.Add(
                     new(
-                        tier.Width,
-                        ComputeAspectAwareHeight(tier.Width, source),
-                        VideoCodecType.H264,
-                        bitrate,
-                        maxBitrate,
-                        bufSize,
-                        framerate,
-                        reference?.Preset,
-                        codecProfile,
-                        bitDepth,
-                        pixelFormat
+                        Width: tier.Width,
+                        Height: ComputeAspectAwareHeight(tier.Width, source),
+                        Codec: VideoCodecType.H264,
+                        BitrateKbps: bitrate,
+                        MaxBitrateKbps: maxBitrate,
+                        BufferSizeKbps: bufSize,
+                        Framerate: framerate,
+                        Preset: reference?.Preset,
+                        CodecProfile: codecProfile,
+                        BitDepth: bitDepth,
+                        PixelFormat: pixelFormat
                     )
                 );
             }
@@ -300,7 +300,9 @@ public class AbrLadderGenerator : IAbrLadderGenerator
         if (rungs.Count > autoConfig.MaxRungs)
         {
             _logger.LogInformation(
-                "AutoLadder: capping {Before} rungs to MaxRungs={Max} (keeping top resolutions)", [rungs.Count, autoConfig.MaxRungs]
+                "AutoLadder: capping {Before} rungs to MaxRungs={Max} (keeping top resolutions)",
+                rungs.Count,
+                autoConfig.MaxRungs
             );
             List<LadderRung> sorted = rungs.OrderByDescending(r => r.Height).ToList();
             rungs = sorted.Take(autoConfig.MaxRungs).ToList();
@@ -310,7 +312,9 @@ public class AbrLadderGenerator : IAbrLadderGenerator
         if (rungs.Count < autoConfig.MinRungs)
         {
             _logger.LogWarning(
-                "AutoLadder produced {Actual} rung(s), which is below MinRungs={Min}. Emitting as-is — fabricating rungs to meet the floor is not supported.", [rungs.Count, autoConfig.MinRungs]
+                "AutoLadder produced {Actual} rung(s), which is below MinRungs={Min}. Emitting as-is — fabricating rungs to meet the floor is not supported.",
+                rungs.Count,
+                autoConfig.MinRungs
             );
         }
 
@@ -344,7 +348,10 @@ public class AbrLadderGenerator : IAbrLadderGenerator
 
                 // Null recommendation → fall through to CrfBased with a warning.
                 _logger.LogWarning(
-                    "Tier '{Label}' has no recommended bitrate for codec {Codec} and strategy {Strategy}. Falling back to CrfBased.", [tier.Label, codec, config.BitrateStrategy]
+                    "Tier '{Label}' has no recommended bitrate for codec {Codec} and strategy {Strategy}. Falling back to CrfBased.",
+                    tier.Label,
+                    codec,
+                    config.BitrateStrategy
                 );
 
                 return ComputeCrfBasedBitrate(tier.Height, config.Crf);
@@ -419,7 +426,7 @@ public class AbrLadderGenerator : IAbrLadderGenerator
         if (config.LowTierCodec is null || config.HighTierCodec is null)
             throw new InvalidOperationException(
                 "AutoLadderConfig.CodecPolicy=Mixed requires both LowTierCodec and HighTierCodec. "
-                         + "ProfileValidator should have rejected this profile before reaching the generator."
+                    + "ProfileValidator should have rejected this profile before reaching the generator."
             );
 
         return tierHeight <= config.MixedPolicySplitHeight

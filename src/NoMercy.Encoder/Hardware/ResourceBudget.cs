@@ -117,7 +117,9 @@ public class ResourceBudget : IResourceBudget
 
             _logger?.LogDebug(
                 "ResourceBudget GPU semaphores registered lazily: {Count} device(s), "
-                         + "{KeyCount} lookup keys (incl. vendor + encoder aliases)", [gpus.Count, _gpuSemaphores.Count]
+                    + "{KeyCount} lookup keys (incl. vendor + encoder aliases)",
+                gpus.Count,
+                _gpuSemaphores.Count
             );
         }
     }
@@ -222,7 +224,7 @@ public class ResourceBudget : IResourceBudget
                     {
                         throw new TimeoutException(
                             $"Timed out acquiring GPU slot {slotIndex + 1}/{requirement.GpuSlots} "
-                                     + $"on {requirement.GpuDeviceKey} after {timeout}."
+                                + $"on {requirement.GpuDeviceKey} after {timeout}."
                         );
                     }
 
@@ -230,7 +232,9 @@ public class ResourceBudget : IResourceBudget
                 }
 
                 _logger?.LogDebug(
-                    "Acquired {GpuSlots} GPU slot(s) on {GpuKey}", [requirement.GpuSlots, requirement.GpuDeviceKey]
+                    "Acquired {GpuSlots} GPU slot(s) on {GpuKey}",
+                    requirement.GpuSlots,
+                    requirement.GpuDeviceKey
                 );
             }
 
@@ -242,7 +246,7 @@ public class ResourceBudget : IResourceBudget
                     {
                         throw new TimeoutException(
                             $"Timed out acquiring CPU thread {threadIndex + 1}/{requirement.CpuThreads} "
-                                     + $"after {timeout}."
+                                + $"after {timeout}."
                         );
                     }
 
@@ -290,7 +294,9 @@ public class ResourceBudget : IResourceBudget
                 }
 
                 _logger?.LogDebug(
-                    "Acquired {GpuSlots} GPU slot(s) on {GpuKey}", [requirement.GpuSlots, requirement.GpuDeviceKey]
+                    "Acquired {GpuSlots} GPU slot(s) on {GpuKey}",
+                    requirement.GpuSlots,
+                    requirement.GpuDeviceKey
                 );
             }
 
@@ -367,7 +373,10 @@ public class ResourceBudget : IResourceBudget
                     if (timeoutMs > 0)
                     {
                         _logger?.LogDebug(
-                            "TryAcquire timed out acquiring GPU slot {Slot}/{Total} on {GpuKey}", [slotIndex + 1, requirement.GpuSlots, requirement.GpuDeviceKey]
+                            "TryAcquire timed out acquiring GPU slot {Slot}/{Total} on {GpuKey}",
+                            slotIndex + 1,
+                            requirement.GpuSlots,
+                            requirement.GpuDeviceKey
                         );
                     }
 
@@ -402,7 +411,9 @@ public class ResourceBudget : IResourceBudget
                     if (timeoutMs > 0)
                     {
                         _logger?.LogDebug(
-                            "TryAcquire timed out acquiring CPU thread {Thread}/{Total}, rolled back GPU slots", [threadIndex + 1, requirement.CpuThreads]
+                            "TryAcquire timed out acquiring CPU thread {Thread}/{Total}, rolled back GPU slots",
+                            threadIndex + 1,
+                            requirement.CpuThreads
                         );
                     }
 
@@ -469,7 +480,7 @@ public class ResourceBudget : IResourceBudget
                     freeMb,
                     _options.MinFreeMemoryMb,
                     logIfDenied,
-                    true
+                    invert: true
                 );
                 return false;
             }
@@ -493,7 +504,11 @@ public class ResourceBudget : IResourceBudget
         _headroomDenialLogged = true;
         string comparison = invert ? "below" : "above";
         _logger?.LogDebug(
-            "Headroom gate denied lease — {Signal} at {Current:F1} is {Cmp} threshold {Threshold:F1}", [signal, current, comparison, threshold]
+            "Headroom gate denied lease — {Signal} at {Current:F1} is {Cmp} threshold {Threshold:F1}",
+            signal,
+            current,
+            comparison,
+            threshold
         );
     }
 
@@ -505,7 +520,10 @@ public class ResourceBudget : IResourceBudget
             gpuSemaphore.Release(lease.GpuSlots);
 
             _logger?.LogDebug(
-                "Released {GpuSlots} GPU slot(s) on {GpuKey} for lease {LeaseId}", [lease.GpuSlots, lease.GpuDeviceKey, lease.LeaseId]
+                "Released {GpuSlots} GPU slot(s) on {GpuKey} for lease {LeaseId}",
+                lease.GpuSlots,
+                lease.GpuDeviceKey,
+                lease.LeaseId
             );
         }
 
@@ -514,7 +532,9 @@ public class ResourceBudget : IResourceBudget
             _cpuSemaphore.Release(lease.CpuThreads);
 
             _logger?.LogDebug(
-                "Released {CpuThreads} CPU thread(s) for lease {LeaseId}", [lease.CpuThreads, lease.LeaseId]
+                "Released {CpuThreads} CPU thread(s) for lease {LeaseId}",
+                lease.CpuThreads,
+                lease.LeaseId
             );
         }
     }
@@ -544,7 +564,7 @@ public class ResourceBudget : IResourceBudget
 
         throw new InvalidOperationException(
             $"GPU device '{gpuDeviceKey}' is not registered with this ResourceBudget. "
-                     + $"Available keys: {string.Join(", ", _gpuSemaphores.Keys)}"
+                + $"Available keys: {string.Join(", ", _gpuSemaphores.Keys)}"
         );
     }
 }

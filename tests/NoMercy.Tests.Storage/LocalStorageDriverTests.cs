@@ -37,7 +37,7 @@ public sealed class LocalStorageDriverTests : IDisposable
     {
         try
         {
-            Directory.Delete(_root, true);
+            Directory.Delete(_root, recursive: true);
         }
         catch
         {
@@ -107,7 +107,7 @@ public sealed class LocalStorageDriverTests : IDisposable
         Directory.CreateDirectory(Path.Combine(dir, "nested"));
         File.WriteAllText(Path.Combine(dir, "nested", "f.txt"), "x");
 
-        _driver.DeleteDirectory(dir, true);
+        _driver.DeleteDirectory(dir, recursive: true);
 
         Directory.Exists(dir).Should().BeFalse();
     }
@@ -174,7 +174,7 @@ public sealed class LocalStorageDriverTests : IDisposable
         string filePath = P("roundtrip.bin");
         byte[] payload = [1, 2, 3, 4, 5];
 
-        using (Stream write = _driver.OpenWrite(filePath, true))
+        using (Stream write = _driver.OpenWrite(filePath, overwrite: true))
             write.Write(payload, 0, payload.Length);
 
         using Stream read = _driver.OpenRead(filePath);
@@ -192,7 +192,7 @@ public sealed class LocalStorageDriverTests : IDisposable
 
         Action act = () =>
         {
-            using Stream s = _driver.OpenWrite(filePath, false);
+            using Stream s = _driver.OpenWrite(filePath, overwrite: false);
         };
 
         act.Should().Throw<IOException>();
@@ -236,7 +236,7 @@ public sealed class LocalStorageDriverTests : IDisposable
         string dst = P("dst.txt");
         File.WriteAllText(src, "payload");
 
-        _driver.CopyFile(src, dst, false);
+        _driver.CopyFile(src, dst, overwrite: false);
 
         File.Exists(src).Should().BeTrue();
         File.ReadAllText(dst).Should().Be("payload");
@@ -250,7 +250,7 @@ public sealed class LocalStorageDriverTests : IDisposable
         File.WriteAllText(src, "a");
         File.WriteAllText(dst, "b");
 
-        Action act = () => _driver.CopyFile(src, dst, false);
+        Action act = () => _driver.CopyFile(src, dst, overwrite: false);
 
         act.Should().Throw<IOException>();
     }

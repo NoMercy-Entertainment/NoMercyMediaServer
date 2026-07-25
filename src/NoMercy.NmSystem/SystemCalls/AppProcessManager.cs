@@ -107,7 +107,7 @@ public class AppProcessManager
 
             try
             {
-                _appProcess.Kill(true);
+                _appProcess.Kill(entireProcessTree: true);
             }
             catch (InvalidOperationException)
             {
@@ -157,9 +157,19 @@ public class AppProcessManager
 
         string[] searchPaths =
         [
-            Path.Combine([appProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine(
+                appProjectDir,
+                "bin",
+                "Debug",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
             ),
-            Path.Combine([appProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
+            Path.Combine(
+                appProjectDir,
+                "bin",
+                "Release",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
             ),
         ];
 

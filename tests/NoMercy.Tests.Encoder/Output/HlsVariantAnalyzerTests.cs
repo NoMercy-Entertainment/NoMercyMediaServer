@@ -60,7 +60,7 @@ public class HlsVariantAnalyzerTests
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 
@@ -75,21 +75,21 @@ public class HlsVariantAnalyzerTests
         try
         {
             string playlist = Path.Combine(dir, "index.m3u8");
-            WriteSegment(dir, "seg0.ts", 1_000_000);
-            WriteSegment(dir, "seg1.ts", 2_000_000);
-            WriteSegment(dir, "seg2.ts", 1_000_000);
+            WriteSegment(dir, "seg0.ts", sizeBytes: 1_000_000);
+            WriteSegment(dir, "seg1.ts", sizeBytes: 2_000_000);
+            WriteSegment(dir, "seg2.ts", sizeBytes: 1_000_000);
 
             File.WriteAllText(
                 playlist,
                 "#EXTM3U\n"
-                          + "#EXT-X-VERSION:3\n"
-                          + "#EXTINF:6.000,\n"
-                          + "seg0.ts\n"
-                          + "#EXTINF:6.000,\n"
-                          + "seg1.ts\n"
-                          + "#EXTINF:6.000,\n"
-                          + "seg2.ts\n"
-                          + "#EXT-X-ENDLIST\n"
+                    + "#EXT-X-VERSION:3\n"
+                    + "#EXTINF:6.000,\n"
+                    + "seg0.ts\n"
+                    + "#EXTINF:6.000,\n"
+                    + "seg1.ts\n"
+                    + "#EXTINF:6.000,\n"
+                    + "seg2.ts\n"
+                    + "#EXT-X-ENDLIST\n"
             );
 
             VariantMetrics metrics = _analyzer.Measure(playlist);
@@ -101,7 +101,7 @@ public class HlsVariantAnalyzerTests
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 
@@ -116,17 +116,17 @@ public class HlsVariantAnalyzerTests
         try
         {
             string playlist = Path.Combine(dir, "index.m3u8");
-            WriteSegment(dir, "seg0.ts", 1_000_000);
+            WriteSegment(dir, "seg0.ts", sizeBytes: 1_000_000);
             // seg1.ts intentionally missing.
 
             File.WriteAllText(
                 playlist,
                 "#EXTM3U\n"
-                          + "#EXTINF:6.000,\n"
-                          + "seg0.ts\n"
-                          + "#EXTINF:6.000,\n"
-                          + "seg1.ts\n"
-                          + "#EXT-X-ENDLIST\n"
+                    + "#EXTINF:6.000,\n"
+                    + "seg0.ts\n"
+                    + "#EXTINF:6.000,\n"
+                    + "seg1.ts\n"
+                    + "#EXT-X-ENDLIST\n"
             );
 
             VariantMetrics metrics = _analyzer.Measure(playlist);
@@ -136,7 +136,7 @@ public class HlsVariantAnalyzerTests
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 
@@ -150,7 +150,7 @@ public class HlsVariantAnalyzerTests
         try
         {
             string playlist = Path.Combine(dir, "index.m3u8");
-            WriteSegment(dir, "seg0.ts", 1_000_000);
+            WriteSegment(dir, "seg0.ts", sizeBytes: 1_000_000);
 
             File.WriteAllText(
                 playlist,
@@ -164,7 +164,7 @@ public class HlsVariantAnalyzerTests
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 
@@ -177,20 +177,20 @@ public class HlsVariantAnalyzerTests
         try
         {
             string playlist = Path.Combine(dir, "index.m3u8");
-            WriteSegment(dir, "seg0.ts", 500_000);
-            WriteSegment(dir, "seg1.ts", 1_000_000);
-            WriteSegment(dir, "seg2.ts", 3_000_000);
+            WriteSegment(dir, "seg0.ts", sizeBytes: 500_000);
+            WriteSegment(dir, "seg1.ts", sizeBytes: 1_000_000);
+            WriteSegment(dir, "seg2.ts", sizeBytes: 3_000_000);
 
             File.WriteAllText(
                 playlist,
                 "#EXTM3U\n"
-                          + "#EXTINF:6,\n"
-                          + "seg0.ts\n"
-                          + "#EXTINF:6,\n"
-                          + "seg1.ts\n"
-                          + "#EXTINF:6,\n"
-                          + "seg2.ts\n"
-                          + "#EXT-X-ENDLIST\n"
+                    + "#EXTINF:6,\n"
+                    + "seg0.ts\n"
+                    + "#EXTINF:6,\n"
+                    + "seg1.ts\n"
+                    + "#EXTINF:6,\n"
+                    + "seg2.ts\n"
+                    + "#EXT-X-ENDLIST\n"
             );
 
             VariantMetrics metrics = _analyzer.Measure(playlist);
@@ -199,7 +199,7 @@ public class HlsVariantAnalyzerTests
         }
         finally
         {
-            Directory.Delete(dir, true);
+            Directory.Delete(dir, recursive: true);
         }
     }
 

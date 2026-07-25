@@ -60,16 +60,16 @@ public class RemoteWorkerDispatcher(
                 ResourceBudgetSnapshot budget = w.GetAvailableBudget();
                 int slots = Math.Max(0, budget.AvailableGpuSlots + budget.AvailableCpuThreads);
                 return new WorkerCapacity(
-                    w.WorkerId,
-                    Math.Max(1, slots),
-                    slots,
+                    WorkerId: w.WorkerId,
+                    SpeedMultiplier: Math.Max(1, slots),
+                    AvailableSlots: slots,
                     // Carry the GPU capability through to the assigner. Without
                     // this the flag defaults false, the assigner's GPU-routing
                     // (RequiresGpu -> workers.Where(HasGpu)) finds no eligible
                     // worker, and a GPU task falls through to the unconstrained
                     // pick — landing on a CPU-only box. A free GPU slot is the
                     // signal that this worker can take GPU work right now.
-                    budget.AvailableGpuSlots > 0
+                    HasGpu: budget.AvailableGpuSlots > 0
                 );
             })
             .ToList();
@@ -80,7 +80,9 @@ public class RemoteWorkerDispatcher(
         Dictionary<string, IRemoteWorker> workerById = remoteWorkers.ToDictionary(w => w.WorkerId);
 
         logger.LogInformation(
-            "Dispatching {Count} tasks across {Workers} remote workers", [tasks.Length, remoteWorkers.Count]
+            "Dispatching {Count} tasks across {Workers} remote workers",
+            tasks.Length,
+            remoteWorkers.Count
         );
 
         // Run every task in parallel. Each task gets its own retry chain
@@ -132,14 +134,19 @@ public class RemoteWorkerDispatcher(
             if (current is not null)
             {
                 logger.LogInformation(
-                    "Task {TaskId} failed on {FailedWorker}; retrying on {NextWorker}", [task.TaskId, attempted.Last(), current.WorkerId]
+                    "Task {TaskId} failed on {FailedWorker}; retrying on {NextWorker}",
+                    task.TaskId,
+                    attempted.Last(),
+                    current.WorkerId
                 );
             }
         }
 
         // All remote attempts exhausted — fall back to local for this task.
         logger.LogWarning(
-            "Task {TaskId} exhausted remote retries ({Attempts} workers tried) — using local dispatcher", [task.TaskId, attempted.Count]
+            "Task {TaskId} exhausted remote retries ({Attempts} workers tried) — using local dispatcher",
+            task.TaskId,
+            attempted.Count
         );
         DispatchResult[] fallbackResults = await localFallback
             .DispatchAsync([task], ct)
@@ -148,10 +155,10 @@ public class RemoteWorkerDispatcher(
             ? fallbackResults[0]
             : new(
                 task.TaskId,
-                false,
-                task.OutputPath,
-                TimeSpan.Zero,
-                "Local fallback returned no result"
+                Success: false,
+                OutputPath: task.OutputPath,
+                Duration: TimeSpan.Zero,
+                Error: "Local fallback returned no result"
             );
     }
 
@@ -174,7 +181,10 @@ public class RemoteWorkerDispatcher(
                 return result;
 
             logger.LogWarning(
-                "Worker {WorkerId} failed task {TaskId} ({Error})", [worker.WorkerId, task.TaskId, result.Error]
+                "Worker {WorkerId} failed task {TaskId} ({Error})",
+                worker.WorkerId,
+                task.TaskId,
+                result.Error
             );
             return null;
         }
@@ -184,10 +194,12 @@ public class RemoteWorkerDispatcher(
         }
         catch (Exception ex)
         {
-            RecordOutcome(worker.WorkerId, false);
+            RecordOutcome(worker.WorkerId, success: false);
             logger.LogWarning(
                 ex,
-                "Worker {WorkerId} threw on task {TaskId}", [worker.WorkerId, task.TaskId]
+                "Worker {WorkerId} threw on task {TaskId}",
+                worker.WorkerId,
+                task.TaskId
             );
             return null;
         }

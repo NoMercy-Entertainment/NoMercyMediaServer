@@ -102,20 +102,27 @@ public sealed class FfmpegCapabilityProbe(
         );
 
         _cached = new(
-            bluRay,
-            dvdRead,
-            ffmpegCapabilities.AvailableEncoders.ToList(),
-            missingFilters,
-            missingMuxers,
-            fpcalcPresent,
-            whisperModelPresent,
-            tesseractPresent,
-            tesseractDir,
-            issues
+            BluRayProtocol: bluRay,
+            DvdReadProtocol: dvdRead,
+            AvailableEncoders: ffmpegCapabilities.AvailableEncoders.ToList(),
+            MissingFilters: missingFilters,
+            MissingMuxers: missingMuxers,
+            FpcalcPresent: fpcalcPresent,
+            WhisperModelPresent: whisperModelPresent,
+            TesseractEngTraineddataPresent: tesseractPresent,
+            TesseractModelsDirectory: tesseractDir,
+            Issues: issues
         );
 
         logger.LogInformation(
-            "Capability probe complete — BluRay={BluRay}, DvdRead={DvdRead}, MissingFilters={FilterCount}, MissingMuxers={MuxerCount}, fpcalc={Fpcalc}, WhisperModel={Whisper}, Tesseract={Tesseract}", [bluRay, dvdRead, missingFilters.Count, missingMuxers.Count, fpcalcPresent, whisperModelPresent, tesseractPresent]
+            "Capability probe complete — BluRay={BluRay}, DvdRead={DvdRead}, MissingFilters={FilterCount}, MissingMuxers={MuxerCount}, fpcalc={Fpcalc}, WhisperModel={Whisper}, Tesseract={Tesseract}",
+            bluRay,
+            dvdRead,
+            missingFilters.Count,
+            missingMuxers.Count,
+            fpcalcPresent,
+            whisperModelPresent,
+            tesseractPresent
         );
     }
 

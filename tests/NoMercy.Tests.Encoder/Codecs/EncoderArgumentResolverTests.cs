@@ -234,7 +234,7 @@ public class EncoderArgumentResolverTests
     [Fact]
     public void ResolveDimensions_DoesNotUpscaleBeyondSource()
     {
-        VideoOutput profile = MakeVideoOutput(1920);
+        VideoOutput profile = MakeVideoOutput(width: 1920);
         (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 1280, 720);
         w.Should().Be(1280, "upscaling is off by design");
     }
@@ -245,7 +245,7 @@ public class EncoderArgumentResolverTests
         // An archive preset re-encodes the codec without rescaling: null width
         // means "keep source width", never the 2-pixel-wide floor a literal
         // 0 used to collapse to.
-        VideoOutput profile = MakeVideoOutput(null);
+        VideoOutput profile = MakeVideoOutput(width: null);
         (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 1606);
         w.Should().Be(3840, "null width means keep the source width");
         h.Should().Be(1606, "height derives from the source aspect ratio");
@@ -257,7 +257,7 @@ public class EncoderArgumentResolverTests
         // Presets persisted before this field went nullable stored Width: 0.
         // That must resolve exactly like null — keep the source width —
         // never the 2-pixel-wide floor 0 used to collapse to.
-        VideoOutput profile = MakeVideoOutput(0);
+        VideoOutput profile = MakeVideoOutput(width: 0);
         (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 2160);
         w.Should().Be(3840, "legacy 0 width means keep the source width, same as null");
         h.Should().Be(2160);
@@ -266,7 +266,7 @@ public class EncoderArgumentResolverTests
     [Fact]
     public void ResolveDimensions_ForcesEvenHeight()
     {
-        VideoOutput profile = MakeVideoOutput(853); // 853x480 → 853*(480/1920) = 213.25
+        VideoOutput profile = MakeVideoOutput(width: 853); // 853x480 → 853*(480/1920) = 213.25
         (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 1920, 480);
         (h % 2).Should().Be(0, "h.264/h.265 require even dimensions");
     }
@@ -274,7 +274,7 @@ public class EncoderArgumentResolverTests
     [Fact]
     public void ResolveDimensions_UsesExplicitHeightWhenProvided()
     {
-        VideoOutput profile = MakeVideoOutput(1280, 720);
+        VideoOutput profile = MakeVideoOutput(width: 1280, height: 720);
         (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 1920, 1080);
         w.Should().Be(1280);
         h.Should().Be(720);
@@ -289,7 +289,7 @@ public class EncoderArgumentResolverTests
         // turned into a rung and back. Zero must be treated like null — derive
         // from the source aspect ratio. Otherwise the variant is named and
         // advertised "3840x0" (RESOLUTION=3840x0) and players skip the rendition.
-        VideoOutput profile = MakeVideoOutput(3840, 0);
+        VideoOutput profile = MakeVideoOutput(width: 3840, height: 0);
         (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 2160);
         w.Should().Be(3840);
         h.Should().Be(2160, "zero height means derive from source AR, never literal 0");
@@ -300,7 +300,7 @@ public class EncoderArgumentResolverTests
     {
         // 2.39:1 scope source (a "Marvel 4K" master is rarely 16:9): 3840-wide
         // output must derive an even height from the real AR, not 2160.
-        VideoOutput profile = MakeVideoOutput(3840, 0);
+        VideoOutput profile = MakeVideoOutput(width: 3840, height: 0);
         (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 1606);
         w.Should().Be(3840);
         h.Should().Be(1606, "derived height tracks the source AR");
@@ -315,18 +315,18 @@ public class EncoderArgumentResolverTests
         // first entry "66" (Baseline) — that ran Baseline while the profile
         // asked for High.
         EncoderInfo videotoolbox = new(
-            "h264_videotoolbox",
-            null,
-            [],
-            ["66", "77", "100"],
-            [],
-            new(0, 100, 50),
-            [RateControlMode.QualityLevel],
-            false,
-            false,
-            3,
-            "yuv420p10le",
-            new()
+            FfmpegName: "h264_videotoolbox",
+            RequiredVendor: null,
+            Presets: [],
+            Profiles: ["66", "77", "100"],
+            Levels: [],
+            QualityRange: new(0, 100, 50),
+            SupportedRateControl: [RateControlMode.QualityLevel],
+            Supports10Bit: false,
+            SupportsHdr: false,
+            MaxConcurrentSessions: 3,
+            PixelFormat10Bit: "yuv420p10le",
+            VendorSpecificFlags: new()
         );
 
         EncoderArgumentResolver.ResolveProfile("high", videotoolbox).Should().Be("100");
@@ -338,18 +338,18 @@ public class EncoderArgumentResolverTests
     public void ResolveProfile_KnownVocabulary_PassesThroughVerbatim()
     {
         EncoderInfo libx264 = new(
-            "libx264",
-            null,
-            ["medium"],
-            ["baseline", "main", "high"],
-            ["4.1"],
-            new(0, 51, 23),
-            [RateControlMode.Crf],
-            false,
-            false,
-            int.MaxValue,
-            "yuv420p10le",
-            new()
+            FfmpegName: "libx264",
+            RequiredVendor: null,
+            Presets: ["medium"],
+            Profiles: ["baseline", "main", "high"],
+            Levels: ["4.1"],
+            QualityRange: new(0, 51, 23),
+            SupportedRateControl: [RateControlMode.Crf],
+            Supports10Bit: false,
+            SupportsHdr: false,
+            MaxConcurrentSessions: int.MaxValue,
+            PixelFormat10Bit: "yuv420p10le",
+            VendorSpecificFlags: new()
         );
 
         EncoderArgumentResolver.ResolveProfile("high", libx264).Should().Be("high");
@@ -371,7 +371,7 @@ public class EncoderArgumentResolverTests
         // 8-bit tier promotes to high10 — the profile libx264 actually accepts.
         EncoderInfo libx264 = GetH264Encoder("libx264");
         EncoderArgumentResolver
-            .ResolveProfile(requested, libx264, 10)
+            .ResolveProfile(requested, libx264, finalBitDepth: 10)
             .Should()
             .Be("high10");
     }
@@ -381,7 +381,7 @@ public class EncoderArgumentResolverTests
     {
         EncoderInfo libx264 = GetH264Encoder("libx264");
         EncoderArgumentResolver
-            .ResolveProfile("high10", libx264, 10)
+            .ResolveProfile("high10", libx264, finalBitDepth: 10)
             .Should()
             .Be("high10");
     }
@@ -392,7 +392,7 @@ public class EncoderArgumentResolverTests
         // The promotion must never fire at 8-bit — "high" stays "high".
         EncoderInfo libx264 = GetH264Encoder("libx264");
         EncoderArgumentResolver
-            .ResolveProfile("high", libx264, 8)
+            .ResolveProfile("high", libx264, finalBitDepth: 8)
             .Should()
             .Be("high");
     }
@@ -402,7 +402,7 @@ public class EncoderArgumentResolverTests
     {
         EncoderInfo libx265 = GetEncoder(VideoCodecType.H265, "libx265");
         EncoderArgumentResolver
-            .ResolveProfile("main", libx265, 10)
+            .ResolveProfile("main", libx265, finalBitDepth: 10)
             .Should()
             .Be("main10");
     }
@@ -413,8 +413,8 @@ public class EncoderArgumentResolverTests
         // A null (Auto) request at 10-bit must not fall back to Profiles[0]
         // ("baseline", 8-bit only) — the fallback itself has to be 10-bit-capable.
         EncoderInfo libx264 = GetH264Encoder("libx264");
-        string? resolved = EncoderArgumentResolver.ResolveProfile(null, libx264, 10);
-        resolved.Should().BeOneOf(["high10", "high422", "high444p"]);
+        string? resolved = EncoderArgumentResolver.ResolveProfile(null, libx264, finalBitDepth: 10);
+        resolved.Should().BeOneOf("high10", "high422", "high444p");
     }
 
     [Fact]
@@ -425,7 +425,7 @@ public class EncoderArgumentResolverTests
         // it falls back to the encoder's own first profile, never "main10".
         EncoderInfo vpx = GetEncoder(VideoCodecType.Vp9, "libvpx-vp9");
         EncoderArgumentResolver
-            .ResolveProfile("main", vpx, 10)
+            .ResolveProfile("main", vpx, finalBitDepth: 10)
             .Should()
             .Be("0", "VP9 falls back to its own first profile, never an H26x sibling");
     }
@@ -435,7 +435,7 @@ public class EncoderArgumentResolverTests
     {
         // 1921 passes validation (Width > 0) but reaches scale=1921:-2, which
         // libx264 rejects ("width not divisible by 2"). Width must be evened.
-        VideoOutput profile = MakeVideoOutput(1921);
+        VideoOutput profile = MakeVideoOutput(width: 1921);
         (int w, int _) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 2160);
         (w % 2).Should().Be(0, "an odd luma width aborts the encode");
         w.Should().Be(1920, "round DOWN so the result never exceeds the request/source");
@@ -446,7 +446,7 @@ public class EncoderArgumentResolverTests
     {
         // Manual ladder rungs carry hand-authored widths (e.g. 853 for 480p);
         // an odd rung width hits the same scale=W:-2 abort as an odd profile width.
-        VideoOutput rung = MakeVideoOutput(853, 480);
+        VideoOutput rung = MakeVideoOutput(width: 853, height: 480);
         (int w, int h) = EncoderArgumentResolver.ResolveDimensions(rung, 1920, 1080);
         (w % 2).Should().Be(0);
         (h % 2).Should().Be(0);
@@ -459,7 +459,7 @@ public class EncoderArgumentResolverTests
         // A corrupt/partial probe can report sourceWidth = 0. With a derived
         // (null) height the old code produced height 0 → RESOLUTION=WIDTHx0 in
         // the HLS master. Height must fall back to a real value.
-        VideoOutput profile = MakeVideoOutput(1920, null);
+        VideoOutput profile = MakeVideoOutput(width: 1920, height: null);
         (int _, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 0, 0);
         h.Should().BeGreaterThan(0, "a zero-height variant is skipped by every player");
         (h % 2).Should().Be(0);
@@ -471,7 +471,7 @@ public class EncoderArgumentResolverTests
         // Height=2160 on a 1280x720 source passed the width-only upscale guard
         // and reached scale_cuda=1280:2160 — a stretched upscale. Explicit
         // height must clamp to the source just like width does.
-        VideoOutput profile = MakeVideoOutput(1280, 2160);
+        VideoOutput profile = MakeVideoOutput(width: 1280, height: 2160);
         (int _, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 1280, 720);
         h.Should().Be(720, "explicit height must not upscale beyond source");
     }
@@ -503,35 +503,35 @@ public class EncoderArgumentResolverTests
         GpuDevice? device = vendor is null
             ? null
             : new GpuDevice(
-                vendor.Value,
-                $"Test {vendor.Value}",
-                16_384,
-                12,
-                [VideoCodecType.H264]
+                Vendor: vendor.Value,
+                Name: $"Test {vendor.Value}",
+                VramMb: 16_384,
+                MaxEncoderSessions: 12,
+                SupportedCodecs: [VideoCodecType.H264]
             );
         return new(ffmpegName, encoder, device, defaultRateControl);
     }
 
     private static VideoOutput MakeVideoOutput(int? width, int? height = null) =>
         new(
-            StreamPolicy.Transcode,
-            VideoCodecType.H264,
-            width,
-            height,
-            V2RateControlMode.Crf,
-            22,
-            4000,
-            null,
-            null,
-            "medium",
-            CodecProfile.High,
-            null,
-            null,
-            8,
-            null,
-            2,
-            false,
-            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            Policy: StreamPolicy.Transcode,
+            Codec: VideoCodecType.H264,
+            Width: width,
+            Height: height,
+            RateControl: V2RateControlMode.Crf,
+            Crf: 22,
+            BitrateKbps: 4000,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
+            Preset: "medium",
+            CodecProfile: CodecProfile.High,
+            Level: null,
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: null,
+            KeyframeIntervalSeconds: 2,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
 }

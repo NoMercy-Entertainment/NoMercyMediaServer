@@ -35,7 +35,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(_outputDir))
-            Directory.Delete(_outputDir, true);
+            Directory.Delete(_outputDir, recursive: true);
         GC.SuppressFinalize(this);
     }
 
@@ -166,20 +166,21 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
 
     private static OutputPlan Plan(OutputFormat format, string encoder) =>
         new(
-            format,
-            [],
+            Format: format,
+            VideoOutputs: [],
+            AudioOutputs:
             [
                 new(
-                    encoder,
-                    192,
-                    2,
-                    44100,
-                    StreamAction.Transcode,
-                    "eng",
-                    "0:a:0"
+                    EncoderName: encoder,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRate: 44100,
+                    Action: StreamAction.Transcode,
+                    Language: "eng",
+                    MapLabel: "0:a:0"
                 ),
             ],
-            [],
-            null
+            SubtitleOutputs: [],
+            Thumbnails: null
         );
 }

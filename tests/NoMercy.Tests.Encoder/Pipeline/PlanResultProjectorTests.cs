@@ -33,46 +33,46 @@ public class PlanResultProjectorTests
     )
     {
         OutputPlan output = new(
-            OutputFormat.Hls,
-            videoOutputs,
-            audioOutputs ?? [],
-            subtitleOutputs ?? [],
-            null,
-            segmentDuration
+            Format: OutputFormat.Hls,
+            VideoOutputs: videoOutputs,
+            AudioOutputs: audioOutputs ?? [],
+            SubtitleOutputs: subtitleOutputs ?? [],
+            Thumbnails: null,
+            SegmentDurationSeconds: segmentDuration
         );
 
         return new(
-            [],
-            TimeSpan.FromMinutes(10),
-            output
+            Groups: [],
+            EstimatedTotalDuration: TimeSpan.FromMinutes(10),
+            OutputPlan: output
         );
     }
 
     private static VideoOutputPlan BuildVideoOutput(int crf, int bitrateKbps = 0) =>
         new(
-            1920,
-            1080,
-            "libx264",
-            crf,
-            bitrateKbps,
-            "medium",
-            "high",
-            "4.1",
-            false,
-            "yuv420p",
-            "[v0]",
-            new()
+            Width: 1920,
+            Height: 1080,
+            EncoderName: "libx264",
+            Crf: crf,
+            BitrateKbps: bitrateKbps,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.1",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: "[v0]",
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudioOutput(string lang = "en") =>
         new(
-            "aac",
-            192,
-            2,
-            48000,
-            StreamAction.Transcode,
-            lang,
-            "0:a:0"
+            EncoderName: "aac",
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRate: 48000,
+            Action: StreamAction.Transcode,
+            Language: lang,
+            MapLabel: "0:a:0"
         );
 
     // ------------------------------------------------------------------
@@ -82,7 +82,7 @@ public class PlanResultProjectorTests
     [Fact]
     public void SingleVariant_CorrectVariantCount()
     {
-        ExecutionPlan plan = BuildPlan([BuildVideoOutput(23)]);
+        ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23)]);
         EncodingContext ctx = EncodingContext.Create();
 
         PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
@@ -93,7 +93,7 @@ public class PlanResultProjectorTests
     [Fact]
     public void SingleVariant_StrategyContainsFormatAndCrf()
     {
-        ExecutionPlan plan = BuildPlan([BuildVideoOutput(23)]);
+        ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23)]);
         EncodingContext ctx = EncodingContext.Create();
 
         PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
@@ -105,7 +105,7 @@ public class PlanResultProjectorTests
     [Fact]
     public void SingleVariant_SegmentDurationPropagated()
     {
-        ExecutionPlan plan = BuildPlan([BuildVideoOutput(23)], segmentDuration: 4);
+        ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23)], segmentDuration: 4);
         EncodingContext ctx = EncodingContext.Create();
 
         PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
@@ -116,7 +116,7 @@ public class PlanResultProjectorTests
     [Fact]
     public void SingleVariant_KeyframeIntervalPropagated()
     {
-        ExecutionPlan plan = BuildPlan([BuildVideoOutput(23)], segmentDuration: 4);
+        ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23)], segmentDuration: 4);
         EncodingContext ctx = EncodingContext.Create();
 
         PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
@@ -132,7 +132,7 @@ public class PlanResultProjectorTests
     [Fact]
     public void CrfOnlyOutput_ProducesCrfRateControl()
     {
-        ExecutionPlan plan = BuildPlan([BuildVideoOutput(23, 0)]);
+        ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23, bitrateKbps: 0)]);
         EncodingContext ctx = EncodingContext.Create();
 
         PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
@@ -149,7 +149,7 @@ public class PlanResultProjectorTests
     [Fact]
     public void BitrateOnlyOutput_ProducesAbrRateControl()
     {
-        ExecutionPlan plan = BuildPlan([BuildVideoOutput(0, 4000)]);
+        ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 0, bitrateKbps: 4000)]);
         EncodingContext ctx = EncodingContext.Create();
 
         PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
@@ -166,7 +166,7 @@ public class PlanResultProjectorTests
     [Fact]
     public void CrfAndBitrateOutput_ProducesCrfCappedRateControl()
     {
-        ExecutionPlan plan = BuildPlan([BuildVideoOutput(23, 4000)]);
+        ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23, bitrateKbps: 4000)]);
         EncodingContext ctx = EncodingContext.Create();
 
         PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
@@ -185,7 +185,7 @@ public class PlanResultProjectorTests
     [Fact]
     public void AsPlanResult_OnSuccess_ReturnsPlanResult()
     {
-        ExecutionPlan plan = BuildPlan([BuildVideoOutput(23)]);
+        ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23)]);
         StageResult result = new StageSuccess<ExecutionPlan>(plan);
         EncodingContext ctx = EncodingContext.Create();
 
@@ -216,24 +216,25 @@ public class PlanResultProjectorTests
     public void TwoVariants_JsonShapeIsStable()
     {
         ExecutionPlan plan = BuildPlan(
+            videoOutputs:
             [
-                BuildVideoOutput(23, 0),
+                BuildVideoOutput(crf: 23, bitrateKbps: 0),
                 new(
-                    1280,
-                    720,
-                    "libx264",
-                    25,
-                    0,
-                    "medium",
-                    "high",
-                    "4.0",
-                    false,
-                    "yuv420p",
-                    "[v1]",
-                    new()
+                    Width: 1280,
+                    Height: 720,
+                    EncoderName: "libx264",
+                    Crf: 25,
+                    BitrateKbps: 0,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.0",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: "[v1]",
+                    ExtraFlags: new()
                 ),
             ],
-            [BuildAudioOutput(), BuildAudioOutput("fr")]
+            audioOutputs: [BuildAudioOutput(), BuildAudioOutput("fr")]
         );
         EncodingContext ctx = EncodingContext.Create();
 

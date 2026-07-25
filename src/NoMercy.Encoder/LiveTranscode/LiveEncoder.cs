@@ -54,7 +54,7 @@ public class LiveEncoder(
         // has fetched its first segment. Authoritative: the client's own heartbeat
         // reports (or, absent those, the segment-request-derived frontier) keep it
         // current thereafter.
-        session.ReportPlaybackPosition(request.StartPosition, true);
+        session.ReportPlaybackPosition(request.StartPosition, authoritative: true);
         session.SetState(LiveSessionState.Starting);
 
         // Flip to Transcoding eagerly so API consumers see the session as live
@@ -94,18 +94,25 @@ public class LiveEncoder(
                 // already fetch. Park the session so a later demand past the
                 // covered region (a seek, a resume) resumes it.
                 logger.LogDebug(
-                    "Live session {SessionId}: desiredIndex {DesiredIndex} already covered through {LastIndex} — parking instead of re-encoding", [sessionId, desiredIndex, lastIndex]
+                    "Live session {SessionId}: desiredIndex {DesiredIndex} already covered through {LastIndex} — parking instead of re-encoding",
+                    sessionId,
+                    desiredIndex,
+                    lastIndex
                 );
                 session.MarkRunnerIdle(runnerCt);
                 return;
             }
 
             logger.LogDebug(
-                "Live session {SessionId}: spawning gap-bounded run — desiredIndex={DesiredIndex} start={Start} stopAt={StopAt}", [sessionId, desiredIndex, plan.Start, plan.StopAt]
+                "Live session {SessionId}: spawning gap-bounded run — desiredIndex={DesiredIndex} start={Start} stopAt={StopAt}",
+                sessionId,
+                desiredIndex,
+                plan.Start,
+                plan.StopAt
             );
 
             LiveRunInput runInput = new(
-                request.InputPath,
+                InputPath: request.InputPath,
                 OutputDirectory: outputDirectory,
                 StartPosition: plan.Start,
                 Quality: session.CurrentQuality,
@@ -147,7 +154,9 @@ public class LiveEncoder(
         );
 
         logger.LogInformation(
-            "Live session {SessionId} started at {Quality}", [sessionId, quality.Label]
+            "Live session {SessionId} started at {Quality}",
+            sessionId,
+            quality.Label
         );
 
         return Task.FromResult<ILiveSession>(session);
@@ -162,22 +171,22 @@ public class LiveEncoder(
         // passed the cap. It carries a placeholder quality — audio-only runs skip
         // the whole video block, so width/height/encoder are never read.
         LiveQuality audioQuality = new(
-            "audio",
-            "Audio",
-            0,
-            0,
-            Codecs.VideoCodecType.H264,
-            128,
-            "aac",
-            false,
-            1.0,
-            true
+            Id: "audio",
+            Label: "Audio",
+            Width: 0,
+            Height: 0,
+            Codec: Codecs.VideoCodecType.H264,
+            BitrateKbps: 128,
+            Encoder: "aac",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 1.0,
+            CanRealtime: true
         );
 
         string sessionId = Ulid.NewUlid().ToString();
         LiveSession session = new(sessionId, audioQuality);
         session.SetAudioStreamIndex(request.AudioStreamIndex);
-        session.ReportPlaybackPosition(request.StartPosition, true);
+        session.ReportPlaybackPosition(request.StartPosition, authoritative: true);
         session.SetState(LiveSessionState.Transcoding);
 
         string outputDirectory = Path.Combine(
@@ -189,7 +198,7 @@ public class LiveEncoder(
             session,
             TimeSpan.FromSeconds(options.DefaultSegmentDurationSeconds),
             outputDirectory,
-            true
+            isAudioRenditionChild: true
         );
 
         async Task SpawnRunner(TimeSpan desiredPosition, CancellationToken runnerCt)
@@ -203,18 +212,25 @@ public class LiveEncoder(
             if (plan is null)
             {
                 logger.LogDebug(
-                    "Live audio rendition {SessionId}: desiredIndex {DesiredIndex} already covered through {LastIndex} — parking instead of re-encoding", [sessionId, desiredIndex, lastIndex]
+                    "Live audio rendition {SessionId}: desiredIndex {DesiredIndex} already covered through {LastIndex} — parking instead of re-encoding",
+                    sessionId,
+                    desiredIndex,
+                    lastIndex
                 );
                 session.MarkRunnerIdle(runnerCt);
                 return;
             }
 
             logger.LogDebug(
-                "Live audio rendition {SessionId}: spawning gap-bounded run — desiredIndex={DesiredIndex} start={Start} stopAt={StopAt}", [sessionId, desiredIndex, plan.Start, plan.StopAt]
+                "Live audio rendition {SessionId}: spawning gap-bounded run — desiredIndex={DesiredIndex} start={Start} stopAt={StopAt}",
+                sessionId,
+                desiredIndex,
+                plan.Start,
+                plan.StopAt
             );
 
             LiveRunInput runInput = new(
-                request.InputPath,
+                InputPath: request.InputPath,
                 OutputDirectory: outputDirectory,
                 StartPosition: plan.Start,
                 Quality: session.CurrentQuality,
@@ -251,7 +267,9 @@ public class LiveEncoder(
         );
 
         logger.LogInformation(
-            "Live audio rendition {SessionId} started for stream 0:a:{Index}", [sessionId, request.AudioStreamIndex]
+            "Live audio rendition {SessionId} started for stream 0:a:{Index}",
+            sessionId,
+            request.AudioStreamIndex
         );
 
         return Task.FromResult<ILiveSession>(session);

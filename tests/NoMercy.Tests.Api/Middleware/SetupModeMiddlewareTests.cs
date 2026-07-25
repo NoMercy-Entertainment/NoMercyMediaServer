@@ -50,7 +50,7 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         SetupEndpoints setupEndpoints = _factory.Services.GetRequiredService<SetupEndpoints>();
         SetupState setupState = new();
-        setupState.DetermineInitialPhase(!setupRequired);
+        setupState.DetermineInitialPhase(hasValidToken: !setupRequired);
 
         bool called = false;
         RequestDelegate finalNext =
@@ -84,7 +84,7 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task SetupRoute_AlwaysServed_WhenSetupNotRequired()
     {
-        SetupModeMiddleware middleware = CreateMiddleware(false, out _);
+        SetupModeMiddleware middleware = CreateMiddleware(setupRequired: false, out _);
         DefaultHttpContext context = MakeContext("/setup");
 
         await middleware.InvokeAsync(context);
@@ -96,7 +96,7 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task SetupRoute_AlwaysServed_WhenSetupRequired()
     {
-        SetupModeMiddleware middleware = CreateMiddleware(true, out _);
+        SetupModeMiddleware middleware = CreateMiddleware(setupRequired: true, out _);
         DefaultHttpContext context = MakeContext("/setup");
 
         await middleware.InvokeAsync(context);
@@ -107,7 +107,7 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task SetupRoute_TrailingSlashVariant_StillMatches()
     {
-        SetupModeMiddleware middleware = CreateMiddleware(false, out _);
+        SetupModeMiddleware middleware = CreateMiddleware(setupRequired: false, out _);
         DefaultHttpContext context = MakeContext("/setup/config");
 
         await middleware.InvokeAsync(context);
@@ -122,7 +122,7 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task FaviconRoute_AlwaysServed()
     {
-        SetupModeMiddleware middleware = CreateMiddleware(true, out _);
+        SetupModeMiddleware middleware = CreateMiddleware(setupRequired: true, out _);
         DefaultHttpContext context = MakeContext("/favicon.ico");
 
         await middleware.InvokeAsync(context);
@@ -140,9 +140,9 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            false,
+            setupRequired: false,
             out _,
-            _ =>
+            next: _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
@@ -167,9 +167,9 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            true,
+            setupRequired: true,
             out _,
-            _ =>
+            next: _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;
@@ -191,9 +191,9 @@ public class SetupModeMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         bool nextCalled = false;
         SetupModeMiddleware middleware = CreateMiddleware(
-            true,
+            setupRequired: true,
             out _,
-            _ =>
+            next: _ =>
             {
                 nextCalled = true;
                 return Task.CompletedTask;

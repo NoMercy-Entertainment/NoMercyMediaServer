@@ -27,39 +27,39 @@ public class LiveFfmpegRunnerCapTests
 {
     private static LiveQuality MakeHwQuality() =>
         new(
-            "1080p",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "h264_nvenc",
-            true,
-            5.0,
-            true
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "h264_nvenc",
+            IsHardwareAccelerated: true,
+            ExpectedSpeed: 5.0,
+            CanRealtime: true
         );
 
     private static LiveQuality MakeSwQuality() =>
         new(
-            "1080p-sw",
-            "1080p",
-            1920,
-            1080,
-            VideoCodecType.H264,
-            8000,
-            "libx264",
-            false,
-            2.0,
-            true
+            Id: "1080p-sw",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
         );
 
     private static LiveRunInput MakeInput(LiveQuality quality, string outputDir) =>
         new(
-            "/media/test.mkv",
-            outputDir,
-            TimeSpan.Zero,
-            quality,
-            4
+            InputPath: "/media/test.mkv",
+            OutputDirectory: outputDir,
+            StartPosition: TimeSpan.Zero,
+            Quality: quality,
+            SegmentDurationSeconds: 4
         );
 
     /// <summary>

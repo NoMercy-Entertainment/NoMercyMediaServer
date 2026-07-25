@@ -143,10 +143,10 @@ public class MoveFolderCrossBackendTests
         byte[] fileContent = [1, 2, 3, 4, 5];
 
         StorageEntry fileEntry = new(
-            "source/folder/track.flac",
-            false,
-            fileContent.Length,
-            DateTimeOffset.UtcNow
+            Path: "source/folder/track.flac",
+            IsDirectory: false,
+            SizeBytes: fileContent.Length,
+            LastModified: DateTimeOffset.UtcNow
         );
 
         Mock<IStorage> source = new();
@@ -206,10 +206,10 @@ public class MoveFolderCrossBackendTests
         DriverB remoteDriver = new();
 
         StorageEntry dirEntry = new(
-            "source/folder/sub",
-            true,
-            0,
-            DateTimeOffset.UtcNow
+            Path: "source/folder/sub",
+            IsDirectory: true,
+            SizeBytes: 0,
+            LastModified: DateTimeOffset.UtcNow
         );
 
         Mock<IStorage> source = new();
@@ -309,10 +309,10 @@ public class MoveFolderCrossBackendTests
         // Deliberately NOT prefixed with "source/folder" — exercises the
         // ternary's else branch (relativePath = entry.Path, unmodified).
         StorageEntry fileEntry = new(
-            "unrelated/track.flac",
-            false,
-            fileContent.Length,
-            DateTimeOffset.UtcNow
+            Path: "unrelated/track.flac",
+            IsDirectory: false,
+            SizeBytes: fileContent.Length,
+            LastModified: DateTimeOffset.UtcNow
         );
 
         Mock<IStorage> source = new();

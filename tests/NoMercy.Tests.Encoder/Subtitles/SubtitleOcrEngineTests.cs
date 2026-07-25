@@ -135,8 +135,8 @@ public class SubtitleOcrEngineParserTests
         List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(input);
 
         Assert.Single(cues);
-        Assert.Equal(0.041667, cues[0].StartSeconds, 6);
-        Assert.Equal(2.083333, cues[0].EndSeconds, 6);
+        Assert.Equal(0.041667, cues[0].StartSeconds, precision: 6);
+        Assert.Equal(2.083333, cues[0].EndSeconds, precision: 6);
     }
 
     /// <summary>

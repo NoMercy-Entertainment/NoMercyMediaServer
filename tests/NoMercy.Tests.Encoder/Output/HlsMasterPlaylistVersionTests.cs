@@ -19,9 +19,9 @@ public class HlsMasterPlaylistVersionTests
     public void ComputeMasterVersion_returns_3_for_basic_mpegts()
     {
         int version = PlaylistGenerator.ComputeMasterVersion(
-            false,
-            false,
-            false
+            hasSubsGroup: false,
+            hasFmp4: false,
+            hasChapterDateRanges: false
         );
 
         Assert.Equal(3, version);
@@ -31,9 +31,9 @@ public class HlsMasterPlaylistVersionTests
     public void ComputeMasterVersion_returns_6_when_subs_group_present()
     {
         int version = PlaylistGenerator.ComputeMasterVersion(
-            true,
-            false,
-            false
+            hasSubsGroup: true,
+            hasFmp4: false,
+            hasChapterDateRanges: false
         );
 
         Assert.Equal(6, version);
@@ -43,9 +43,9 @@ public class HlsMasterPlaylistVersionTests
     public void ComputeMasterVersion_returns_7_when_fmp4()
     {
         int version = PlaylistGenerator.ComputeMasterVersion(
-            false,
-            true,
-            false
+            hasSubsGroup: false,
+            hasFmp4: true,
+            hasChapterDateRanges: false
         );
 
         Assert.Equal(7, version);
@@ -55,9 +55,9 @@ public class HlsMasterPlaylistVersionTests
     public void ComputeMasterVersion_returns_8_when_chapter_dateranges()
     {
         int version = PlaylistGenerator.ComputeMasterVersion(
-            false,
-            false,
-            true
+            hasSubsGroup: false,
+            hasFmp4: false,
+            hasChapterDateRanges: true
         );
 
         Assert.Equal(8, version);
@@ -68,18 +68,18 @@ public class HlsMasterPlaylistVersionTests
     {
         // subs + fmp4 → 7
         int versionSubsFmp4 = PlaylistGenerator.ComputeMasterVersion(
-            true,
-            true,
-            false
+            hasSubsGroup: true,
+            hasFmp4: true,
+            hasChapterDateRanges: false
         );
 
         Assert.Equal(7, versionSubsFmp4);
 
         // subs + fmp4 + chapters → 8
         int versionAll = PlaylistGenerator.ComputeMasterVersion(
-            true,
-            true,
-            true
+            hasSubsGroup: true,
+            hasFmp4: true,
+            hasChapterDateRanges: true
         );
 
         Assert.Equal(8, versionAll);

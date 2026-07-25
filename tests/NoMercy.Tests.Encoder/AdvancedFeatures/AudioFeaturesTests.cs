@@ -39,18 +39,18 @@ public class AudioFeaturesTests
     public void AudioMetadata_ConstructsWithRequiredFields()
     {
         AudioMetadata metadata = new(
-            "Track One",
-            "Some Artist",
-            "Various Artists",
-            "The Album",
-            1,
-            1,
-            2024,
-            "Rock",
-            "mbid-track-001",
-            "mbid-release-001",
-            "aqstid-fp-001",
-            null
+            Title: "Track One",
+            Artist: "Some Artist",
+            AlbumArtist: "Various Artists",
+            Album: "The Album",
+            TrackNumber: 1,
+            DiscNumber: 1,
+            Year: 2024,
+            Genre: "Rock",
+            MusicBrainzTrackId: "mbid-track-001",
+            MusicBrainzReleaseId: "mbid-release-001",
+            AcoustIdFingerprint: "aqstid-fp-001",
+            CoverArt: null
         );
 
         metadata.Title.Should().Be("Track One");
@@ -71,18 +71,18 @@ public class AudioFeaturesTests
     public void AudioMetadata_SupportsNullableOptionalFields()
     {
         AudioMetadata metadata = new(
-            "Minimal Track",
-            "Artist",
-            "Artist",
-            "Album",
-            1,
-            1,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
+            Title: "Minimal Track",
+            Artist: "Artist",
+            AlbumArtist: "Artist",
+            Album: "Album",
+            TrackNumber: 1,
+            DiscNumber: 1,
+            Year: null,
+            Genre: null,
+            MusicBrainzTrackId: null,
+            MusicBrainzReleaseId: null,
+            AcoustIdFingerprint: null,
+            CoverArt: null
         );
 
         metadata.Year.Should().BeNull();
@@ -96,9 +96,9 @@ public class AudioFeaturesTests
     public void AlbumArtSource_ConstructsWithFilePath()
     {
         AlbumArtSource source = new(
-            "/music/covers/album.jpg",
-            null,
-            AlbumArtType.Front
+            FilePath: "/music/covers/album.jpg",
+            Url: null,
+            Type: AlbumArtType.Front
         );
 
         source.FilePath.Should().Be("/music/covers/album.jpg");
@@ -110,9 +110,9 @@ public class AudioFeaturesTests
     public void AlbumArtSource_ConstructsWithUrl()
     {
         AlbumArtSource source = new(
-            null,
-            "https://example.com/cover.jpg",
-            AlbumArtType.Artist
+            FilePath: null,
+            Url: "https://example.com/cover.jpg",
+            Type: AlbumArtType.Artist
         );
 
         source.FilePath.Should().BeNull();
@@ -137,24 +137,24 @@ public class AudioFeaturesTests
     public void AudioMetadata_WithCoverArt_CarriesCoverArt()
     {
         AlbumArtSource coverArt = new(
-            "/tmp/cover.jpg",
-            null,
-            AlbumArtType.Front
+            FilePath: "/tmp/cover.jpg",
+            Url: null,
+            Type: AlbumArtType.Front
         );
 
         AudioMetadata metadata = new(
-            "Track",
-            "Artist",
-            "Artist",
-            "Album",
-            1,
-            1,
-            2024,
-            "Jazz",
-            null,
-            null,
-            null,
-            coverArt
+            Title: "Track",
+            Artist: "Artist",
+            AlbumArtist: "Artist",
+            Album: "Album",
+            TrackNumber: 1,
+            DiscNumber: 1,
+            Year: 2024,
+            Genre: "Jazz",
+            MusicBrainzTrackId: null,
+            MusicBrainzReleaseId: null,
+            AcoustIdFingerprint: null,
+            CoverArt: coverArt
         );
 
         metadata.CoverArt.Should().NotBeNull();

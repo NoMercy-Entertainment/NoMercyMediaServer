@@ -84,23 +84,23 @@ public class PlanStageBuiltinPresetMatrixTests
             .Returns(
                 (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
                     new(
-                        SoftwareEncoderFor(codec),
-                        new(
-                            SoftwareEncoderFor(codec),
-                            null,
-                            ["medium"],
-                            ["main", "high", "main10"],
-                            ["4.1", "5.1"],
-                            new(0, 51, 23),
-                            [RateControlMode.Crf],
-                            true,
-                            true,
-                            int.MaxValue,
-                            "yuv420p10le",
-                            new()
+                        FfmpegEncoderName: SoftwareEncoderFor(codec),
+                        EncoderInfo: new(
+                            FfmpegName: SoftwareEncoderFor(codec),
+                            RequiredVendor: null,
+                            Presets: ["medium"],
+                            Profiles: ["main", "high", "main10"],
+                            Levels: ["4.1", "5.1"],
+                            QualityRange: new(0, 51, 23),
+                            SupportedRateControl: [RateControlMode.Crf],
+                            Supports10Bit: true,
+                            SupportsHdr: true,
+                            MaxConcurrentSessions: int.MaxValue,
+                            PixelFormat10Bit: "yuv420p10le",
+                            VendorSpecificFlags: new()
                         ),
-                        null,
-                        RateControlMode.Crf
+                        Device: null,
+                        DefaultRateControl: RateControlMode.Crf
                     )
             );
 
@@ -130,42 +130,45 @@ public class PlanStageBuiltinPresetMatrixTests
 
     private static MediaInfo RichSource() =>
         new(
-            "/media/rich.mkv",
-            "matroska",
-            TimeSpan.FromMinutes(120),
-            50000,
-            40_000_000_000,
+            FilePath: "/media/rich.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(120),
+            OverallBitRateKbps: 50000,
+            FileSizeBytes: 40_000_000_000,
+            VideoStreams:
             [
                 new(
-                    0,
-                    "hevc",
-                    3840,
-                    2160,
-                    24.0,
-                    10,
-                    "yuv420p10le",
-                    "bt2020",
-                    "smpte2084",
-                    "bt2020nc",
-                    true,
-                    45000
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: 3840,
+                    Height: 2160,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: "smpte2084",
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 45000
                 ),
             ],
+            AudioStreams:
             [
                 new(
-                    1,
-                    "eac3",
-                    6,
-                    48000,
-                    768,
-                    "eng",
-                    true,
-                    false
+                    Index: 1,
+                    Codec: "eac3",
+                    Channels: 6,
+                    SampleRate: 48000,
+                    BitRateKbps: 768,
+                    Language: "eng",
+                    IsDefault: true,
+                    IsForced: false
                 ),
             ],
+            SubtitleStreams:
             [
-                new(2, "subrip", "eng", true, false),
+                new(Index: 2, Codec: "subrip", Language: "eng", IsDefault: true, IsForced: false),
             ],
-            []
+            Chapters: []
         );
 }

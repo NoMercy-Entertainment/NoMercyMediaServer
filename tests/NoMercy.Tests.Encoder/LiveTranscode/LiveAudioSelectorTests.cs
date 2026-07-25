@@ -25,21 +25,21 @@ public class LiveAudioSelectorTests
 {
     private static AudioStreamInfo Stream(int index, string? language, bool isDefault = false) =>
         new(
-            index,
-            "aac",
-            2,
-            48000,
-            128,
-            language,
-            isDefault,
-            false
+            Index: index,
+            Codec: "aac",
+            Channels: 2,
+            SampleRate: 48000,
+            BitRateKbps: 128,
+            Language: language,
+            IsDefault: isDefault,
+            IsForced: false
         );
 
     [Fact]
     public void Select_PrefersLibraryLanguage_OverFileDefault()
     {
         // Anime: Japanese is the file's default (index 0), English is index 1.
-        AudioStreamInfo[] streams = [Stream(0, "jpn", true), Stream(1, "eng")];
+        AudioStreamInfo[] streams = [Stream(0, "jpn", isDefault: true), Stream(1, "eng")];
 
         int index = LiveAudioSelector.Select(streams, ["en"]);
 
@@ -52,7 +52,7 @@ public class LiveAudioSelectorTests
     public void Select_MatchesBibliographicIso6392_Tag()
     {
         // ffmpeg tags Dutch as the /B form "dut"; the library stores "nl".
-        AudioStreamInfo[] streams = [Stream(0, "eng", true), Stream(1, "dut")];
+        AudioStreamInfo[] streams = [Stream(0, "eng", isDefault: true), Stream(1, "dut")];
 
         LiveAudioSelector.Select(streams, ["nl"]).Should().Be(1);
     }
@@ -69,7 +69,7 @@ public class LiveAudioSelectorTests
     [Fact]
     public void Select_NoPreferredMatch_FallsBackToSourceDefault()
     {
-        AudioStreamInfo[] streams = [Stream(0, "jpn"), Stream(1, "fra", true)];
+        AudioStreamInfo[] streams = [Stream(0, "jpn"), Stream(1, "fra", isDefault: true)];
 
         LiveAudioSelector
             .Select(streams, ["en"])
@@ -88,7 +88,7 @@ public class LiveAudioSelectorTests
     [Fact]
     public void Select_EmptyPreferences_UsesSourceDefault()
     {
-        AudioStreamInfo[] streams = [Stream(0, "jpn"), Stream(1, "eng", true)];
+        AudioStreamInfo[] streams = [Stream(0, "jpn"), Stream(1, "eng", isDefault: true)];
 
         LiveAudioSelector.Select(streams, []).Should().Be(1);
     }

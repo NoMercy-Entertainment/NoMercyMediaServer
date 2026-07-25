@@ -60,7 +60,7 @@ public sealed class NetworkDiscoveryExternalIpFallbackChainTests
     public async Task GetExternalIpAsync_NoToken_NoDevice_CachePresent_ReturnsCachedValue()
     {
         InMemoryStorageDriverStub driver = new();
-        using (Stream write = driver.OpenWrite(CacheFilePath, true))
+        using (Stream write = driver.OpenWrite(CacheFilePath, overwrite: true))
         await using (StreamWriter writer = new(write, leaveOpen: true))
             writer.Write("198.51.100.7");
 
@@ -75,7 +75,7 @@ public sealed class NetworkDiscoveryExternalIpFallbackChainTests
     public async Task GetExternalIpAsync_CacheContainsOnlyWhitespace_TreatedAsMiss()
     {
         InMemoryStorageDriverStub driver = new();
-        using (Stream write = driver.OpenWrite(CacheFilePath, true))
+        using (Stream write = driver.OpenWrite(CacheFilePath, overwrite: true))
         await using (StreamWriter writer = new(write, leaveOpen: true))
             writer.Write("   ");
 
@@ -90,7 +90,7 @@ public sealed class NetworkDiscoveryExternalIpFallbackChainTests
     public async Task GetExternalIpAsync_CacheValueIsTrimmed()
     {
         InMemoryStorageDriverStub driver = new();
-        using (Stream write = driver.OpenWrite(CacheFilePath, true))
+        using (Stream write = driver.OpenWrite(CacheFilePath, overwrite: true))
         await using (StreamWriter writer = new(write, leaveOpen: true))
             writer.Write("  203.0.113.9  \n");
 
@@ -193,7 +193,7 @@ public sealed class NetworkDiscoveryExternalIpFallbackChainTests
     public async Task GetExternalIpAsync_EmptyAccessToken_AlsoSkipsApiCall_FallsBackToCache()
     {
         InMemoryStorageDriverStub driver = new();
-        using (Stream write = driver.OpenWrite(CacheFilePath, true))
+        using (Stream write = driver.OpenWrite(CacheFilePath, overwrite: true))
         await using (StreamWriter writer = new(write, leaveOpen: true))
             writer.Write("192.0.2.55");
 
