@@ -15,9 +15,44 @@ public interface IConnectivityStrategy
 {
     string Name { get; }
     int Priority { get; }
-    Task<bool> TryEstablishAsync(CancellationToken ct);
+    Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct);
     Task TeardownAsync();
     ConnectivityType Type { get; }
+}
+
+/// <summary>
+/// How much a strategy actually knows about the connectivity it reports. The distinction
+/// exists because "I started" and "a client can reach us" are different claims, and
+/// treating the first as the second is what let an unverifiable port forward outrank a
+/// working tunnel.
+/// </summary>
+public enum ConnectivityConfidence
+{
+    None,
+
+    /// <summary>
+    /// The transport reported success, but nothing confirmed that a client outside the
+    /// network can reach the published address. Usable as a last resort, never as a reason
+    /// to stop looking for something better.
+    /// </summary>
+    Assumed,
+
+    /// <summary>
+    /// A connection over this transport actually completed.
+    /// </summary>
+    Verified,
+}
+
+public readonly record struct ConnectivityResult(
+    bool Established,
+    ConnectivityConfidence Confidence
+)
+{
+    public static ConnectivityResult Failed() => new(false, ConnectivityConfidence.None);
+
+    public static ConnectivityResult Verified() => new(true, ConnectivityConfidence.Verified);
+
+    public static ConnectivityResult Assumed() => new(true, ConnectivityConfidence.Assumed);
 }
 
 public enum ConnectivityType

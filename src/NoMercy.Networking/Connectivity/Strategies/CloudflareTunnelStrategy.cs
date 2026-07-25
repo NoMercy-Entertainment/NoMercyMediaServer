@@ -11,6 +11,7 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
@@ -21,12 +22,26 @@ using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Networking.Connectivity.Strategies;
 
-public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
+public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
 {
     private readonly Func<Task>? _checkTunnelAvailability;
     private readonly IConnectivityStatus _connectivityStatus;
     private Process? _tunnelProcess;
     private bool _disposed;
+
+    private static readonly TimeSpan RegistrationTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// cloudflared logs a line per edge connection it registers. That line is the first
+    /// moment the tunnel can actually carry traffic, so it is what "the tunnel is up" has to
+    /// mean. Both the current and the older wording are matched so a cloudflared upgrade
+    /// cannot silently turn every tunnel into a timeout.
+    /// </summary>
+    [GeneratedRegex(
+        @"registered tunnel connection|connection .* registered",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex ConnectionRegisteredPattern();
 
     public string Name => "CloudflareTunnel";
     public int Priority => 3;
@@ -45,7 +60,7 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
         _connectivityStatus = connectivityStatus;
     }
 
-    public async Task<bool> TryEstablishAsync(CancellationToken ct)
+    public async Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct)
     {
         if (_checkTunnelAvailability is not null)
             await _checkTunnelAvailability();
@@ -56,12 +71,16 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                 "You don't have access to our Cloudflare tunnel service, this is a paid feature."
             );
             _logger.LogInformation(
-                "You need to manually forward port {InternalServerPort} to {ExternalServerPort} if you want to use the server outside your local network", [RuntimeServerSettings.Current.InternalServerPort, RuntimeServerSettings.Current.ExternalServerPort]
+                "You need to manually forward port {InternalServerPort} to {ExternalServerPort} if you want to use the server outside your local network",
+                [
+                    RuntimeServerSettings.Current.InternalServerPort,
+                    RuntimeServerSettings.Current.ExternalServerPort,
+                ]
             );
             _logger.LogInformation(
                 "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide"
             );
-            return false;
+            return ConnectivityResult.Failed();
         }
 
         try
@@ -85,23 +104,70 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                 EnableRaisingEvents = true,
             };
 
-            _tunnelProcess.OutputDataReceived += (_, args) => _logger.LogTrace(args.Data.OrEmpty());
-            _tunnelProcess.ErrorDataReceived += (_, args) => _logger.LogTrace(args.Data.OrEmpty());
-            _tunnelProcess.Exited += (_, args) =>
-                _logger.LogWarning("Cloudflare tunnel process exited: {Args}", args);
+            // A started process is not a working tunnel. cloudflared exits non-fatally on a
+            // revoked token, a clock skew or no egress, and reporting success on Start()
+            // left the server advertising a tunnel address nothing was listening on.
+            TaskCompletionSource<bool> registered = new(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+
+            void Watch(string? line)
+            {
+                if (string.IsNullOrEmpty(line))
+                    return;
+
+                _logger.LogTrace(line);
+
+                if (ConnectionRegisteredPattern().IsMatch(line))
+                    registered.TrySetResult(true);
+            }
+
+            _tunnelProcess.OutputDataReceived += (_, args) => Watch(args.Data);
+            _tunnelProcess.ErrorDataReceived += (_, args) => Watch(args.Data);
+            _tunnelProcess.Exited += (_, _) =>
+            {
+                _logger.LogWarning("Cloudflare tunnel process exited");
+                registered.TrySetResult(false);
+            };
 
             _tunnelProcess.Start();
             _tunnelProcess.BeginOutputReadLine();
             _tunnelProcess.BeginErrorReadLine();
 
+            using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(
+                ct
+            );
+            timeout.CancelAfter(RegistrationTimeout);
+
+            bool connected;
+            try
+            {
+                connected = await registered.Task.WaitAsync(timeout.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                connected = false;
+                _logger.LogWarning(
+                    "Cloudflare tunnel did not register a connection within {Seconds}s",
+                    RegistrationTimeout.TotalSeconds
+                );
+            }
+
+            if (!connected)
+            {
+                StopTunnel();
+                return ConnectivityResult.Failed();
+            }
+
             _connectivityStatus.NatStatus = NatStatus.Tunneled;
-            _logger.LogInformation("Cloudflare tunnel started successfully");
-            return true;
+            _logger.LogInformation("Cloudflare tunnel registered a connection");
+            return ConnectivityResult.Verified();
         }
         catch (Exception ex)
         {
             _logger.LogInformation("Failed to start Cloudflare tunnel: {Message}", ex.Message);
-            return false;
+            StopTunnel();
+            return ConnectivityResult.Failed();
         }
     }
 

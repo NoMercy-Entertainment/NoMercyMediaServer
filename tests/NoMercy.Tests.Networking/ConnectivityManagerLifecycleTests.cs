@@ -62,7 +62,8 @@ public sealed class ConnectivityManagerLifecycleTests
         public int Priority => 1;
         public ConnectivityType Type => ConnectivityType.PortForward;
 
-        public Task<bool> TryEstablishAsync(CancellationToken ct) => Task.FromResult(succeeds);
+        public Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct) =>
+            Task.FromResult(succeeds ? ConnectivityResult.Verified() : ConnectivityResult.Failed());
 
         public Task TeardownAsync()
         {

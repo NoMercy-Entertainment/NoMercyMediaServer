@@ -247,8 +247,7 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IConnectivityStrategy, StunHolePunchStrategy>();
         services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(
             sp.GetRequiredService<ILogger<CloudflareTunnelStrategy>>(),
-            sp.GetRequiredService<IConnectivityStatus>(),
-            () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability()
+            sp.GetRequiredService<IConnectivityStatus>()
         ));
 
         // Add Auth services
@@ -288,8 +287,18 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IUpdateChecker, UpdateChecker>();
         services.AddHostedService<PeriodicUpdateCheckService>();
 
-        // Connectivity manager (replaces ServerRegistrationService + CloudflareTunnelService)
-        services.AddSingleton<IConnectivityManager, ConnectivityManager>();
+        // Connectivity manager (replaces ServerRegistrationService + CloudflareTunnelService).
+        // The tunnel availability check belongs to the manager, not the tunnel strategy: the
+        // strategy is tried last, so asking there meant a server never discovered a tunnel
+        // had been assigned to it unless every other transport had already failed.
+        services.AddSingleton<IConnectivityManager>(sp => new ConnectivityManager(
+            sp.GetRequiredService<ILogger<ConnectivityManager>>(),
+            sp.GetRequiredService<IAuthTokenStore>(),
+            sp.GetRequiredService<INetworkDiscovery>(),
+            sp.GetServices<IConnectivityStrategy>(),
+            sp.GetRequiredService<IBootStatus>(),
+            () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability()
+        ));
         services.AddHostedService(sp =>
             (ConnectivityManager)sp.GetRequiredService<IConnectivityManager>()
         );

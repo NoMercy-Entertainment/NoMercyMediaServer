@@ -35,9 +35,9 @@ public sealed class CloudflareTunnelStrategyTests
         ConnectivityStatus status = new() { CloudflareTunnelToken = null };
         CloudflareTunnelStrategy strategy = BuildStrategy(status);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(result);
+        Assert.False(result.Established);
     }
 
     [Fact]
@@ -46,9 +46,9 @@ public sealed class CloudflareTunnelStrategyTests
         ConnectivityStatus status = new() { CloudflareTunnelToken = string.Empty };
         CloudflareTunnelStrategy strategy = BuildStrategy(status);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(result);
+        Assert.False(result.Established);
     }
 
     [Fact]
@@ -91,9 +91,9 @@ public sealed class CloudflareTunnelStrategyTests
         ConnectivityStatus status = new() { CloudflareTunnelToken = "dummy-tunnel-token" };
         CloudflareTunnelStrategy strategy = BuildStrategy(status);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
 
-        Assert.False(result);
+        Assert.False(result.Established);
     }
 
     [Fact]

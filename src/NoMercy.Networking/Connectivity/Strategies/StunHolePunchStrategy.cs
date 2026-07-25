@@ -49,7 +49,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         ("stun.cloudflare.com", 3478),
     ];
 
-    public async Task<bool> TryEstablishAsync(CancellationToken ct)
+    public async Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct)
     {
         try
         {
@@ -65,7 +65,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             if (firstResult is null)
             {
                 _logger.LogDebug("STUN binding request to primary server failed");
-                return false;
+                return ConnectivityResult.Failed();
             }
 
             // Send STUN binding request to second server from same socket
@@ -99,7 +99,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
                 // Same IP but different port → Symmetric NAT, hole-punch won't work
                 _logger.LogDebug("Symmetric NAT detected — STUN hole-punch not viable");
                 Cleanup();
-                return false;
+                return ConnectivityResult.Failed();
             }
             else
             {
@@ -108,12 +108,13 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
                     "Symmetric NAT detected (different IPs) — STUN hole-punch not viable"
                 );
                 Cleanup();
-                return false;
+                return ConnectivityResult.Failed();
             }
 
             _connectivityStatus.NatStatus = NatStatus.HolePunched;
             _logger.LogInformation(
-                "STUN discovered public endpoint: {StunPublicIp}:{StunPublicPort}", [_connectivityStatus.StunPublicIp, _connectivityStatus.StunPublicPort]
+                "STUN discovered public endpoint: {StunPublicIp}:{StunPublicPort}",
+                [_connectivityStatus.StunPublicIp, _connectivityStatus.StunPublicPort]
             );
 
             // Start keep-alive to maintain NAT mapping
@@ -140,13 +141,15 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
                 TimeSpan.FromSeconds(25)
             );
 
-            return true;
+            // STUN proved what our public endpoint is, not that a client can open a media
+            // connection to it — that needs a rendezvous on the other side. Unverified.
+            return ConnectivityResult.Assumed();
         }
         catch (Exception ex)
         {
             _logger.LogDebug("STUN hole-punch failed: {Message}", ex.Message);
             Cleanup();
-            return false;
+            return ConnectivityResult.Failed();
         }
     }
 
@@ -205,7 +208,8 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         catch (Exception ex)
         {
             _logger.LogDebug(
-                "STUN request to {Host}:{Port} failed: {Message}", [host, port, ex.Message]
+                "STUN request to {Host}:{Port} failed: {Message}",
+                [host, port, ex.Message]
             );
             return null;
         }
