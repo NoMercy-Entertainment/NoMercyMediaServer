@@ -39,6 +39,15 @@ public class LinuxResourceProviderTests
 {
     private static LinuxResourceProvider CreateProvider() => new();
 
+    /// <summary>
+    /// Whether this host actually exposes the kernel surface the provider reads.
+    /// The degradation tests below were written from a Windows box, where it never
+    /// exists — but the Linux CI runner has a real /proc, so the provider correctly
+    /// returns live telemetry there and "must be zero" is the wrong expectation.
+    /// Assert the contract that holds either way: never throw, always well-formed.
+    /// </summary>
+    private static bool HasProcfs => File.Exists("/proc/stat");
+
     [Fact]
     public void Constructor_OnHostWithoutProcfs_DoesNotThrow()
     {
@@ -53,6 +62,15 @@ public class LinuxResourceProviderTests
         LinuxResourceProvider provider = CreateProvider();
 
         Resource resource = provider.Collect();
+
+        if (HasProcfs)
+        {
+            resource
+                .Cpu.Total.Should()
+                .BeGreaterThanOrEqualTo(0.0, "a real /proc/stat yields a live, sane CPU total");
+            resource.Memory.Total.Should().BeGreaterThan(0.0, "/proc/meminfo reports real memory");
+            return;
+        }
 
         resource
             .Cpu.Total.Should()
@@ -75,6 +93,15 @@ public class LinuxResourceProviderTests
 
         provider.Collect();
         Resource second = provider.Collect();
+
+        if (HasProcfs)
+        {
+            // With a real /proc/stat the delta branch IS reached on the second call,
+            // which is the more interesting path — assert it produces a sane figure.
+            second.Cpu.Total.Should().BeGreaterThanOrEqualTo(0.0);
+            second.Cpu.Total.Should().BeLessThanOrEqualTo(100.0);
+            return;
+        }
 
         second.Cpu.Total.Should().Be(0.0);
     }
@@ -325,7 +352,15 @@ public class LinuxResourceProviderTests
             "ReadCpuSnapshots"
         )!;
 
-        ((System.Collections.ICollection)result).Count.Should().Be(0);
+        int count = ((System.Collections.ICollection)result).Count;
+
+        if (HasProcfs)
+        {
+            count.Should().BePositive("a real /proc/stat lists at least the aggregate cpu line");
+            return;
+        }
+
+        count.Should().Be(0);
     }
 
     [Fact]

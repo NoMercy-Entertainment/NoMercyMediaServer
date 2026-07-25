@@ -64,7 +64,8 @@ internal sealed class PluginLoader(
             if (!_storage.Exists(assemblyPath))
             {
                 _logger.LogWarning(
-                    "Plugin manifest {ManifestPath} references assembly '{Assembly}' which was not found.", [manifestPath, manifest.Assembly]
+                    "Plugin manifest {ManifestPath} references assembly '{Assembly}' which was not found.",
+                    [manifestPath, manifest.Assembly]
                 );
 
                 await _eventBus.PublishAsync(
@@ -96,7 +97,8 @@ internal sealed class PluginLoader(
                 string failureMessage = string.Join("; ", verification.Failures);
 
                 _logger.LogWarning(
-                    "Plugin {PluginName} failed verification and was marked malfunctioned: {Failures}", [manifest.Name, failureMessage]
+                    "Plugin {PluginName} failed verification and was marked malfunctioned: {Failures}",
+                    [manifest.Name, failureMessage]
                 );
 
                 PluginInfo malfunctionedInfo = PluginManifestParser.ToPluginInfo(
@@ -274,7 +276,8 @@ internal sealed class PluginLoader(
                 );
 
                 _logger.LogWarning(
-                    "Failed to load plugin assembly {AssemblyPath}: {Error}", [assemblyPath, errorMessage]
+                    "Failed to load plugin assembly {AssemblyPath}: {Error}",
+                    [assemblyPath, errorMessage]
                 );
 
                 await _eventBus.PublishAsync(
@@ -293,7 +296,8 @@ internal sealed class PluginLoader(
             catch (Exception ex)
             {
                 _logger.LogWarning(
-                    "Failed to load plugin assembly {AssemblyPath}: {Error}", [assemblyPath, ex.Message]
+                    "Failed to load plugin assembly {AssemblyPath}: {Error}",
+                    [assemblyPath, ex.Message]
                 );
 
                 await _eventBus.PublishAsync(
@@ -315,7 +319,8 @@ internal sealed class PluginLoader(
             string pluginName = Path.GetFileName(pluginDir);
 
             _logger.LogWarning(
-                "Failed to parse plugin manifest {ManifestPath}: {Error}", [manifestPath, ex.Message]
+                "Failed to parse plugin manifest {ManifestPath}: {Error}",
+                [manifestPath, ex.Message]
             );
 
             await _eventBus.PublishAsync(
@@ -348,7 +353,8 @@ internal sealed class PluginLoader(
         catch (Exception loadContextEx)
         {
             _logger.LogWarning(
-                "Failed to initialize plugin load context for {AssemblyPath}: {Error}", [assemblyPath, loadContextEx.Message]
+                "Failed to initialize plugin load context for {AssemblyPath}: {Error}",
+                [assemblyPath, loadContextEx.Message]
             );
 
             await _eventBus.PublishAsync(
@@ -357,7 +363,7 @@ internal sealed class PluginLoader(
                     PluginId = Guid.Empty.ToString(),
                     PluginName = Path.GetFileNameWithoutExtension(assemblyPath),
                     ErrorMessage =
-                        $"Failed to initialize plugin load {loadContextEx.Message}",
+                        $"Failed to initialize plugin load context: {loadContextEx.Message}",
                     ExceptionType = loadContextEx.GetType().Name,
                 },
                 ct
@@ -443,7 +449,8 @@ internal sealed class PluginLoader(
 
                     _logger.LogError(
                         ex,
-                        "Plugin {PluginName} in assembly {AssemblyPath} failed to load and was marked malfunctioned: {Error}", [identity.Name, assemblyPath, ex.Message]
+                        "Plugin {PluginName} in assembly {AssemblyPath} failed to load and was marked malfunctioned: {Error}",
+                        [identity.Name, assemblyPath, ex.Message]
                     );
 
                     if (instance is not null)
@@ -505,7 +512,8 @@ internal sealed class PluginLoader(
             );
 
             _logger.LogWarning(
-                "Failed to load plugin assembly {AssemblyPath}: {Error}", [assemblyPath, errorMessage]
+                "Failed to load plugin assembly {AssemblyPath}: {Error}",
+                [assemblyPath, errorMessage]
             );
 
             await _eventBus.PublishAsync(
@@ -526,7 +534,8 @@ internal sealed class PluginLoader(
             string assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
 
             _logger.LogWarning(
-                "Failed to load plugin assembly {AssemblyPath}: {Error}", [assemblyPath, ex.Message]
+                "Failed to load plugin assembly {AssemblyPath}: {Error}",
+                [assemblyPath, ex.Message]
             );
 
             await _eventBus.PublishAsync(

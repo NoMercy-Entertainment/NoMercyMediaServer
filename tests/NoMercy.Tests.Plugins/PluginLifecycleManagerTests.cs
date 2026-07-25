@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Runtime.InteropServices;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
@@ -403,14 +404,19 @@ public class PluginLifecycleManagerTests : IDisposable
             Func<Task> act = () => _lifecycle.UninstallPluginAsync(id);
 
             await act.Should().NotThrowAsync();
-            Directory
-                .Exists(pluginDir)
-                .Should()
-                .BeTrue("the read-only file blocked the recursive delete");
+            AssertDeleteBlockedWhereThePlatformBlocksIt(
+                pluginDir,
+                "the read-only file blocked the recursive delete"
+            );
         }
         finally
         {
-            File.SetAttributes(readOnlyFilePath, FileAttributes.Normal);
+            // Only Windows keeps the file around: there the read-only flag blocks the
+            // delete and the attribute has to be cleared so the fixture can clean up.
+            // On POSIX the delete succeeded and the file is already gone, so resetting
+            // its attributes throws DirectoryNotFoundException out of the finally.
+            if (File.Exists(readOnlyFilePath))
+                File.SetAttributes(readOnlyFilePath, FileAttributes.Normal);
         }
     }
 
@@ -441,7 +447,32 @@ public class PluginLifecycleManagerTests : IDisposable
         Func<Task> act = () => _lifecycle.UninstallPluginAsync(id);
 
         await act.Should().NotThrowAsync();
-        Directory.Exists(pluginDir).Should().BeTrue("the locked file blocked the recursive delete");
+        AssertDeleteBlockedWhereThePlatformBlocksIt(
+            pluginDir,
+            "the locked file blocked the recursive delete"
+        );
+    }
+
+    /// <summary>
+    /// The contract under test is "uninstall never throws", and that is asserted on
+    /// every platform. Whether the directory survives is not portable: a held handle
+    /// or a read-only flag only blocks deletion on Windows, while POSIX unlinks open
+    /// files and ignores the read-only attribute, so the delete simply succeeds. Both
+    /// outcomes are correct — assert the one the running platform actually produces
+    /// rather than pinning the Windows result everywhere.
+    /// </summary>
+    private static void AssertDeleteBlockedWhereThePlatformBlocksIt(
+        string pluginDir,
+        string because
+    )
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            Directory.Exists(pluginDir).Should().BeTrue(because);
+        else
+            Directory
+                .Exists(pluginDir)
+                .Should()
+                .BeFalse("POSIX lets the recursive delete complete regardless");
     }
 
     private sealed class FakePlugin : IPlugin
