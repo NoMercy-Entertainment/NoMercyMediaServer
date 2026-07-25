@@ -15,9 +15,7 @@ namespace NoMercy.Analyzers;
 public sealed class NamedArgumentsCodeFixProvider : CodeFixProvider
 {
     public override ImmutableArray<string> FixableDiagnosticIds =>
-        ImmutableArray.Create(
-            DiagnosticDescriptors.RequireNamedArgumentsForSingleLetterCallbacks.Id
-        );
+        ImmutableArray.Create(DiagnosticDescriptors.RequireNamedArgumentsForComplexCalls.Id);
 
     // WellKnownFixAllProviders.BatchFixer computes each diagnostic's fix as an
     // independently-edited copy of the document, then merges the copies via a

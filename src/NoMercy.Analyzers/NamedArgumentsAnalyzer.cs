@@ -12,7 +12,7 @@ namespace NoMercy.Analyzers;
 public sealed class NamedArgumentsAnalyzer : DiagnosticAnalyzer
 {
     private static readonly DiagnosticDescriptor Rule =
-        DiagnosticDescriptors.RequireNamedArgumentsForSingleLetterCallbacks;
+        DiagnosticDescriptors.RequireNamedArgumentsForComplexCalls;
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
         ImmutableArray.Create(Rule);
@@ -35,6 +35,9 @@ public sealed class NamedArgumentsAnalyzer : DiagnosticAnalyzer
 
         SeparatedSyntaxList<ArgumentSyntax> arguments = invocation.ArgumentList.Arguments;
 
+        // Long argument lists are where positional order stops being readable.
+        bool callIsComplex = arguments.Count > 3;
+
         for (int index = 0; index < arguments.Count; index++)
         {
             ArgumentSyntax argumentSyntax = arguments[index];
@@ -42,11 +45,11 @@ public sealed class NamedArgumentsAnalyzer : DiagnosticAnalyzer
             if (argumentSyntax.NameColon != null)
                 continue;
 
-            // Only a callback whose parameter is a single letter is opaque enough to
-            // need the label: `Count(a => ...)` says nothing about what `a` is for,
-            // while `Count(predicate: a => ...)` does. Every other argument reads fine
-            // positionally, and labelling them all is what made this rule unusable.
-            if (!LambdaArgumentHelpers.HasSingleLetterParameter(argumentSyntax.Expression))
+            // Short calls are fine positionally unless the value itself carries no
+            // meaning at the call site: `Detect(episodeFingerprints, true)` says
+            // nothing, `Detect(episodeFingerprints, fromTail: true)` does. Naming
+            // anything beyond these two cases is what made this rule unusable.
+            if (!callIsComplex && !IsOpaqueLiteral(argumentSyntax.Expression))
                 continue;
 
             if (index >= symbol.Parameters.Length)
@@ -62,4 +65,14 @@ public sealed class NamedArgumentsAnalyzer : DiagnosticAnalyzer
             context.ReportDiagnostic(diagnostic);
         }
     }
+
+    /// <summary>
+    /// A bare literal whose parameter the reader cannot infer from the call site.
+    /// Numbers and strings usually carry their own meaning ("en", 1080); a naked
+    /// <c>true</c>/<c>false</c>/<c>null</c> never does.
+    /// </summary>
+    private static bool IsOpaqueLiteral(ExpressionSyntax expression) =>
+        expression.IsKind(SyntaxKind.TrueLiteralExpression)
+        || expression.IsKind(SyntaxKind.FalseLiteralExpression)
+        || expression.IsKind(SyntaxKind.NullLiteralExpression);
 }

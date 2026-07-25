@@ -127,6 +127,10 @@
       Version="1.1.2"
     />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzer.Testing" Version="1.1.2" />
+    <PackageVersion
+      Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit"
+      Version="1.1.2"
+    />
     <PackageVersion Include="Mono.Nat" Version="3.0.4" />
     <PackageVersion Include="NCrontab" Version="3.4.0" />
     <PackageVersion Include="Pastel" Version="7.0.1" />

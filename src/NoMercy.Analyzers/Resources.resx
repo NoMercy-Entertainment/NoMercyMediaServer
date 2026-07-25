@@ -18,19 +18,19 @@
     </data>
 
     <data name="RequireNamedArgumentsTitle" xml:space="preserve">
-        <value>Name the argument of a single-letter callback</value>
+        <value>Use named arguments where position is not self-explanatory</value>
     </data>
     
     <data name="RequireNamedArgumentsMessage" xml:space="preserve">
-        <value>Name this argument: its callback parameter is a single letter</value>
+        <value>Name this argument: the call has more than three arguments, or the value is a bare true/false/null</value>
     </data>
     
     <data name="RequireNamedArgumentsMessageFormat" xml:space="preserve">
-        <value>Name this argument: its callback parameter is a single letter</value>
+        <value>Name this argument: the call has more than three arguments, or the value is a bare true/false/null</value>
     </data>
     
     <data name="RequireNamedArgumentsDescription" xml:space="preserve">
-        <value>Enforces a named argument on callback lambdas whose parameter is a single letter, where the call site alone does not say what the callback is for</value>
+        <value>Enforces named arguments where positional order stops being readable: calls with more than three arguments, and bare true/false/null values whose parameter cannot be inferred at the call site</value>
     </data>
     
     <data name="CallbackParameterShouldBeRenamedTitle" xml:space="preserve">

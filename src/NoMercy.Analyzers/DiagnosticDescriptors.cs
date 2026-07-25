@@ -4,7 +4,7 @@ namespace NoMercy.Analyzers;
 
 public static class DiagnosticDescriptors
 {
-    public static readonly DiagnosticDescriptor RequireNamedArgumentsForSingleLetterCallbacks = new(
+    public static readonly DiagnosticDescriptor RequireNamedArgumentsForComplexCalls = new(
         DiagnosticIds.RequireNamedArguments,
         Resources.RequireNamedArgumentsTitle,
         Resources.RequireNamedArgumentsMessageFormat,

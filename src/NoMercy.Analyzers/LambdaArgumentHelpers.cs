@@ -9,15 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-
 namespace NoMercy.Analyzers;
 
 /// <summary>
-/// Shared lambda-shape helpers. <see cref="CallbackParameterAnalyzer"/> and
-/// <see cref="NamedArgumentsAnalyzer"/> both key off "callback lambda with a
-/// single-letter parameter" and must agree on what that means, so the test lives
-/// in one place.
+/// Shared lambda-shape helpers for <see cref="CallbackParameterAnalyzer"/>.
 /// </summary>
 internal static class LambdaArgumentHelpers
 {
@@ -26,31 +21,4 @@ internal static class LambdaArgumentHelpers
     /// says "this value is deliberately unused", which is the clarity the rule wants.
     /// </summary>
     internal static bool IsSingleLetter(string name) => name.Length == 1 && name != "_";
-
-    /// <summary>
-    /// True when <paramref name="expression"/> is a lambda that names at least one of
-    /// its parameters with a single letter.
-    /// </summary>
-    internal static bool HasSingleLetterParameter(ExpressionSyntax expression)
-    {
-        switch (expression)
-        {
-            case SimpleLambdaExpressionSyntax simple:
-                return IsSingleLetter(simple.Parameter.Identifier.Text);
-
-            case ParenthesizedLambdaExpressionSyntax parenthesized:
-                foreach (ParameterSyntax parameter in parenthesized.ParameterList.Parameters)
-                {
-                    if (IsSingleLetter(parameter.Identifier.Text))
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-
-            default:
-                return false;
-        }
-    }
 }
