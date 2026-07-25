@@ -44,6 +44,10 @@ jobs:
   # sailed straight through. It must block the release path.
   coverage:
     runs-on: ubuntu-latest
+    # Nothing downstream reads a coverage artifact, so this job is a test gate, not
+    # a report. Without a cap it once ran 6 hours before GitHub killed it, holding
+    # the whole release chain open the entire time.
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v5
@@ -106,13 +110,19 @@ jobs:
           echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
           echo "Fetched nomercy-ffmpeg $tag -> $dest"
 
-      - name: Run tests with coverage
+      # Only the uncategorized tests: everything with a Category trait already ran
+      # in `test` (Unit/ErrorHandling/Characterization) or `integration_tests`
+      # (Integration), and re-running all ~4600 of them plus the real encodes is
+      # what made this job take 70-90 minutes and gate every release behind itself.
+      # A missing trait satisfies every `!=` clause, so this selects exactly the
+      # gap the job exists to close.
+      - name: Run uncategorized tests
         run: >
           dotnet test NoMercy.Server.sln
           --configuration Release
-          --collect:"XPlat Code Coverage"
-          --settings tests/coverletArgs.runsettings
           --verbosity minimal
+          --blame-hang-timeout 10m
+          --filter "Category!=Unit&Category!=ErrorHandling&Category!=Characterization&Category!=Integration"
 
   # Integration tests - run on the dev release path (direct pushes to dev), master,
   # releases, or manually. PRs (github.ref = refs/pull/N/merge) don't match the
