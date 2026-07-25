@@ -35,9 +35,11 @@ namespace NoMercy.Tests.Cli.Support;
 /// with "Cannot assign requested address" as the client falls back to resolving
 /// the base address over TCP.
 /// </remarks>
-internal sealed class FakeManagementPipeServer
+internal sealed class FakeManagementPipeServer : IDisposable
 {
     private static bool IsWindows => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+    private Socket? _listener;
 
     /// <summary>
     /// What the client should be handed: a bare pipe name on Windows, an absolute
@@ -49,6 +51,15 @@ internal sealed class FakeManagementPipeServer
             : Path.Combine(Path.GetTempPath(), $"nomercy-test-{Guid.NewGuid():N}.sock");
 
     /// <summary>
+    /// How long to wait for the client before giving up. A scenario whose client
+    /// never connects would otherwise park here forever: the blame collector then
+    /// takes an inactivity hang dump and aborts the whole test run, which fails the
+    /// job with no indication of which test was responsible. Failing this one wait
+    /// keeps the diagnosis local to the test that caused it.
+    /// </summary>
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Waits for a single client connection, reads the request line into a
     /// string, then hands the raw stream to <paramref name="respond"/> so
     /// the caller can write back whatever raw HTTP bytes the scenario needs.
@@ -58,9 +69,23 @@ internal sealed class FakeManagementPipeServer
         CancellationToken ct = default
     )
     {
-        return IsWindows
-            ? await RunOnceOverNamedPipeAsync(respond, ct)
-            : await RunOnceOverUnixSocketAsync(respond, ct);
+        using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(
+            ct
+        );
+        timeoutCts.CancelAfter(ConnectTimeout);
+
+        try
+        {
+            return IsWindows
+                ? await RunOnceOverNamedPipeAsync(respond, timeoutCts.Token)
+                : await RunOnceOverUnixSocketAsync(respond, timeoutCts.Token);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new TimeoutException(
+                $"No client connected to '{PipeName}' within {ConnectTimeout.TotalSeconds:0}s."
+            );
+        }
     }
 
     private async Task<string> RunOnceOverNamedPipeAsync(
@@ -89,27 +114,50 @@ internal sealed class FakeManagementPipeServer
         CancellationToken ct
     )
     {
-        // A bound socket file left behind by a previous step would make Bind fail
-        // with "Address already in use" — RunSequenceAsync rebinds per connection.
+        // Bind once and keep listening for the fixture's lifetime. Rebinding per
+        // call leaves a window where the path is unbound, and a multi-step scenario
+        // (RunSequenceAsync) opens a fresh connection for every request because each
+        // response is "Connection: close" — landing in that window hangs the connect.
+        // A real server keeps one listener and accepts in turn, so do the same.
+        Socket listener = EnsureListener();
+
+        using Socket connection = await listener.AcceptAsync(ct);
+        await using NetworkStream stream = new(connection, false);
+
+        string request = await ReadRequestAsync(stream, ct);
+        await respond(stream);
+
+        return request;
+    }
+
+    private Socket EnsureListener()
+    {
+        if (_listener is not null)
+            return _listener;
+
         File.Delete(PipeName);
 
-        using Socket listener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        Socket listener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
         listener.Bind(new UnixDomainSocketEndPoint(PipeName));
-        listener.Listen(1);
+        listener.Listen(backlog: 8);
 
-        try
+        _listener = listener;
+        return listener;
+    }
+
+    public void Dispose()
+    {
+        _listener?.Dispose();
+        _listener = null;
+
+        if (!IsWindows)
         {
-            using Socket connection = await listener.AcceptAsync(ct);
-            await using NetworkStream stream = new(connection, false);
-
-            string request = await ReadRequestAsync(stream, ct);
-            await respond(stream);
-
-            return request;
-        }
-        finally
-        {
-            File.Delete(PipeName);
+            try
+            {
+                File.Delete(PipeName);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
     }
 
