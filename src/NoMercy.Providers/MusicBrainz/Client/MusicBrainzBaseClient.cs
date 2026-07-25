@@ -11,6 +11,7 @@
 
 using System.Net;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Helpers;
@@ -30,6 +31,16 @@ public class MusicBrainzBaseClient : ExternalApiClient
 
     // MusicBrainz asks clients to stay at roughly one request per second.
     protected override int RequestIntervalMs => 1500;
+
+    // MusicBrainz answers 403 to anonymous callers, so a request without a
+    // User-Agent never returns data. The DI-registered client normally carries one,
+    // but a caller that resolves it bare (an early seed path constructing the client
+    // itself) would otherwise reach the API with no agent at all.
+    protected override void ConfigureClient(HttpClient client)
+    {
+        if (client.DefaultRequestHeaders.UserAgent.Count == 0)
+            client.WithNoMercyUserAgent();
+    }
 
     protected override void LogRequest(string url) =>
         Logger.MusicBrainz(url, LogEventLevel.Verbose);
