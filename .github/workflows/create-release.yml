@@ -239,10 +239,20 @@ jobs:
           git reset --hard origin/master
 
           if ! git merge --squash -X theirs origin/dev; then
-            # Resolve modify/delete conflicts: if a file was deleted in dev, delete it here too
+            # Whatever -X theirs could not settle on its own, settle the same way it
+            # would have: dev is the release source, so every still-unmerged path takes
+            # dev's version, or is deleted when dev no longer has it. Matching only on
+            # "deleted in dev" used to be enough, but rename/rename conflicts leave both
+            # sides present and fell straight through. Git pairs a deleted file with an
+            # unrelated new one whenever they look similar, and in a repository where
+            # every file opens with the same ten-line licence header, two small files
+            # easily clear that bar.
             while IFS= read -r conflict_file; do
-              if ! git cat-file -e "origin/dev:${conflict_file}" 2>/dev/null; then
-                git rm --force "${conflict_file}"
+              if git cat-file -e "origin/dev:${conflict_file}" 2>/dev/null; then
+                git checkout origin/dev -- "${conflict_file}"
+                git add -- "${conflict_file}"
+              else
+                git rm --force -- "${conflict_file}"
               fi
             done < <(git ls-files -u | cut -f2 | sort -u)
 

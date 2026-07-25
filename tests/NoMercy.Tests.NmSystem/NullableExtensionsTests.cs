@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Extensions;
-
 namespace NoMercy.Tests.NmSystem;
 
 [Trait("Category", "Unit")]
@@ -37,7 +35,7 @@ public class NullableExtensionsTests
     {
         int[]? value = [1, 2, 3];
         int[] result = value.OrEmpty();
-        result.Should().Equal(1, 2, 3);
+        result.Should().Equal([1, 2, 3]);
     }
 
     [Fact]
@@ -53,7 +51,7 @@ public class NullableExtensionsTests
     {
         List<string>? value = ["a", "b"];
         List<string> result = value.OrEmpty();
-        result.Should().Equal("a", "b");
+        result.Should().Equal(["a", "b"]);
     }
 
     [Fact]
@@ -69,7 +67,7 @@ public class NullableExtensionsTests
     {
         IEnumerable<int>? value = new[] { 1, 2, 3 };
         IEnumerable<int> result = value.OrEmpty();
-        result.Should().Equal(1, 2, 3);
+        result.Should().Equal([1, 2, 3]);
     }
 
     [Fact]

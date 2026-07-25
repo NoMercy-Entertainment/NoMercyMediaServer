@@ -10,7 +10,9 @@
 // -----------------------------------------------------------------------------
 
 using System.Reflection;
+using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -28,6 +30,42 @@ public class JobDispatcherTests
         JobQueue queue = new(adapter);
         JobDispatcher dispatcher = new(queue, NullLogger<JobDispatcher>.Instance);
         return (dispatcher, adapter);
+    }
+
+    /// <summary>
+    /// Dispatch() must never let an enqueue failure escape to the caller — a
+    /// dispatcher throwing would take down the code path that called it (e.g.
+    /// mid-request in an API handler). It logs and swallows instead.
+    /// </summary>
+    [Fact]
+    public void Dispatch_QueueEnqueueThrows_DoesNotPropagate_JobDispatcherSurvives()
+    {
+        Mock<IQueueContext> context = new();
+        context.Setup(c => c.JobExists(It.IsAny<string>())).Throws<InvalidOperationException>();
+        JobQueue queue = new(context.Object);
+        JobDispatcher dispatcher = new(queue, NullLogger<JobDispatcher>.Instance);
+        TestJob job = new() { Message = "will not enqueue" };
+
+        Action act = () => dispatcher.Dispatch(job);
+
+        act.Should().NotThrow();
+        context.Verify(c => c.AddJob(It.IsAny<QueueJobModel>()), Times.Never);
+    }
+
+    [Fact]
+    public void DispatchChild_QueueEnqueueThrows_DoesNotPropagate()
+    {
+        Mock<IQueueContext> context = new();
+        context.Setup(c => c.JobExists(It.IsAny<string>())).Throws<InvalidOperationException>();
+        JobQueue queue = new(context.Object);
+        JobDispatcher dispatcher = new(queue, NullLogger<JobDispatcher>.Instance);
+        TestJob job = new() { Message = "child will not enqueue" };
+
+        Action act = () =>
+            dispatcher.DispatchChild(job, "encoder-child", 1, parentJobId: 5, groupTag: "g");
+
+        act.Should().NotThrow();
+        context.Verify(c => c.AddJob(It.IsAny<QueueJobModel>()), Times.Never);
     }
 
     [Fact]

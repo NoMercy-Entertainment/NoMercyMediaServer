@@ -46,6 +46,14 @@ public class CdDiscSourceTests
     }
 
     [Fact]
+    public void ParseTracks_NoStreamsProperty_ReturnsEmpty()
+    {
+        string json = """{"format":{}}""";
+        DiscTrack[] tracks = CdDiscSource.ParseTracks(json);
+        tracks.Should().BeEmpty();
+    }
+
+    [Fact]
     public void ParseTracks_NonAudioStream_IsSkipped()
     {
         string json = """
@@ -269,5 +277,115 @@ public class CdDiscSourceTests
         );
 
         info.AudioTracks.Should().HaveCount(1);
+    }
+
+    // ── ProbeTitleAsync ──────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ProbeTitleAsync_ReturnsSkeletonTitleForRequestedIndex()
+    {
+        CdDiscSource sut = MakeSut();
+        DiscDrive drive = new("D:\\", "AUDIO_CD", true, OpticalDiscType.Cd);
+
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 4, CancellationToken.None);
+
+        title.Index.Should().Be(4);
+        title.Name.Should().Be("Track 04");
+        title.Duration.Should().Be(TimeSpan.Zero);
+        title.IsMainFeature.Should().BeFalse();
+        title.VideoStreams.Should().BeEmpty();
+    }
+
+    // ── Malformed ffprobe JSON → empty tracks, not a throw ─────────────────
+
+    [Fact]
+    public async Task ProbeAsync_MalformedFfprobeJson_ReturnsEmptyAudioTracks_FallsBackToDataCd()
+    {
+        Mock<IProcessRunner> runnerMock = new();
+        runnerMock
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                new ProcessResult(
+                    ExitCode: 0,
+                    StdOut: "{ not valid json",
+                    StdErr: "",
+                    Duration: TimeSpan.Zero
+                )
+            );
+
+        Mock<IStorageDriver> driverMock = new();
+        driverMock
+            .Setup(d =>
+                d.EnumerateFileSystemEntries(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<SearchOption>()
+                )
+            )
+            .Returns(["D:\\readme.txt"]);
+        driverMock.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
+
+        CdDiscSource sut = MakeSut(runnerMock.Object, driverMock.Object);
+
+        DiscDrive drive = new("D:\\", "DATA", true, OpticalDiscType.Cd);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
+
+        info.AudioTracks.Should()
+            .HaveCount(1, "malformed JSON must degrade to the data-CD fallback");
+        info.AudioTracks![0].Title.Should().Be("readme.txt");
+    }
+
+    // ── EnumerateDataCd exception handling ─────────────────────────────────
+
+    [Fact]
+    public async Task ProbeAsync_DataCdEnumerationThrows_ReturnsEmptyAudioTracks()
+    {
+        Mock<IProcessRunner> runnerMock = new();
+        runnerMock
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+            );
+
+        Mock<IStorageDriver> driverMock = new();
+        driverMock
+            .Setup(d =>
+                d.EnumerateFileSystemEntries(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<SearchOption>()
+                )
+            )
+            .Throws(new UnauthorizedAccessException("access denied"));
+
+        CdDiscSource sut = MakeSut(runnerMock.Object, driverMock.Object);
+
+        DiscDrive drive = new("D:\\", "DATA", true, OpticalDiscType.Cd);
+        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
+
+        info.AudioTracks.Should().BeEmpty("enumeration failure must degrade gracefully, not throw");
+    }
+
+    // ── Type property ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Type_IsCd()
+    {
+        CdDiscSource sut = MakeSut();
+        sut.Type.Should().Be(OpticalDiscType.Cd);
     }
 }

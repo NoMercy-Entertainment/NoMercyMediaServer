@@ -12,7 +12,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -46,7 +45,7 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
             new { folder = "" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -77,7 +76,7 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
             new { }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -109,7 +108,7 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
             new { }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -147,7 +146,7 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
             new { parent = "", name = "" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

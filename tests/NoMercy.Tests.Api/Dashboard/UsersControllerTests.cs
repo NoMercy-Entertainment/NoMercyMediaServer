@@ -12,7 +12,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -41,7 +40,7 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/users");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -95,7 +94,7 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -147,7 +146,7 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             "/api/v1/dashboard/users/permissions"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -175,7 +174,7 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/dashboard/users/{Guid.NewGuid()}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -195,7 +194,7 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -207,7 +206,7 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             new { }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

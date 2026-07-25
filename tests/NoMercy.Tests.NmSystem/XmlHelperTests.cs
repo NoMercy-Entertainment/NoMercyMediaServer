@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Xml.Serialization;
-using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.NmSystem;
 

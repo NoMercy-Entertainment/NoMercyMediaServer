@@ -108,9 +108,7 @@ public static class Software
 
             FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(exePath);
             if (
-                fileInfo.FileMajorPart == 0
-                && fileInfo.FileMinorPart == 0
-                && fileInfo.FileBuildPart == 0
+                fileInfo is { FileMajorPart: 0, FileMinorPart: 0, FileBuildPart: 0 }
             )
                 return null;
 

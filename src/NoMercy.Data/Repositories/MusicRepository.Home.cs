@@ -28,6 +28,7 @@ public partial class MusicRepository
             .Include(album => album.AlbumTrack)
                 .ThenInclude(albumTrack => albumTrack.Track)
             .OrderByDescending(album => album.CreatedAt)
+            .ThenBy(album => album.Id)
             .ToListAsync(ct);
     }
 
@@ -41,6 +42,7 @@ public partial class MusicRepository
             .Include(artist => artist.ArtistTrack)
                 .ThenInclude(artistTrack => artistTrack.Track)
             .OrderByDescending(artist => artist.CreatedAt)
+            .ThenBy(artist => artist.Id)
             .ToListAsync(ct);
     }
 
@@ -52,6 +54,7 @@ public partial class MusicRepository
             .Where(genre => genre.MusicGenreTracks.Any())
             .Include(genre => genre.MusicGenreTracks)
             .OrderByDescending(genre => genre.MusicGenreTracks.Count)
+            .ThenBy(genre => genre.Id)
             .ToListAsync(ct);
     }
 
@@ -187,6 +190,7 @@ public partial class MusicRepository
             .MusicGenres.AsNoTracking()
             .Where(genre => genre.MusicGenreTracks.Any())
             .OrderByDescending(genre => genre.MusicGenreTracks.Count())
+            .ThenBy(genre => genre.Id)
             .Select(genre => new MusicGenreCardDto
             {
                 Id = genre.Id,
@@ -219,6 +223,7 @@ public partial class MusicRepository
                 ColorPalette = at.Artist._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -248,6 +253,7 @@ public partial class MusicRepository
                 ColorPalette = at.Album._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -278,6 +284,7 @@ public partial class MusicRepository
                 ColorPalette = pt.Playlist._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -397,6 +404,7 @@ public partial class MusicRepository
                 ColorPalette = at.Artist._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -421,6 +429,7 @@ public partial class MusicRepository
                 ColorPalette = at.Album._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -446,6 +455,7 @@ public partial class MusicRepository
                 ColorPalette = pt.Playlist._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -527,6 +537,7 @@ public partial class MusicRepository
             .Artists.AsNoTracking()
             .Where(artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Any())
             .OrderByDescending(artist => artist.CreatedAt)
+            .ThenBy(artist => artist.Id)
             .Select(artist => new ArtistCardDto
             {
                 Id = artist.Id,
@@ -551,6 +562,7 @@ public partial class MusicRepository
             .MusicGenres.AsNoTracking()
             .Where(genre => genre.MusicGenreTracks.Any())
             .OrderByDescending(genre => genre.MusicGenreTracks.Count())
+            .ThenBy(genre => genre.Id)
             .Select(genre => new MusicGenreCardDto
             {
                 Id = genre.Id,
@@ -565,6 +577,7 @@ public partial class MusicRepository
             .Albums.AsNoTracking()
             .Where(album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Any())
             .OrderByDescending(album => album.CreatedAt)
+            .ThenBy(album => album.Id)
             .Select(album => new AlbumCardDto
             {
                 Id = album.Id,

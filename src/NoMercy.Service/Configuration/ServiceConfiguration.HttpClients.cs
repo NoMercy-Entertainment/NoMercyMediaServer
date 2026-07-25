@@ -78,10 +78,15 @@ public static partial class ServiceConfiguration
                 client.BaseAddress = new("https://musicbrainz.org/ws/2/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                // MusicBrainz puts anonymous UAs in a 50 req/s global shared
-                // bucket — fine for our bursty low-traffic use. Deliberate
-                // choice for privacy over the per-IP identified tier.
-                client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
+                // A blank/generic UA (including the literal string "anonymous")
+                // lands in MusicBrainz's shared 50 req/s bucket — not a per-client
+                // allowance, but one pool split across every anonymous client on
+                // the internet, so our own request pacing can't stop it from
+                // getting exhausted by other people's traffic. A properly
+                // identified UA bypasses UA-based throttling entirely and only
+                // has to respect the 1 req/sec-per-IP limit our Queue already
+                // paces to (MusicBrainzBaseClient.RequestIntervalMs).
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 

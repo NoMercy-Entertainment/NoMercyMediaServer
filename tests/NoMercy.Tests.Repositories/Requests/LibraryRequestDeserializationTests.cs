@@ -42,7 +42,7 @@ public class LibraryRequestDeserializationTests
         request.Realtime.Should().BeFalse();
         request.SpecialSeasonName.Should().Be("Specials");
         request.Type.Should().Be("movie");
-        request.Subtitles.Should().Equal("en", "nl");
+        request.Subtitles.Should().Equal(["en", "nl"]);
         request.FolderLibrary.Should().NotBeNull();
     }
 

@@ -222,10 +222,10 @@ public class AudioFilterBuilderTests
     // ── Edge cases ──────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(LoudnessMode.None, DownmixMode.Auto, null)]
-    [InlineData(LoudnessMode.Custom, DownmixMode.Auto, null)]
-    [InlineData(LoudnessMode.None, DownmixMode.Custom, null)]
-    [InlineData(LoudnessMode.Custom, DownmixMode.Custom, "")]
+    [InlineData([LoudnessMode.None, DownmixMode.Auto, null])]
+    [InlineData([LoudnessMode.Custom, DownmixMode.Auto, null])]
+    [InlineData([LoudnessMode.None, DownmixMode.Custom, null])]
+    [InlineData([LoudnessMode.Custom, DownmixMode.Custom, ""])]
     public void BuildAudioFilter_AllNullCases_ReturnsNull(
         LoudnessMode loudness,
         DownmixMode downmix,

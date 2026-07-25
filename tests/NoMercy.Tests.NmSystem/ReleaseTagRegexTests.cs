@@ -115,12 +115,12 @@ public class ReleaseTagRegexTests
     }
 
     [Theory]
-    [InlineData("The Office 1080p WEB-DL", StringExtensions.ReleaseTagCategory.Resolution, "1080p")]
-    [InlineData("Some Show WEB-DL x265", StringExtensions.ReleaseTagCategory.Source, "WEB-DL")]
-    [InlineData("Movie Title HEVC", StringExtensions.ReleaseTagCategory.Codec, "HEVC")]
-    [InlineData("Concert EAC3", StringExtensions.ReleaseTagCategory.Audio, "EAC3")]
-    [InlineData("Film HDR10", StringExtensions.ReleaseTagCategory.Hdr, "HDR10")]
-    [InlineData("Feature IMAX", StringExtensions.ReleaseTagCategory.Flag, "IMAX")]
+    [InlineData(["The Office 1080p WEB-DL", StringExtensions.ReleaseTagCategory.Resolution, "1080p"])]
+    [InlineData(["Some Show WEB-DL x265", StringExtensions.ReleaseTagCategory.Source, "WEB-DL"])]
+    [InlineData(["Movie Title HEVC", StringExtensions.ReleaseTagCategory.Codec, "HEVC"])]
+    [InlineData(["Concert EAC3", StringExtensions.ReleaseTagCategory.Audio, "EAC3"])]
+    [InlineData(["Film HDR10", StringExtensions.ReleaseTagCategory.Hdr, "HDR10"])]
+    [InlineData(["Feature IMAX", StringExtensions.ReleaseTagCategory.Flag, "IMAX"])]
     public void TryGetReleaseTag_ReportsEarliestCategory(
         string input, StringExtensions.ReleaseTagCategory expectedCategory, string expectedValue)
     {

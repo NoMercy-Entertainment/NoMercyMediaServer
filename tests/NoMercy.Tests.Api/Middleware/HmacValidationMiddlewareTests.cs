@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Moq;
 using NoMercy.Api.Middleware;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
@@ -54,6 +55,50 @@ public class HmacValidationMiddlewareTests
                     services.AddSingleton<IOptions<EncoderOptions>>(
                         new OptionsWrapper<EncoderOptions>(opts)
                     );
+                });
+                web.Configure(app =>
+                {
+                    app.UseMiddleware<HmacValidationMiddleware>();
+                    app.Run(ctx =>
+                    {
+                        ctx.Response.StatusCode = 200;
+                        return ctx.Response.WriteAsync("ok");
+                    });
+                });
+            })
+            .Build();
+
+        host.Start();
+        return host.GetTestClient();
+    }
+
+    /// <summary>
+    /// Same pipeline as <see cref="BuildClient"/>, plus a registered
+    /// <see cref="ILicenseTokenClient"/> — exercises the remote-worker token
+    /// introspection branch (Phase 4.9): when a request carries
+    /// X-NoMercy-WorkerToken, the middleware checks IntrospectAsync before
+    /// falling back to the configured signing key, and the token itself
+    /// becomes the HMAC secret when active.
+    /// </summary>
+    private static HttpClient BuildClientWithWorkerToken(
+        string? configuredSecret,
+        Mock<ILicenseTokenClient> licenseTokenClient
+    )
+    {
+        IHost host = new HostBuilder()
+            .ConfigureWebHost(web =>
+            {
+                web.UseTestServer();
+                web.ConfigureServices(services =>
+                {
+                    EncoderOptions opts = new()
+                    {
+                        DistributedEncodingSigningKey = configuredSecret,
+                    };
+                    services.AddSingleton<IOptions<EncoderOptions>>(
+                        new OptionsWrapper<EncoderOptions>(opts)
+                    );
+                    services.AddSingleton(licenseTokenClient.Object);
                 });
                 web.Configure(app =>
                 {
@@ -260,5 +305,131 @@ public class HmacValidationMiddlewareTests
         HttpClient client = BuildClient(configuredSecret: null);
         HttpResponseMessage response = await client.GetAsync("/api/v1/distribution/workers");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    }
+
+    // -------------------------------------------------------------------------
+    // Tests: remote-worker token introspection (ILicenseTokenClient)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task WorkerToken_ActiveToken_UsesTokenItselfAsHmacSecret()
+    {
+        const string workerToken = "worker-token-abc123";
+        Mock<ILicenseTokenClient> licenseTokenClient = new();
+        licenseTokenClient
+            .Setup(c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IntrospectResult(true, [], null));
+
+        // Configured signing key is deliberately different from the worker
+        // token — proves the signature must be verified against the WORKER
+        // TOKEN, not the static DistributedEncodingSigningKey.
+        HttpClient client = BuildClientWithWorkerToken(
+            configuredSecret: "static-secret-never-used-here",
+            licenseTokenClient
+        );
+
+        byte[] bodyBytes = Encoding.UTF8.GetBytes("{\"task\":true}");
+        HmacSigner signer = new(workerToken);
+        long ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        string sig = signer.Sign("POST", "/api/v1/worker/execute-task", ts, bodyBytes);
+
+        HttpRequestMessage request = new(HttpMethod.Post, "/api/v1/worker/execute-task")
+        {
+            Content = new ByteArrayContent(bodyBytes),
+        };
+        request.Headers.Add("X-NoMercy-WorkerToken", workerToken);
+        request.Headers.Add("X-NoMercy-Timestamp", ts.ToString());
+        request.Headers.Add("X-NoMercy-Signature", sig);
+
+        HttpResponseMessage response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        licenseTokenClient.Verify(
+            c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task WorkerToken_ActiveToken_ButSignedWithWrongSecret_Returns401()
+    {
+        const string workerToken = "worker-token-abc123";
+        Mock<ILicenseTokenClient> licenseTokenClient = new();
+        licenseTokenClient
+            .Setup(c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IntrospectResult(true, [], null));
+
+        HttpClient client = BuildClientWithWorkerToken(Secret, licenseTokenClient);
+
+        byte[] bodyBytes = [];
+        HmacSigner wrongSigner = new("not-the-worker-token");
+        long ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        string sig = wrongSigner.Sign("GET", "/api/v1/worker/status", ts, bodyBytes);
+
+        HttpRequestMessage request = new(HttpMethod.Get, "/api/v1/worker/status");
+        request.Headers.Add("X-NoMercy-WorkerToken", workerToken);
+        request.Headers.Add("X-NoMercy-Timestamp", ts.ToString());
+        request.Headers.Add("X-NoMercy-Signature", sig);
+
+        HttpResponseMessage response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task WorkerToken_InactiveToken_Returns401WorkerTokenInvalid()
+    {
+        const string workerToken = "revoked-worker-token";
+        Mock<ILicenseTokenClient> licenseTokenClient = new();
+        licenseTokenClient
+            .Setup(c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IntrospectResult(false, [], "Token has been revoked"));
+
+        HttpClient client = BuildClientWithWorkerToken(Secret, licenseTokenClient);
+
+        HttpRequestMessage request = new(HttpMethod.Get, "/api/v1/worker/status");
+        request.Headers.Add("X-NoMercy-WorkerToken", workerToken);
+        request.Headers.Add(
+            "X-NoMercy-Timestamp",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
+        );
+        request.Headers.Add("X-NoMercy-Signature", "irrelevant-since-token-is-inactive");
+
+        HttpResponseMessage response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        string body = await response.Content.ReadAsStringAsync();
+        JsonDocument json = JsonDocument.Parse(body);
+        Assert.Equal("worker_token_invalid", json.RootElement.GetProperty("reason").GetString());
+    }
+
+    [Fact]
+    public async Task NoWorkerTokenHeader_FallsBackToConfiguredSigningKey_NeverConsultsLicenseClient()
+    {
+        Mock<ILicenseTokenClient> licenseTokenClient = new();
+        HttpClient client = BuildClientWithWorkerToken(Secret, licenseTokenClient);
+
+        byte[] bodyBytes = Encoding.UTF8.GetBytes("{\"test\":true}");
+        (long ts, string sig) = MakeSignature(
+            "POST",
+            "/api/v1/distribution/tasks",
+            bodyBytes,
+            Secret
+        );
+
+        HttpRequestMessage request = new(HttpMethod.Post, "/api/v1/distribution/tasks")
+        {
+            Content = new ByteArrayContent(bodyBytes),
+        };
+        request.Headers.Add("X-NoMercy-Timestamp", ts.ToString());
+        request.Headers.Add("X-NoMercy-Signature", sig);
+
+        HttpResponseMessage response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        licenseTokenClient.Verify(
+            c => c.IntrospectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never
+        );
     }
 }

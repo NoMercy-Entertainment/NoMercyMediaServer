@@ -36,7 +36,7 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         Assert.True(
             element.TryGetProperty(propertyName, out _),
             $"Expected JSON property '{propertyName}' not found. "
-                + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
+                         + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
         );
 
     private static IEnumerable<string> EnumerateProperties(JsonElement element)
@@ -66,7 +66,7 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         Assert.True(
             hasCustomStatus || hasProblemDetails,
             $"Expected status response shape. "
-                + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
+                         + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
         );
     }
 
@@ -1138,18 +1138,18 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     // =========================================================================
 
     [Theory]
-    [InlineData("GET", "/api/v1/dashboard/configuration")]
-    [InlineData("GET", "/api/v1/dashboard/devices")]
-    [InlineData("GET", "/api/v1/dashboard/encoderprofiles")]
-    [InlineData("GET", "/api/v1/dashboard/libraries")]
-    [InlineData("GET", "/api/v1/dashboard/logs")]
-    [InlineData("GET", "/api/v1/dashboard/plugins")]
-    [InlineData("GET", "/api/v1/dashboard/activity")]
-    [InlineData("GET", "/api/v1/dashboard/server")]
-    [InlineData("GET", "/api/v1/dashboard/server/info")]
-    [InlineData("GET", "/api/v1/dashboard/specials")]
-    [InlineData("GET", "/api/v1/dashboard/tasks")]
-    [InlineData("GET", "/api/v1/dashboard/users")]
+    [InlineData(["GET", "/api/v1/dashboard/configuration"])]
+    [InlineData(["GET", "/api/v1/dashboard/devices"])]
+    [InlineData(["GET", "/api/v1/dashboard/encoderprofiles"])]
+    [InlineData(["GET", "/api/v1/dashboard/libraries"])]
+    [InlineData(["GET", "/api/v1/dashboard/logs"])]
+    [InlineData(["GET", "/api/v1/dashboard/plugins"])]
+    [InlineData(["GET", "/api/v1/dashboard/activity"])]
+    [InlineData(["GET", "/api/v1/dashboard/server"])]
+    [InlineData(["GET", "/api/v1/dashboard/server/info"])]
+    [InlineData(["GET", "/api/v1/dashboard/specials"])]
+    [InlineData(["GET", "/api/v1/dashboard/tasks"])]
+    [InlineData(["GET", "/api/v1/dashboard/users"])]
     public async Task DashboardEndpoints_ReturnUnauthorized_WhenUnauthenticated(
         string method,
         string url

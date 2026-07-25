@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Extensions;
-
 namespace NoMercy.Tests.NmSystem;
 
 [Trait("Category", "Unit")]
@@ -43,9 +41,9 @@ public class UrlExtensionsTests
     }
 
     [Theory]
-    [InlineData("https://example.com/path/file.jpg", "file.jpg")]
-    [InlineData("https://example.com/document.pdf", "document.pdf")]
-    [InlineData("https://example.com/path/to/image.png", "image.png")]
+    [InlineData(["https://example.com/path/file.jpg", "file.jpg"])]
+    [InlineData(["https://example.com/document.pdf", "document.pdf"])]
+    [InlineData(["https://example.com/path/to/image.png", "image.png"])]
     public void FileName_ExtractsFileNameFromUrl(string urlString, string expected)
     {
         Uri url = new(urlString);
@@ -62,9 +60,9 @@ public class UrlExtensionsTests
     }
 
     [Theory]
-    [InlineData("https://example.com/path/file.jpg", "https://example.com/path")]
-    [InlineData("https://example.com/document.pdf", "https://example.com")]
-    [InlineData("https://example.com/a/b/c/file.txt", "https://example.com/a/b/c")]
+    [InlineData(["https://example.com/path/file.jpg", "https://example.com/path"])]
+    [InlineData(["https://example.com/document.pdf", "https://example.com"])]
+    [InlineData(["https://example.com/a/b/c/file.txt", "https://example.com/a/b/c"])]
     public void BasePath_ExtractsUrlWithoutFileName(string urlString, string expected)
     {
         Uri url = new(urlString);

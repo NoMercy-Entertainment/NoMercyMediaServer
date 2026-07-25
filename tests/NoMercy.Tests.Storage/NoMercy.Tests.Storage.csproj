@@ -46,4 +46,24 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NoMercy.Storage\NoMercy.Storage.csproj" />
   </ItemGroup>
+
+  <!-- SMBLibrary: mirrors NoMercy.Storage's own reference so tests can construct
+       SmbSession / SmbReadStream / SmbWriteStream directly against real SMBLibrary
+       types (mocked ISMBFileStore) instead of only through a live SMB server. -->
+  <PropertyGroup>
+    <SmbForkDir>$(MSBuildThisFileDirectory)../../../../packages/nomercy-smblibrary/output/managed</SmbForkDir>
+    <SmbForkDir Condition="!Exists('$(SmbForkDir)/NoMercy.SMBLibrary.dll')"
+      >$(MSBuildThisFileDirectory)../../libs/smb</SmbForkDir
+    >
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="NoMercy.SMBLibrary">
+      <HintPath>$(SmbForkDir)/NoMercy.SMBLibrary.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="NoMercy.SMBLibrary.Utilities">
+      <HintPath>$(SmbForkDir)/NoMercy.SMBLibrary.Utilities.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
 </Project>

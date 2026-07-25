@@ -92,7 +92,7 @@ public class LyricsAggregator : ILyricsAggregator
             () => FromLrclibSearch(lrclibClient, query, artists)
         );
         Task<ProviderAttempt> musixmatchTask = RunMusixmatch(musixmatchClient, query);
-        ProviderAttempt[] raced = await Task.WhenAll(searchTask, musixmatchTask);
+        ProviderAttempt[] raced = await Task.WhenAll(new[]{searchTask, musixmatchTask});
 
         ProviderAttempt[] attempts = [exact, raced[0], raced[1]];
         LyricCandidate? best = LyricMatcher.PickBest(

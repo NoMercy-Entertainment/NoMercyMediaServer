@@ -92,10 +92,7 @@ public sealed class HardwareEncoderProbe(
             // the first line carries the actual cause (e.g. "Cannot load
             // libcuda.so.1", "No VA display found"); the rest is downstream noise.
             logger.LogDebug(
-                "Hardware encoder init probe: {Encoder} unusable (exit {Code}): {Err}",
-                encoderName,
-                result.ExitCode,
-                FirstMeaningfulLine(result.StdErr)
+                "Hardware encoder init probe: {Encoder} unusable (exit {Code}): {Err}", [encoderName, result.ExitCode, FirstMeaningfulLine(result.StdErr)]
             );
             return false;
         }
@@ -104,9 +101,7 @@ public sealed class HardwareEncoderProbe(
             // Only the probe's own timeout fired — the caller's token is still
             // live. A hang means the encoder cannot be trusted; never usable.
             logger.LogWarning(
-                "Hardware encoder init probe timed out after {Timeout}: {Encoder} — treating as unusable",
-                ProbeTimeout,
-                encoderName
+                "Hardware encoder init probe timed out after {Timeout}: {Encoder} — treating as unusable", [ProbeTimeout, encoderName]
             );
             return false;
         }

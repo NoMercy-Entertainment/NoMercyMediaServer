@@ -156,19 +156,9 @@ internal static class StartCommand
 
         string[] searchPaths =
         [
-            Path.Combine(
-                serverProjectDir,
-                "bin",
-                "Debug",
-                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
-                execName
+            Path.Combine([serverProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
             ),
-            Path.Combine(
-                serverProjectDir,
-                "bin",
-                "Release",
-                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
-                execName
+            Path.Combine([serverProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName]
             ),
         ];
 

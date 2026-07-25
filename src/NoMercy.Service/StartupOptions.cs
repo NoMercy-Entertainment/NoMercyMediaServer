@@ -12,10 +12,8 @@
 using CommandLine;
 using NoMercy.Database;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Service.Seeds;
 using NoMercy.Setup.Ui;
 using Serilog.Events;
 using ConfigurationModel = NoMercy.Database.Models.Common.Configuration;
@@ -33,9 +31,6 @@ public class StartupOptions
 
     [Option('l', "loglevel", Required = false, HelpText = "Run the server in development mode.")]
     public string LogLevel { get; set; } = nameof(LogEventLevel.Information);
-
-    [Option("seed", Required = false, HelpText = "Run the server in development mode.")]
-    public bool ShouldSeed { get; set; }
 
     [Option(
         'i',
@@ -93,9 +88,6 @@ public class StartupOptions
                 LogLevel = envLogLevel.Trim();
         }
 
-        if (!ShouldSeed)
-            ShouldSeed = GetEnvBool("NOMERCY_SEED");
-
         if (InternalPort == 0)
         {
             string? envPort = Environment.GetEnvironmentVariable("NOMERCY_INTERNAL_PORT");
@@ -132,7 +124,6 @@ public class StartupOptions
 
         Dictionary<string, string> options = new();
 
-        DatabaseSeeder.ShouldSeedMarvel = ShouldSeed;
         if (Development)
         {
             Config.IsDev = true;
@@ -147,9 +138,6 @@ public class StartupOptions
 
             Logger.App("Running in development mode.");
         }
-
-        if (ShouldSeed)
-            Logger.App("Seeding database.");
 
         if (!string.IsNullOrEmpty(LogLevel))
         {
@@ -204,7 +192,7 @@ public class StartupOptions
             options.Add("externalIp", ExternalIp);
         }
 
-        UserSettings.ApplySettings(options, silent: true);
+        UserSettings.ApplySettings(options, true);
     }
 
     private static int ResolvePort(
@@ -283,7 +271,7 @@ public class StartupOptions
     {
         if (
             !string.IsNullOrWhiteSpace(raw)
-            && Enum.TryParse(raw, ignoreCase: true, out level)
+            && Enum.TryParse(raw, true, out level)
             && Enum.IsDefined(level)
         )
             return true;

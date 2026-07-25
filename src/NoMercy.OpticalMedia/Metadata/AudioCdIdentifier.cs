@@ -243,11 +243,6 @@ public sealed class AudioCdIdentifier(
         return string.Concat(credits.Select(c => (c.Name ?? string.Empty) + c.Joinphrase));
     }
 
-    private static string FormatArtistCredit(RecordingArtistCredit[] credits)
-    {
-        return string.Concat(credits.Select(c => c.Name + c.Joinphrase));
-    }
-
     /// <summary>
     /// Builds the <c>toc=</c> query string for the MusicBrainz fuzzy TOC lookup.
     /// Format: firstTrack+lastTrack+leadOut+150+t1+150+t2+150+…

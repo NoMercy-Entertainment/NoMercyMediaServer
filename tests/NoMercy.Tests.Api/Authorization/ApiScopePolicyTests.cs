@@ -24,12 +24,12 @@ public class ApiScopePolicyTests
 {
     [Theory]
     // Real Keycloak shape: a single space-delimited claim.
-    [InlineData(true, "openid profile client-roles-nomercy-ui email")]
-    [InlineData(true, "openid")]
-    [InlineData(true, "profile email")]
+    [InlineData([true, "openid profile client-roles-nomercy-ui email"])]
+    [InlineData([true, "openid"])]
+    [InlineData([true, "profile email"])]
     // No openid/profile present.
-    [InlineData(false, "email address")]
-    [InlineData(false, "")]
+    [InlineData([false, "email address"])]
+    [InlineData([false, ""])]
     public void HasRequiredScope_SingleClaim(bool expected, string scopeValue)
     {
         Assert.Equal(expected, ApiScopePolicy.HasRequiredScope([scopeValue]));

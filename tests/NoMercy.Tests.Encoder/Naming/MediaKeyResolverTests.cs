@@ -18,11 +18,11 @@ public class MediaKeyResolverTests
     private readonly MediaKeyResolver _resolver = new();
 
     [Theory]
-    [InlineData(MediaType.Movie, 550, "mfa")]
-    [InlineData(MediaType.Movie, 1, "m1")]
-    [InlineData(MediaType.Movie, 0, "m0")]
-    [InlineData(MediaType.Episode, 12345, "e9ix")]
-    [InlineData(MediaType.Track, 100, "t2s")]
+    [InlineData([MediaType.Movie, 550, "mfa"])]
+    [InlineData([MediaType.Movie, 1, "m1"])]
+    [InlineData([MediaType.Movie, 0, "m0"])]
+    [InlineData([MediaType.Episode, 12345, "e9ix"])]
+    [InlineData([MediaType.Track, 100, "t2s"])]
     public void ForMedia_ProducesShortKey(MediaType type, long id, string expected)
     {
         _resolver.ForMedia(type, id).Should().Be(expected);

@@ -18,69 +18,117 @@ using Xunit;
 namespace NoMercy.Tests.Queue;
 
 /// <summary>
-/// Pins <see cref="MediaPlaybackActivityGate"/>: only the NAS-read-heavy
-/// queues (library/file/import/extras) defer, and only while
-/// <see cref="MediaActivityMonitor.IsActive"/> is true. The encoder queue and
-/// network-only queues (e.g. music) must never defer, active or not.
+/// Pins <see cref="MediaPlaybackActivityGate"/>: only "library" and "file"
+/// (the queues that walk the filesystem/NAS directly) defer while
+/// <see cref="MediaActivityMonitor.IsActive"/> is true, and only up to a
+/// capped trickle window — they can never be starved indefinitely. "import"
+/// and "extras" (API/DB-only work), plus the encoder and music queues, must
+/// never defer, active or not.
 /// </summary>
 public class MediaPlaybackActivityGateTests
 {
     [Theory]
-    [InlineData("library")]
-    [InlineData("file")]
-    [InlineData("import")]
-    [InlineData("extras")]
+    [InlineData(data: "library")]
+    [InlineData(data: "file")]
     public void ShouldDefer_NasHeavyQueue_WhenActive_ReturnsTrue(string queueName)
     {
         MediaActivityMonitor monitor = new();
         monitor.Touch();
-        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor);
+        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor: monitor);
 
-        gate.ShouldDefer(queueName).Should().BeTrue();
+        gate.ShouldDefer(queueName: queueName).Should().BeTrue();
     }
 
     [Theory]
-    [InlineData("library")]
-    [InlineData("file")]
-    [InlineData("import")]
-    [InlineData("extras")]
+    [InlineData(data: "library")]
+    [InlineData(data: "file")]
     public void ShouldDefer_NasHeavyQueue_WhenInactive_ReturnsFalse(string queueName)
     {
         MediaActivityMonitor monitor = new();
-        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor);
+        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor: monitor);
 
-        gate.ShouldDefer(queueName).Should().BeFalse();
+        gate.ShouldDefer(queueName: queueName).Should().BeFalse();
     }
 
     [Theory]
-    [InlineData("encoder")]
-    [InlineData("music")]
-    public void ShouldDefer_EncoderOrMusicQueue_WhenActive_ReturnsFalse(string queueName)
+    [InlineData(data: "import")]
+    [InlineData(data: "extras")]
+    [InlineData(data: "encoder")]
+    [InlineData(data: "music")]
+    public void ShouldDefer_ApiDbOnlyOrNonNasQueue_WhenActive_ReturnsFalse(string queueName)
     {
         MediaActivityMonitor monitor = new();
         monitor.Touch();
-        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor);
+        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor: monitor);
 
-        gate.ShouldDefer(queueName).Should().BeFalse();
+        gate.ShouldDefer(queueName: queueName).Should().BeFalse();
     }
 
     [Theory]
-    [InlineData("encoder")]
-    [InlineData("music")]
-    public void ShouldDefer_EncoderOrMusicQueue_WhenInactive_ReturnsFalse(string queueName)
+    [InlineData(data: "import")]
+    [InlineData(data: "extras")]
+    [InlineData(data: "encoder")]
+    [InlineData(data: "music")]
+    public void ShouldDefer_ApiDbOnlyOrNonNasQueue_WhenInactive_ReturnsFalse(string queueName)
     {
         MediaActivityMonitor monitor = new();
-        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor);
+        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor: monitor);
 
-        gate.ShouldDefer(queueName).Should().BeFalse();
+        gate.ShouldDefer(queueName: queueName).Should().BeFalse();
     }
 
     [Fact]
     public void DeferInterval_IsTwoSeconds()
     {
         MediaActivityMonitor monitor = new();
-        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor);
+        IWorkerActivityGate gate = new MediaPlaybackActivityGate(monitor: monitor);
 
-        gate.DeferInterval.Should().Be(TimeSpan.FromSeconds(2));
+        gate.DeferInterval.Should().Be(expected: TimeSpan.FromSeconds(seconds: 2));
+    }
+
+    [Fact]
+    public void ShouldDefer_NasHeavyQueue_AllowsOneJobThroughPerTrickleWindow()
+    {
+        MediaActivityMonitor monitor = new();
+        monitor.Touch();
+        DateTime now = new(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0);
+        MediaPlaybackActivityGate gate = new(
+            monitor: monitor,
+            maxDeferInterval: TimeSpan.FromSeconds(seconds: 30),
+            utcNow: () => now
+        );
+
+        // Still within the trickle window — deferred.
+        gate.ShouldDefer(queueName: "library").Should().BeTrue();
+
+        // Trickle window elapsed — exactly one poll is let through...
+        now = now.AddSeconds(value: 31);
+        gate.ShouldDefer(queueName: "library").Should().BeFalse();
+
+        // ...and immediately re-armed, so the next poll defers again.
+        gate.ShouldDefer(queueName: "library").Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldDefer_NasHeavyQueue_TracksTrickleWindowPerQueueIndependently()
+    {
+        MediaActivityMonitor monitor = new();
+        monitor.Touch();
+        DateTime now = new(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0);
+        MediaPlaybackActivityGate gate = new(
+            monitor: monitor,
+            maxDeferInterval: TimeSpan.FromSeconds(seconds: 30),
+            utcNow: () => now
+        );
+
+        // Establish "library"'s baseline, then let its window elapse.
+        gate.ShouldDefer(queueName: "library").Should().BeTrue();
+        now = now.AddSeconds(value: 31);
+        gate.ShouldDefer(queueName: "library").Should().BeFalse();
+
+        // "file" has never been checked before, so its own window hasn't
+        // started yet — it defers independently of "library" having just
+        // trickled through.
+        gate.ShouldDefer(queueName: "file").Should().BeTrue();
     }
 }

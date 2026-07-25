@@ -23,4 +23,7 @@ public class PluginInfo
     public string? AssemblyPath { get; init; }
     public string? TargetAbi { get; init; }
     public string? ManifestPath { get; init; }
+    public bool Verified { get; init; }
+    public bool Trusted { get; init; }
+    public PluginCapabilities? Capabilities { get; init; }
 }

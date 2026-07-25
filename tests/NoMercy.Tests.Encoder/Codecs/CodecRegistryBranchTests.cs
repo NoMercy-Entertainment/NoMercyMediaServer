@@ -116,16 +116,16 @@ public class CodecRegistryBranchTests
     // ── GetAudioEncoder delegates to definitions table ──────────────────────
 
     [Theory]
-    [InlineData(AudioCodecType.Aac, "libfdk_aac")]
-    [InlineData(AudioCodecType.Flac, "flac")]
-    [InlineData(AudioCodecType.Opus, "libopus")]
-    [InlineData(AudioCodecType.Ac3, "ac3")]
-    [InlineData(AudioCodecType.Eac3, "eac3")]
-    [InlineData(AudioCodecType.Mp3, "libmp3lame")]
-    [InlineData(AudioCodecType.Vorbis, "libvorbis")]
-    [InlineData(AudioCodecType.TrueHd, "truehd")]
-    [InlineData(AudioCodecType.Dts, "dca")]
-    [InlineData(AudioCodecType.Copy, "copy")]
+    [InlineData([AudioCodecType.Aac, "libfdk_aac"])]
+    [InlineData([AudioCodecType.Flac, "flac"])]
+    [InlineData([AudioCodecType.Opus, "libopus"])]
+    [InlineData([AudioCodecType.Ac3, "ac3"])]
+    [InlineData([AudioCodecType.Eac3, "eac3"])]
+    [InlineData([AudioCodecType.Mp3, "libmp3lame"])]
+    [InlineData([AudioCodecType.Vorbis, "libvorbis"])]
+    [InlineData([AudioCodecType.TrueHd, "truehd"])]
+    [InlineData([AudioCodecType.Dts, "dca"])]
+    [InlineData([AudioCodecType.Copy, "copy"])]
     public void GetAudioEncoder_returns_canonical_ffmpeg_name_per_codec(
         AudioCodecType codec,
         string expectedFfmpegName

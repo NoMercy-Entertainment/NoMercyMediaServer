@@ -77,9 +77,7 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
             return;
 
         Log.LogDebug(
-            "Finding media files for {Id} in library {ToString}",
-            Id,
-            Library.Id.ToString()
+            "Finding media files for {Id} in library {ToString}", [Id, Library.Id.ToString()]
         );
 
         await using MediaContext context = new();
@@ -116,9 +114,7 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
         if (file.Files.Count > 0)
         {
             Log.LogInformation(
-                "Found {Count} files in {Path}",
-                file.Files.Count,
-                file.Files.FirstOrDefault()?.Path
+                "Found {Count} files in {Path}", [file.Files.Count, file.Files.FirstOrDefault()?.Path]
             );
 
             if (library.LibraryMovies.Count > 0)

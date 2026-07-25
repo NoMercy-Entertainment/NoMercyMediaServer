@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Extensions;
-
 namespace NoMercy.Tests.NmSystem;
 
 [Trait("Category", "Unit")]
@@ -39,40 +37,40 @@ public class AlphaBucketTests
     }
 
     [Theory]
-    [InlineData(null, "#", true)]
-    [InlineData("", "#", true)]
-    [InlineData("  ", "#", true)]
+    [InlineData([null, "#", true])]
+    [InlineData(["", "#", true])]
+    [InlineData(["  ", "#", true])]
     public void Matches_EmptyTitleSort_MapsToHash(string? titleSort, string bucket, bool expected)
     {
         AlphaBucket.Matches(titleSort, bucket).Should().Be(expected);
     }
 
     [Theory]
-    [InlineData("apple", "A", true)]
-    [InlineData("apple", "B", false)]
-    [InlineData("alice", "A", true)]
-    [InlineData("zebra", "Z", true)]
-    [InlineData("movie", "M", true)]
+    [InlineData(["apple", "A", true])]
+    [InlineData(["apple", "B", false])]
+    [InlineData(["alice", "A", true])]
+    [InlineData(["zebra", "Z", true])]
+    [InlineData(["movie", "M", true])]
     public void Matches_LetterBucket_CaseInsensitive(string titleSort, string bucket, bool expected)
     {
         AlphaBucket.Matches(titleSort, bucket).Should().Be(expected);
     }
 
     [Theory]
-    [InlineData("Apple", "A", true)]
-    [InlineData("APPLE", "A", true)]
-    [InlineData("aPpLe", "A", true)]
+    [InlineData(["Apple", "A", true])]
+    [InlineData(["APPLE", "A", true])]
+    [InlineData(["aPpLe", "A", true])]
     public void Matches_LetterBucket_IgnoresCase(string titleSort, string bucket, bool expected)
     {
         AlphaBucket.Matches(titleSort, bucket).Should().Be(expected);
     }
 
     [Theory]
-    [InlineData("1234", "#", true)]
-    [InlineData("1234", "A", false)]
-    [InlineData("#hashtag", "#", true)]
-    [InlineData("@mention", "#", true)]
-    [InlineData("[bracket", "#", true)]
+    [InlineData(["1234", "#", true])]
+    [InlineData(["1234", "A", false])]
+    [InlineData(["#hashtag", "#", true])]
+    [InlineData(["@mention", "#", true])]
+    [InlineData(["[bracket", "#", true])]
     public void Matches_NonLetterStartingTitle_MapsToHash(
         string titleSort,
         string bucket,
@@ -83,9 +81,9 @@ public class AlphaBucketTests
     }
 
     [Theory]
-    [InlineData("_underscore", "#", true)]
-    [InlineData("-dash", "#", true)]
-    [InlineData("(paren", "#", true)]
+    [InlineData(["_underscore", "#", true])]
+    [InlineData(["-dash", "#", true])]
+    [InlineData(["(paren", "#", true])]
     public void Matches_SpecialCharacterStart_MapsToHash(
         string titleSort,
         string bucket,

@@ -58,7 +58,7 @@ public class TmdbPerformanceTests : TmdbTestBase
         Task<TmdbMovieKeywords?> keywordsTask = client.Keywords();
         Task<TmdbImages?> imagesTask = client.Images();
 
-        await Task.WhenAll(detailsTask, creditsTask, externalIdsTask, keywordsTask, imagesTask);
+        await Task.WhenAll([detailsTask, creditsTask, externalIdsTask, keywordsTask, imagesTask]);
 
         TmdbMovieDetails? details = await detailsTask;
         TmdbMovieCredits? credits = await creditsTask;

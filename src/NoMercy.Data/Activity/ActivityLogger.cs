@@ -166,10 +166,7 @@ public class ActivityLogger : IActivityLogger
         if (row.DeviceId == Ulid.Empty || row.UserId == Guid.Empty)
         {
             _logger.LogDebug(
-                "Skipping activity log {Type}: missing DeviceId or UserId (device={DeviceId}, user={UserId})",
-                row.Type,
-                row.DeviceId,
-                row.UserId
+                "Skipping activity log {Type}: missing DeviceId or UserId (device={DeviceId}, user={UserId})", [row.Type, row.DeviceId, row.UserId]
             );
             return;
         }
@@ -190,21 +187,14 @@ public class ActivityLogger : IActivityLogger
                 // shows up in the structured-log JSON; the @x exception field is
                 // dropped by the upstream enricher pipeline.
                 _logger.LogWarning(
-                    "Activity log write failed (attempt {Attempt}/{Max}) for {Type}: {ErrorChain}; retrying",
-                    attempt,
-                    MaxRetries,
-                    row.Type,
-                    FlattenError(ex)
+                    "Activity log write failed (attempt {Attempt}/{Max}) for {Type}: {ErrorChain}; retrying", [attempt, MaxRetries, row.Type, FlattenError(ex)]
                 );
                 await Task.Delay(RetryDelay, ct);
             }
             catch (Exception ex)
             {
                 _logger.LogError(
-                    "Activity log write failed after {Max} attempts; dropping row {Type}: {ErrorChain}",
-                    MaxRetries,
-                    row.Type,
-                    FlattenError(ex)
+                    "Activity log write failed after {Max} attempts; dropping row {Type}: {ErrorChain}", [MaxRetries, row.Type, FlattenError(ex)]
                 );
                 return;
             }

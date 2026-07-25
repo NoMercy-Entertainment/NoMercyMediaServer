@@ -340,7 +340,7 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         Task<TmdbSeasonDetails?> task2 = season2Client.Details();
         Task<TmdbSeasonDetails?> task3 = season3Client.Details();
 
-        await Task.WhenAll(task1, task2, task3);
+        await Task.WhenAll([task1, task2, task3]);
 
         TmdbSeasonDetails? season1 = await task1;
         TmdbSeasonDetails? season2 = await task2;

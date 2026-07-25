@@ -11,8 +11,27 @@
     <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
     <RepositoryUrl>https://github.com/NoMercy-Entertainment/nomercy-media-server</RepositoryUrl>
 
-    <Version>0.1.431</Version>
+    <Version>0.1.432</Version>
     <AssemblyVersion>$(Version).0</AssemblyVersion>
     <FileVersion>$(Version).0</FileVersion>
   </PropertyGroup>
+
+  <!--
+      Ship NoMercy.Analyzers (all custom analyzers + code fix providers: named
+      arguments, callback parameter naming, storage path rules) to every project
+      as a companion, the standard "analyzer-as-companion" ProjectReference
+      pattern (OutputItemType="Analyzer" + ReferenceOutputAssembly="false"). This
+      file is inherited by every project under the repo — including the
+      analyzer's own project — so a PackageReference here was circular: the
+      analyzer would need to consume its own not-yet-built package to build
+      itself. The condition excludes the analyzer project from referencing itself.
+    -->
+  <ItemGroup>
+    <ProjectReference
+      Include="$(MSBuildThisFileDirectory)src\NoMercy.Analyzers\NoMercy.Analyzers.csproj"
+      Condition="'$(MSBuildProjectName)' != 'NoMercy.Analyzers' and '$(MSBuildProjectName)' != 'NoMercy.Tests.Analyzers'"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false"
+    />
+  </ItemGroup>
 </Project>

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
@@ -29,9 +30,7 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
     )
     {
         logger.LogInformation(
-            "[{CorrelationId}] Analyzing: {Path}",
-            context.CorrelationId,
-            inputPath
+            "[{CorrelationId}] Analyzing: {Path}", [context.CorrelationId, inputPath]
         );
 
         // Use the per-folder source storage from the job context when available;
@@ -55,12 +54,7 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
         {
             MediaInfo info = await analyzer.AnalyzeAsync(inputPath, effectiveStorage, ct);
             logger.LogInformation(
-                "[{CorrelationId}] Analysis complete: {Video}v {Audio}a {Sub}s {Duration}",
-                context.CorrelationId,
-                info.VideoStreams.Count,
-                info.AudioStreams.Count,
-                info.SubtitleStreams.Count,
-                info.Duration
+                "[{CorrelationId}] Analysis complete: {Video}v {Audio}a {Sub}s {Duration}", [context.CorrelationId, info.VideoStreams.Count, info.AudioStreams.Count, info.SubtitleStreams.Count, info.Duration]
             );
             EmitSourceQuirkDecisions(info, context);
             return new StageSuccess<MediaInfo>(info);
@@ -106,11 +100,15 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
         {
             if (v.IsVariableFrameRate)
             {
+                // Message rides the DecisionLog the dashboard reads over the API —
+                // keep it period-decimal regardless of host locale.
                 sink.Add(
                     new(
                         "analyze",
                         "analyze.vfr_detected",
-                        $"Stream {v.Index} reports variable frame rate (real {v.RealFrameRate:F3} vs avg {v.AverageFrameRate:F3}).",
+                        $"Stream {v.Index} reports variable frame rate "
+                                 + $"(real {v.RealFrameRate!.Value.ToString("F3", CultureInfo.InvariantCulture)} "
+                                 + $"vs avg {v.AverageFrameRate!.Value.ToString("F3", CultureInfo.InvariantCulture)}).",
                         new
                         {
                             v.Index,

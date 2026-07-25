@@ -126,39 +126,29 @@ public class PersonManager(
 
         await personRepository.Store(people);
         logger.LogInformation(
-            "Show {Name}; Season {SeasonNumber}: People stored",
-            season.Name,
-            season.SeasonNumber
+            "Show {Name}; Season {SeasonNumber}: People stored", [season.Name, season.SeasonNumber]
         );
 
         await personRepository.StoreRoles(roles);
         logger.LogDebug(
-            "Show {Name}; Season {SeasonNumber}: Roles stored",
-            season.Name,
-            season.SeasonNumber
+            "Show {Name}; Season {SeasonNumber}: Roles stored", [season.Name, season.SeasonNumber]
         );
 
         await personRepository.StoreJobs(jobs);
         logger.LogDebug(
-            "Show {Name}; Season {SeasonNumber}: Jobs stored",
-            season.Name,
-            season.SeasonNumber
+            "Show {Name}; Season {SeasonNumber}: Jobs stored", [season.Name, season.SeasonNumber]
         );
 
         List<int> ids = personRepository.GetIds();
 
         await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Season);
         logger.LogDebug(
-            "Show {Name}; Season {SeasonNumber}: Cast stored",
-            season.Name,
-            season.SeasonNumber
+            "Show {Name}; Season {SeasonNumber}: Cast stored", [season.Name, season.SeasonNumber]
         );
 
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Season);
         logger.LogDebug(
-            "Show {Name}; Season {SeasonNumber}: Crew stored",
-            season.Name,
-            season.SeasonNumber
+            "Show {Name}; Season {SeasonNumber}: Crew stored", [season.Name, season.SeasonNumber]
         );
     }
 
@@ -196,44 +186,29 @@ public class PersonManager(
 
         await personRepository.Store(people);
         logger.LogInformation(
-            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: People stored",
-            episode.Name,
-            episode.SeasonNumber,
-            episode.EpisodeNumber
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: People stored", [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
         );
 
         await personRepository.StoreRoles(roles);
         logger.LogDebug(
-            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Roles stored",
-            episode.Name,
-            episode.SeasonNumber,
-            episode.EpisodeNumber
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Roles stored", [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
         );
 
         await personRepository.StoreJobs(jobs);
         logger.LogDebug(
-            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Jobs stored",
-            episode.Name,
-            episode.SeasonNumber,
-            episode.EpisodeNumber
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Jobs stored", [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
         );
 
         List<int> ids = personRepository.GetIds();
 
         await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Episode);
         logger.LogDebug(
-            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Cast stored",
-            episode.Name,
-            episode.SeasonNumber,
-            episode.EpisodeNumber
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Cast stored", [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
         );
 
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Episode);
         logger.LogDebug(
-            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Crew stored",
-            episode.Name,
-            episode.SeasonNumber,
-            episode.EpisodeNumber
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Crew stored", [episode.Name, episode.SeasonNumber, episode.EpisodeNumber]
         );
     }
 

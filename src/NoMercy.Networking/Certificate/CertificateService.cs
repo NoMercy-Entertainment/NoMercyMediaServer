@@ -355,8 +355,8 @@ public class CertificateService : ICertificateService
         // Never log PEM/key material — only the non-secret expiry.
         _logger.LogInformation(
             "Generated self-signed fallback certificate (expires {NotAfter:yyyy-MM-dd}) so HTTPS "
-                + "stays reachable without a Let's Encrypt cert. Direct browser access will show a "
-                + "trust warning until a real certificate is acquired.",
+                     + "stays reachable without a Let's Encrypt cert. Direct browser access will show a "
+                     + "trust warning until a real certificate is acquired.",
             generated.NotAfter
         );
     }
@@ -428,9 +428,7 @@ public class CertificateService : ICertificateService
         catch (Exception ex)
         {
             _logger.LogDebug(
-                "Skipping invalid SAN DNS name {DnsName} for self-signed cert: {Message}",
-                dnsName,
-                ex.Message
+                "Skipping invalid SAN DNS name {DnsName} for self-signed cert: {Message}", [dnsName, ex.Message]
             );
         }
     }
@@ -592,10 +590,7 @@ public class CertificateService : ICertificateService
 
                     // null means 202 — cert not ready yet, wait and retry
                     _logger.LogInformation(
-                        "Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})",
-                        CertRetryDelaySeconds,
-                        attempt,
-                        maxRetries
+                        "Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})", [CertRetryDelaySeconds, attempt, maxRetries]
                     );
                     await DelayBetweenAttemptsAsync(
                         TimeSpan.FromSeconds(CertRetryDelaySeconds),
@@ -616,11 +611,7 @@ public class CertificateService : ICertificateService
                     )
                 {
                     _logger.LogInformation(
-                        "Certificate attempt failed: {Message}, retrying in {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})",
-                        ex.Message,
-                        CertRetryDelaySeconds,
-                        attempt,
-                        maxRetries
+                        "Certificate attempt failed: {Message}, retrying in {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})", [ex.Message, CertRetryDelaySeconds, attempt, maxRetries]
                     );
                     await DelayBetweenAttemptsAsync(
                         TimeSpan.FromSeconds(CertRetryDelaySeconds),
@@ -734,8 +725,8 @@ public class CertificateService : ICertificateService
 
     private async Task WriteTextAsync(string path, string content)
     {
-        await using Stream stream = _driver.OpenWrite(path, overwrite: true);
-        await using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
+        await using Stream stream = _driver.OpenWrite(path, true);
+        await using StreamWriter writer = new(stream, encoding: Encoding.UTF8, leaveOpen: true);
         await writer.WriteAsync(content);
         await writer.FlushAsync();
     }

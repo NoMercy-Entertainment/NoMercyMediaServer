@@ -84,6 +84,48 @@ public sealed class ClaimsPrincipalExtensionsTests
     }
 
     [Fact]
+    public void IsSelf_ReturnsFalse_WhenPrincipalIsNull()
+    {
+        Guid userId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        ClaimsPrincipal? principal = null;
+
+        bool result = principal.IsSelf(userId);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Role_ReturnsRoleClaim_WhenPresent()
+    {
+        List<Claim> claims = [new(ClaimTypes.Role, "Administrator")];
+        ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
+
+        string result = principal.Role();
+
+        result.Should().Be("Administrator");
+    }
+
+    [Fact]
+    public void Role_ReturnsEmpty_WhenRoleClaimAbsent()
+    {
+        ClaimsPrincipal principal = new(new ClaimsIdentity([], "TestScheme"));
+
+        string result = principal.Role();
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Role_ReturnsEmpty_WhenPrincipalIsNull()
+    {
+        ClaimsPrincipal? principal = null;
+
+        string result = principal.Role();
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
     public void UserName_ReturnsNameClaim_WhenPresent()
     {
         List<Claim> claims =
@@ -115,6 +157,48 @@ public sealed class ClaimsPrincipalExtensionsTests
     }
 
     [Fact]
+    public void UserName_ReturnsTrimmedGivenName_WhenSurnameAbsent()
+    {
+        List<Claim> claims = [new(ClaimTypes.GivenName, "John")];
+        ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
+
+        string result = principal.UserName();
+
+        result.Should().Be("John");
+    }
+
+    [Fact]
+    public void UserName_ReturnsTrimmedSurname_WhenGivenNameAbsent()
+    {
+        List<Claim> claims = [new(ClaimTypes.Surname, "Smith")];
+        ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
+
+        string result = principal.UserName();
+
+        result.Should().Be("Smith");
+    }
+
+    [Fact]
+    public void UserName_ReturnsEmpty_WhenAllNameClaimsAbsent()
+    {
+        ClaimsPrincipal principal = new(new ClaimsIdentity([], "TestScheme"));
+
+        string result = principal.UserName();
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void UserName_ReturnsEmpty_WhenPrincipalIsNull()
+    {
+        ClaimsPrincipal? principal = null;
+
+        string result = principal.UserName();
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Email_ReturnsEmailClaim()
     {
         List<Claim> claims = [new(ClaimTypes.Email, "user@nomercy.tv")];
@@ -129,6 +213,16 @@ public sealed class ClaimsPrincipalExtensionsTests
     public void Email_ReturnsEmpty_WhenEmailClaimAbsent()
     {
         ClaimsPrincipal principal = new(new ClaimsIdentity([], "TestScheme"));
+
+        string result = principal.Email();
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Email_ReturnsEmpty_WhenPrincipalIsNull()
+    {
+        ClaimsPrincipal? principal = null;
 
         string result = principal.Email();
 

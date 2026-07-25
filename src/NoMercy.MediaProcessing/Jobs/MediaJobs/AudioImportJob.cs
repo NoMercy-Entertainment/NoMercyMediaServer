@@ -11,6 +11,7 @@
 
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
@@ -31,11 +32,9 @@ using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-
-using Microsoft.Extensions.Logging;
-using NoMercy.Storage;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 public class AudioImportJob : AbstractMusicFolderJob
@@ -100,7 +99,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception ex)
         {
-            Log.LogInformation("Fingerprint lookup failed for {Path}: {Message}", mediaFile.Path, ex.Message);
+            Log.LogInformation("Fingerprint lookup failed for {Path}: {Message}", [mediaFile.Path, ex.Message]);
             return null;
         }
     }

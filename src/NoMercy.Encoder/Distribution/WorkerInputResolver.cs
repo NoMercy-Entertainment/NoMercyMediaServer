@@ -34,7 +34,7 @@ public class WorkerInputResolver(
             return new();
         }
 
-        logger.LogInformation("Worker executing task {TaskId} ({Type})", task.TaskId, task.Type);
+        logger.LogInformation("Worker executing task {TaskId} ({Type})", [task.TaskId, task.Type]);
 
         // Pull the source locally if the worker can't see the original
         // path on its own filesystem. Shared-storage installs return the

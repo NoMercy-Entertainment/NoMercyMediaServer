@@ -28,6 +28,7 @@ public class ContentSegmentRepository(MediaContext context) : IContentSegmentRep
             .ContentSegments.AsNoTracking()
             .Where(s => s.EpisodeId == episodeId)
             .OrderBy(s => s.StartSeconds)
+            .ThenBy(s => s.Id)
             .ToListAsync();
 
     /// <summary>
@@ -51,6 +52,7 @@ public class ContentSegmentRepository(MediaContext context) : IContentSegmentRep
 
         return await query
             .OrderByDescending(s => s.UpdatedAt)
+            .ThenByDescending(s => s.Id)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -63,6 +65,7 @@ public class ContentSegmentRepository(MediaContext context) : IContentSegmentRep
             .ContentSegments.AsNoTracking()
             .Where(s => s.MovieId == movieId)
             .OrderBy(s => s.StartSeconds)
+            .ThenBy(s => s.Id)
             .ToListAsync();
 
     public Task<ContentSegment?> GetByIdAsync(Ulid id) =>

@@ -17,8 +17,8 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Data.Repositories;
 
@@ -37,18 +37,22 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .Specials.AsNoTracking()
             .AsSplitQuery()
             .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                    .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
+            .ThenInclude(item => item.Movie)
+            .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                    .ThenInclude(m =>
-                        m!.CertificationMovies.Where(c => c.Certification.Iso31661 == "US").Take(1)
-                    )
-                        .ThenInclude(c => c.Certification)
+            .ThenInclude(item => item.Movie)
+            .ThenInclude(m =>
+                m!
+                    .CertificationMovies.Where(c => c.Certification.Iso31661 == "US")
+                    .OrderBy(c => c.CertificationId)
+                    .Take(1)
+            )
+            .ThenInclude(c => c.Certification)
             .OrderBy(special => special.TitleSort)
+            .ThenBy(special => special.Id)
             .Skip(page * take)
             .Take(take)
             .ToListAsync(ct);
@@ -68,6 +72,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .Specials.AsNoTracking()
             .AsSingleQuery()
             .OrderBy(special => special.TitleSort)
+            .ThenBy(special => special.Id)
             .Skip(page * take)
             .Take(take)
             .Select(special => new SpecialCardDto
@@ -117,6 +122,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .Specials.AsNoTracking()
             .AsSingleQuery()
             .OrderBy(special => special.TitleSort)
+            .ThenBy(special => special.Id)
             .Skip(page * take)
             .Take(take)
             .Select(special => new SpecialCardDto
@@ -187,6 +193,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 ),
                 Items = special
                     .Items.OrderBy(i => i.Order)
+                    .ThenBy(i => i.Id)
                     .Select(i => new SpecialItemRefDto
                     {
                         MovieId = i.MovieId,
@@ -300,6 +307,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 g => g.Key,
                 g =>
                     g.OrderByDescending(i => i.VoteAverage)
+                        .ThenBy(i => i.Id)
                         .Take(2)
                         .Select(i => new SpecialImageProjection
                         {
@@ -324,6 +332,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 g => g.Key,
                 g =>
                     g.OrderByDescending(i => i.VoteAverage)
+                        .ThenBy(i => i.Id)
                         .Take(2)
                         .Select(i => new SpecialImageProjection
                         {
@@ -342,28 +351,28 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             );
 
         ILookup<int, SpecialCastProjection> castLookup = (
-            await ctx
-                .Movies.AsNoTracking()
-                .Where(m => ids.Contains(m.Id))
-                .SelectMany(
-                    m => m.Cast,
-                    (m, c) =>
-                        new
-                        {
-                            MovieId = m.Id,
-                            PersonId = c.Person.Id,
-                            PersonName = c.Person.Name,
-                            PersonProfile = c.Person.Profile,
-                            PersonKnownForDepartment = c.Person.KnownForDepartment,
-                            PersonColorPalette = c.Person._colorPalette,
-                            PersonDeathDay = c.Person.DeathDay,
-                            PersonGender = c.Person.Gender,
-                            c.Role.Character,
-                            c.Role.Order,
-                        }
-                )
-                .ToListAsync(ct)
-        )
+                await ctx
+                    .Movies.AsNoTracking()
+                    .Where(m => ids.Contains(m.Id))
+                    .SelectMany(
+                        m => m.Cast,
+                        (m, c) =>
+                            new
+                            {
+                                MovieId = m.Id,
+                                PersonId = c.Person.Id,
+                                PersonName = c.Person.Name,
+                                PersonProfile = c.Person.Profile,
+                                PersonKnownForDepartment = c.Person.KnownForDepartment,
+                                PersonColorPalette = c.Person._colorPalette,
+                                PersonDeathDay = c.Person.DeathDay,
+                                PersonGender = c.Person.Gender,
+                                c.Role.Character,
+                                c.Role.Order,
+                            }
+                    )
+                    .ToListAsync(ct)
+            )
             .GroupBy(x => x.MovieId)
             .SelectMany(
                 g => g.OrderBy(x => x.Order).Take(15),
@@ -388,31 +397,31 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .ToLookup(x => x.Key, x => x.Cast);
 
         ILookup<int, SpecialCrewProjection> crewLookup = (
-            await ctx
-                .Movies.AsNoTracking()
-                .Where(m => ids.Contains(m.Id))
-                .SelectMany(
-                    m => m.Crew,
-                    (m, c) =>
-                        new
-                        {
-                            MovieId = m.Id,
-                            PersonId = c.Person.Id,
-                            PersonName = c.Person.Name,
-                            PersonProfile = c.Person.Profile,
-                            PersonKnownForDepartment = c.Person.KnownForDepartment,
-                            PersonColorPalette = c.Person._colorPalette,
-                            PersonDeathDay = c.Person.DeathDay,
-                            PersonGender = c.Person.Gender,
-                            c.Job.Task,
-                            c.Job.Order,
-                        }
-                )
-                .ToListAsync(ct)
-        )
+                await ctx
+                    .Movies.AsNoTracking()
+                    .Where(m => ids.Contains(m.Id))
+                    .SelectMany(
+                        m => m.Crew,
+                        (m, c) =>
+                            new
+                            {
+                                MovieId = m.Id,
+                                PersonId = c.Person.Id,
+                                PersonName = c.Person.Name,
+                                PersonProfile = c.Person.Profile,
+                                PersonKnownForDepartment = c.Person.KnownForDepartment,
+                                PersonColorPalette = c.Person._colorPalette,
+                                PersonDeathDay = c.Person.DeathDay,
+                                PersonGender = c.Person.Gender,
+                                c.Job.Task,
+                                c.Job.Order,
+                            }
+                    )
+                    .ToListAsync(ct)
+            )
             .GroupBy(x => x.MovieId)
             .SelectMany(
-                g => g.Take(15),
+                g => g.OrderBy(x => x.Order).Take(15),
                 (g, x) =>
                     new
                     {
@@ -573,6 +582,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 g => g.Key,
                 g =>
                     g.OrderByDescending(i => i.VoteAverage)
+                        .ThenBy(i => i.Id)
                         .Take(2)
                         .Select(i => new SpecialImageProjection
                         {
@@ -597,6 +607,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 g => g.Key,
                 g =>
                     g.OrderByDescending(i => i.VoteAverage)
+                        .ThenBy(i => i.Id)
                         .Take(2)
                         .Select(i => new SpecialImageProjection
                         {
@@ -615,28 +626,28 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             );
 
         ILookup<int, SpecialCastProjection> castLookup = (
-            await ctx
-                .Tvs.AsNoTracking()
-                .Where(tv => ids.Contains(tv.Id))
-                .SelectMany(
-                    tv => tv.Cast,
-                    (tv, c) =>
-                        new
-                        {
-                            TvId = tv.Id,
-                            PersonId = c.Person.Id,
-                            PersonName = c.Person.Name,
-                            PersonProfile = c.Person.Profile,
-                            PersonKnownForDepartment = c.Person.KnownForDepartment,
-                            PersonColorPalette = c.Person._colorPalette,
-                            PersonDeathDay = c.Person.DeathDay,
-                            PersonGender = c.Person.Gender,
-                            c.Role.Character,
-                            c.Role.Order,
-                        }
-                )
-                .ToListAsync(ct)
-        )
+                await ctx
+                    .Tvs.AsNoTracking()
+                    .Where(tv => ids.Contains(tv.Id))
+                    .SelectMany(
+                        tv => tv.Cast,
+                        (tv, c) =>
+                            new
+                            {
+                                TvId = tv.Id,
+                                PersonId = c.Person.Id,
+                                PersonName = c.Person.Name,
+                                PersonProfile = c.Person.Profile,
+                                PersonKnownForDepartment = c.Person.KnownForDepartment,
+                                PersonColorPalette = c.Person._colorPalette,
+                                PersonDeathDay = c.Person.DeathDay,
+                                PersonGender = c.Person.Gender,
+                                c.Role.Character,
+                                c.Role.Order,
+                            }
+                    )
+                    .ToListAsync(ct)
+            )
             .GroupBy(x => x.TvId)
             .SelectMany(
                 g => g.OrderBy(x => x.Order).Take(15),
@@ -661,31 +672,31 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .ToLookup(x => x.Key, x => x.Cast);
 
         ILookup<int, SpecialCrewProjection> crewLookup = (
-            await ctx
-                .Tvs.AsNoTracking()
-                .Where(tv => ids.Contains(tv.Id))
-                .SelectMany(
-                    tv => tv.Crew,
-                    (tv, c) =>
-                        new
-                        {
-                            TvId = tv.Id,
-                            PersonId = c.Person.Id,
-                            PersonName = c.Person.Name,
-                            PersonProfile = c.Person.Profile,
-                            PersonKnownForDepartment = c.Person.KnownForDepartment,
-                            PersonColorPalette = c.Person._colorPalette,
-                            PersonDeathDay = c.Person.DeathDay,
-                            PersonGender = c.Person.Gender,
-                            c.Job.Task,
-                            c.Job.Order,
-                        }
-                )
-                .ToListAsync(ct)
-        )
+                await ctx
+                    .Tvs.AsNoTracking()
+                    .Where(tv => ids.Contains(tv.Id))
+                    .SelectMany(
+                        tv => tv.Crew,
+                        (tv, c) =>
+                            new
+                            {
+                                TvId = tv.Id,
+                                PersonId = c.Person.Id,
+                                PersonName = c.Person.Name,
+                                PersonProfile = c.Person.Profile,
+                                PersonKnownForDepartment = c.Person.KnownForDepartment,
+                                PersonColorPalette = c.Person._colorPalette,
+                                PersonDeathDay = c.Person.DeathDay,
+                                PersonGender = c.Person.Gender,
+                                c.Job.Task,
+                                c.Job.Order,
+                            }
+                    )
+                    .ToListAsync(ct)
+            )
             .GroupBy(x => x.TvId)
             .SelectMany(
-                g => g.Take(15),
+                g => g.OrderBy(x => x.Order).Take(15),
                 (g, x) =>
                     new
                     {
@@ -720,28 +731,63 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
         return tvs;
     }
 
-    public async Task<Special?> GetSpecialAsync(Guid userId, Ulid id, CancellationToken ct = default)
+    public async Task<Special?> GetSpecialAsync(
+        Guid userId,
+        Ulid id,
+        CancellationToken ct = default
+    )
     {
         return await context
-                .Specials.AsNoTracking()
-                .AsSplitQuery()
-                .Where(special => special.Id == id)
-                .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
-                    .ThenInclude(specialItem => specialItem.Movie)
-                        .ThenInclude(movie => movie!.VideoFiles)
-                            .ThenInclude(file =>
-                                file.UserData.Where(userData => userData.UserId.Equals(userId))
-                            )
-                .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
-                    .ThenInclude(specialItem => specialItem.Episode)
-                        .ThenInclude(movie => movie!.VideoFiles)
-                            .ThenInclude(file =>
-                                file.UserData.Where(userData => userData.UserId.Equals(userId))
-                            )
-                .Include(special =>
-                    special.SpecialUser.Where(specialUser => specialUser.UserId.Equals(userId))
-                )
-                .FirstOrDefaultAsync(ct);
+            .Specials.AsNoTracking()
+            .AsSplitQuery()
+            .Where(special => special.Id == id)
+            .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
+            .ThenInclude(specialItem => specialItem.Movie)
+            .ThenInclude(movie => movie!.VideoFiles)
+            .ThenInclude(file =>
+                file.UserData.Where(userData => userData.UserId.Equals(userId))
+            )
+            .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
+            .ThenInclude(specialItem => specialItem.Episode)
+            .ThenInclude(movie => movie!.VideoFiles)
+            .ThenInclude(file =>
+                file.UserData.Where(userData => userData.UserId.Equals(userId))
+            )
+            .Include(special =>
+                special.SpecialUser.Where(specialUser => specialUser.UserId.Equals(userId))
+            )
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<Special?> GetSpecialWithTvAsync(
+        Guid userId,
+        Ulid id,
+        CancellationToken ct = default
+    )
+    {
+        return await context
+            .Specials.AsNoTracking()
+            .AsSplitQuery()
+            .Where(special => special.Id == id)
+            .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
+            .ThenInclude(specialItem => specialItem.Movie)
+            .ThenInclude(movie => movie!.VideoFiles)
+            .ThenInclude(file =>
+                file.UserData.Where(userData => userData.UserId.Equals(userId))
+            )
+            .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
+            .ThenInclude(specialItem => specialItem.Episode)
+            .ThenInclude(episode => episode!.Tv)
+            .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
+            .ThenInclude(specialItem => specialItem.Episode)
+            .ThenInclude(movie => movie!.VideoFiles)
+            .ThenInclude(file =>
+                file.UserData.Where(userData => userData.UserId.Equals(userId))
+            )
+            .Include(special =>
+                special.SpecialUser.Where(specialUser => specialUser.UserId.Equals(userId))
+            )
+            .FirstOrDefaultAsync(ct);
     }
 
     private static readonly Func<
@@ -749,20 +795,19 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
         Guid,
         Ulid,
         Task<Special?>
-    > GetSpecialAvailableQuery = EF.CompileAsyncQuery(
-        (MediaContext mediaContext, Guid userId, Ulid id) =>
-            mediaContext
-                .Specials.AsNoTracking()
-                .Where(special => special.Id == id)
-                .Include(special => special.Items)
-                    .ThenInclude(specialItem => specialItem.Movie)
-                        .ThenInclude(movie => movie!.VideoFiles)
-                            .ThenInclude(file => file.UserData)
-                .Include(special => special.Items)
-                    .ThenInclude(specialItem => specialItem.Episode)
-                        .ThenInclude(episode => episode!.VideoFiles)
-                            .ThenInclude(file => file.UserData)
-                .FirstOrDefault()
+    > GetSpecialAvailableQuery = EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid id) =>
+        mediaContext
+            .Specials.AsNoTracking()
+            .Where(special => special.Id == id)
+            .Include(special => special.Items)
+            .ThenInclude(specialItem => specialItem.Movie)
+            .ThenInclude(movie => movie!.VideoFiles)
+            .ThenInclude(file => file.UserData)
+            .Include(special => special.Items)
+            .ThenInclude(specialItem => specialItem.Episode)
+            .ThenInclude(episode => episode!.VideoFiles)
+            .ThenInclude(file => file.UserData)
+            .FirstOrDefault()
     );
 
     public Task<Special?> GetSpecialAvailableAsync(Guid userId, Ulid id) =>
@@ -782,23 +827,25 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .AsSplitQuery()
             .Include(special => special.SpecialUser.Where(su => su.UserId == userId))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                    .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
+            .ThenInclude(item => item.Movie)
+            .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                    .ThenInclude(m =>
-                        m!
-                            .CertificationMovies.Where(c =>
-                                c.Certification.Iso31661 == "US"
-                                || c.Certification.Iso31661 == country
-                            )
-                            .Take(1)
+            .ThenInclude(item => item.Movie)
+            .ThenInclude(m =>
+                m!
+                    .CertificationMovies.Where(c =>
+                        c.Certification.Iso31661 == "US"
+                        || c.Certification.Iso31661 == country
                     )
-                        .ThenInclude(c => c.Certification)
+                    .OrderBy(c => c.CertificationId)
+                    .Take(1)
+            )
+            .ThenInclude(c => c.Certification)
             .OrderBy(special => special.TitleSort)
+            .ThenBy(special => special.Id)
             .Skip(page * take)
             .Take(take)
             .ToListAsync(ct);
@@ -817,75 +864,94 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .AsSplitQuery()
             .Where(special => special.Id == id)
             .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                    .ThenInclude(m => m!.Translations.Where(t => t.Iso6391 == language))
+            .ThenInclude(item => item.Movie)
+            .ThenInclude(m => m!.Translations.Where(t => t.Iso6391 == language))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                    .ThenInclude(m => m!.Images.Where(i => i.Type == "logo").Take(1))
+            .ThenInclude(item => item.Movie)
+            .ThenInclude(m =>
+                m!
+                    .Images.Where(i => i.Type == "logo")
+                    .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
+                    .Take(1)
+            )
             .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                    .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
-                        .ThenInclude(v => v.Metadata)
+            .ThenInclude(item => item.Movie)
+            .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
+            .ThenInclude(v => v.Metadata)
             .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                    .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
-                        .ThenInclude(v =>
-                            v.UserData.Where(ud => ud.UserId == userId && ud.Type == "specials")
-                        )
+            .ThenInclude(item => item.Movie)
+            .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
+            .ThenInclude(v =>
+                v.UserData.Where(ud => ud.UserId == userId && ud.Type == "specials")
+            )
             .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                    .ThenInclude(m => m!.MovieUser.Where(mu => mu.UserId == userId))
+            .ThenInclude(item => item.Movie)
+            .ThenInclude(m => m!.MovieUser.Where(mu => mu.UserId == userId))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                    .ThenInclude(m =>
-                        m!
-                            .CertificationMovies.Where(c =>
-                                c.Certification.Iso31661 == "US"
-                                || c.Certification.Iso31661 == country
-                            )
-                            .Take(1)
+            .ThenInclude(item => item.Movie)
+            .ThenInclude(m =>
+                m!
+                    .CertificationMovies.Where(c =>
+                        c.Certification.Iso31661 == "US"
+                        || c.Certification.Iso31661 == country
                     )
-                        .ThenInclude(c => c.Certification)
+                    .OrderBy(c => c.CertificationId)
+                    .Take(1)
+            )
+            .ThenInclude(c => c.Certification)
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.Season)
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e => e!.Season)
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.Translations.Where(t => t.Iso6391 == language))
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e => e!.Translations.Where(t => t.Iso6391 == language))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.Images.Where(i => i.Type == "logo").Take(1))
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e =>
+                e!
+                    .Images.Where(i => i.Type == "logo")
+                    .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
+                    .Take(1)
+            )
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
-                        .ThenInclude(v => v.Metadata)
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
+            .ThenInclude(v => v.Metadata)
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
-                        .ThenInclude(v => v.UserData.Where(ud => ud.UserId == userId))
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
+            .ThenInclude(v => v.UserData.Where(ud => ud.UserId == userId))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.Tv)
-                        .ThenInclude(tv => tv.Translations.Where(t => t.Iso6391 == language))
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e => e!.Tv)
+            .ThenInclude(tv => tv.Translations.Where(t => t.Iso6391 == language))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.Tv)
-                        .ThenInclude(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e => e!.Tv)
+            .ThenInclude(tv =>
+                tv.Images.Where(i => i.Type == "logo")
+                    .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
+                    .Take(1)
+            )
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.Tv)
-                        .ThenInclude(tv => tv.TvUser.Where(tu => tu.UserId == userId))
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e => e!.Tv)
+            .ThenInclude(tv => tv.TvUser.Where(tu => tu.UserId == userId))
             .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.Tv)
-                        .ThenInclude(tv =>
-                            tv.CertificationTvs.Where(c =>
-                                    c.Certification.Iso31661 == "US"
-                                    || c.Certification.Iso31661 == country
-                                )
-                                .Take(1)
-                        )
-                            .ThenInclude(c => c.Certification)
+            .ThenInclude(item => item.Episode)
+            .ThenInclude(e => e!.Tv)
+            .ThenInclude(tv =>
+                tv.CertificationTvs.Where(c =>
+                        c.Certification.Iso31661 == "US"
+                        || c.Certification.Iso31661 == country
+                    )
+                    .OrderBy(c => c.CertificationId)
+                    .Take(1)
+            )
+            .ThenInclude(c => c.Certification)
             .FirstOrDefaultAsync(ct);
     }
 
@@ -909,9 +975,9 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             SpecialItem? firstItemWithVideo = await context
                 .SpecialItems.Where(si => si.SpecialId == specialId)
                 .Include(si => si.Movie)
-                    .ThenInclude(m => m!.VideoFiles)
+                .ThenInclude(m => m!.VideoFiles)
                 .Include(si => si.Episode)
-                    .ThenInclude(e => e!.VideoFiles)
+                .ThenInclude(e => e!.VideoFiles)
                 .OrderBy(si => si.Order)
                 .FirstOrDefaultAsync(ct);
 
@@ -990,7 +1056,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             ct
         );
 
-        await Task.WhenAll(moviesTask, tvsTask);
+        await Task.WhenAll([moviesTask, tvsTask]);
 
         return new(moviesTask.Result, tvsTask.Result);
     }
@@ -1017,7 +1083,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 .WhenMatched(specialUser =>
                     new() { SpecialId = specialUser.SpecialId, UserId = specialUser.UserId }
                 )
-                .RunAsync();
+                .RunAsync(ct);
         }
         else
         {
@@ -1058,11 +1124,10 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
         await ctx
             .SpecialUser.Upsert(new() { SpecialId = special.Id, UserId = userId })
             .On(su => new { su.SpecialId, su.UserId })
-            .WhenMatched(
-                (existing, incoming) =>
-                    new() { SpecialId = incoming.SpecialId, UserId = incoming.UserId }
+            .WhenMatched((existing, incoming) =>
+                new() { SpecialId = incoming.SpecialId, UserId = incoming.UserId }
             )
-            .RunAsync();
+            .RunAsync(ct);
 
         return special;
     }
@@ -1124,7 +1189,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
     public async Task<Special?> DeleteSpecialAsync(Ulid id, CancellationToken ct = default)
     {
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-        Special? special = await ctx.Specials.FindAsync(keyValues: [id], cancellationToken: ct);
+        Special? special = await ctx.Specials.FindAsync([id], ct);
 
         if (special is null)
             return null;
@@ -1157,11 +1222,11 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .SpecialItems.AsNoTracking()
             .Where(si => si.SpecialId == id)
             .Include(si => si.Movie)
-                .ThenInclude(m => m!.VideoFiles)
+            .ThenInclude(m => m!.VideoFiles)
             .Include(si => si.Episode)
-                .ThenInclude(e => e!.Tv)
+            .ThenInclude(e => e!.Tv)
             .Include(si => si.Episode)
-                .ThenInclude(e => e!.VideoFiles)
+            .ThenInclude(e => e!.VideoFiles)
             .OrderBy(si => si.Order)
             .ToListAsync(ct);
     }
@@ -1239,3 +1304,4 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .ToListAsync(ct);
     }
 }
+  

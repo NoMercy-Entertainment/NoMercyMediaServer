@@ -40,7 +40,7 @@ public class ReleaseManager(
         CoverArtImageManagerManager.CoverPalette? coverPalette
     )> Add(Guid id, Library albumLibrary, Folder libraryFolder, MediaFolder mediaFolder)
     {
-        logger.LogTrace("Adding Release: {Id} to Library: {Title}", id, albumLibrary.Title);
+        logger.LogTrace("Adding Release: {Id} to Library: {Title}", [id, albumLibrary.Title]);
 
         MusicBrainzReleaseClient musicBrainzReleaseClient = new();
         MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(

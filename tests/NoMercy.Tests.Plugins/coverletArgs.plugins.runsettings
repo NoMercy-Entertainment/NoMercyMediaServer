@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Task-scoped coverage runsettings for the NoMercy.Plugins / NoMercy.Plugins.Abstractions
+  100%-coverage drive. Copied from ../coverletArgs.runsettings with two changes:
+    - ExcludeByAttribute drops CompilerGeneratedAttribute (the shared file excludes it,
+      which hides async state-machine bodies from coverage — exactly what this task
+      needs to see).
+    - Include is scoped to the two target assemblies so this file can't be mistaken
+      for a full-suite settings file.
+  Do NOT use this file for the full `dotnet test` suite; it exists only for the
+  scoped coverage runs this task requires. Do NOT modify ../coverletArgs.runsettings.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Exclude>[coverlet.*.tests?]*,[*]Coverlet.Core*,[*]Moq*</Exclude>
+          <Include>[NoMercy.Plugins]*,[NoMercy.Plugins.Abstractions]*</Include>
+          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute</ExcludeByAttribute>
+          <SingleHit>false</SingleHit>
+          <UseSourceLink>false</UseSourceLink>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          <SkipAutoProps>true</SkipAutoProps>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

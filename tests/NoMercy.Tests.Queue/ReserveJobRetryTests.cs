@@ -104,7 +104,7 @@ public class ReserveJobRetryTests : IDisposable
         Assert.False(
             foundPopAfterRecursiveCall,
             "CRIT-09 regression: ReserveJob recursive call result is being discarded (pop after call). "
-                + "The recursive call must have 'return' before it."
+                         + "The recursive call must have 'return' before it."
         );
     }
 

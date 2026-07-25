@@ -320,32 +320,6 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         }
     }
 
-    /// <summary>
-    /// Moves a reserved job onto a different queue with a replaced payload
-    /// and resets its reservation so it re-enters immediately. Used by the
-    /// GPU-budget safety net: a job pinned to a GPU device key that will
-    /// never be satisfiable (the vendor isn't physically present on this
-    /// host) is re-planned onto a software <c>ResourceRequirement</c> and
-    /// rerouted to its now-CPU queue instead of looping at the budget gate
-    /// forever. Attempts reset to 0 — the degraded requirement is a
-    /// different, previously-unattempted shape of the job.
-    /// </summary>
-    public void Requeue(QueueJobModel job, string newQueue, string newPayload)
-    {
-        lock (_writeLock)
-        {
-            job.Queue = newQueue;
-            job.ReservedAt = null;
-            job.AvailableAt = DateTime.UtcNow;
-            job.Attempts = 0;
-            context.UpdateJob(job);
-            context.UpdateJobPayload(job.Id, newPayload, DateTime.UtcNow);
-            context.SaveChanges();
-        }
-
-        WorkAvailable.Release();
-    }
-
     public void DeleteJob(QueueJobModel queueJob, int attempt = 0)
     {
         try

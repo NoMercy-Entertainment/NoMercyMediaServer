@@ -9,19 +9,17 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Extensions;
-
 namespace NoMercy.Tests.NmSystem;
 
 [Trait("Category", "Unit")]
 public class TitleSortHelperTests
 {
     [Theory]
-    [InlineData("The Matrix", null, "matrix")]
-    [InlineData("An Apple", null, "apple")]
-    [InlineData("A Bridge", null, "bridge")]
-    [InlineData("the matrix", null, "matrix")]
-    [InlineData("THE MATRIX", null, "matrix")]
+    [InlineData(["The Matrix", null, "matrix"])]
+    [InlineData(["An Apple", null, "apple"])]
+    [InlineData(["A Bridge", null, "bridge"])]
+    [InlineData(["the matrix", null, "matrix"])]
+    [InlineData(["THE MATRIX", null, "matrix"])]
     public void TitleSort_StripLeadingArticles(string title, int? year, string expected)
     {
         string result = title.TitleSort(year);
@@ -29,9 +27,9 @@ public class TitleSortHelperTests
     }
 
     [Theory]
-    [InlineData("Matrix", null, "matrix")]
-    [InlineData("Bridge", null, "bridge")]
-    [InlineData("Zebra", null, "zebra")]
+    [InlineData(["Matrix", null, "matrix"])]
+    [InlineData(["Bridge", null, "bridge"])]
+    [InlineData(["Zebra", null, "zebra"])]
     public void TitleSort_NoArticle_JustLowercase(string title, int? year, string expected)
     {
         string result = title.TitleSort(year);
@@ -77,8 +75,8 @@ public class TitleSortHelperTests
     }
 
     [Theory]
-    [InlineData("", null)]
-    [InlineData("", 2020)]
+    [InlineData(["", null])]
+    [InlineData(["", 2020])]
     public void TitleSort_EmptyTitle_ReturnsEmpty(string title, int? year)
     {
         string result = title.TitleSort(year);

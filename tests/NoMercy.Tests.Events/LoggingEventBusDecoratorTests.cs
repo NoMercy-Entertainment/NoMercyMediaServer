@@ -223,7 +223,7 @@ public class LoggingEventBusDecoratorTests
 
         await decorator.PublishAsync(new TestEvent());
 
-        order.Should().Equal("logged", "handled");
+        order.Should().Equal(["logged", "handled"]);
     }
 
     [Fact]

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
@@ -215,7 +216,10 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
 
         // Compute speed ratio vs software baseline
         double swFps = BestFpsForHandle(codec, swHandle, speedIndex);
-        string ratio = swFps > 0 ? $"{bestFps / swFps:F1}×" : "?×";
+        // This ratio rides the DecisionLog Message/Data the dashboard reads over
+        // the API — keep it period-decimal regardless of host locale.
+        string ratio =
+            swFps > 0 ? $"{(bestFps / swFps).ToString("F1", CultureInfo.InvariantCulture)}×" : "?×";
 
         decisions.Add(
             new(
@@ -291,7 +295,10 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
 
         string swHandle = CanonicalSoftwareHandle(codec);
         double swFps = BestFpsForHandle(codec, swHandle, speedIndex);
-        string ratio = swFps > 0 ? $"{bestFps / swFps:F1}×" : "?×";
+        // This ratio rides the DecisionLog Message/Data the dashboard reads over
+        // the API — keep it period-decimal regardless of host locale.
+        string ratio =
+            swFps > 0 ? $"{(bestFps / swFps).ToString("F1", CultureInfo.InvariantCulture)}×" : "?×";
 
         decisions.Add(
             new(

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
@@ -21,7 +22,6 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercy.Providers.TMDB.Models.Movies;
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Collections;
 
 public class CollectionManager(
@@ -63,7 +63,7 @@ public class CollectionManager(
         jobDispatcher.DispatchColorPaletteJob("collection", collection.Id.ToString());
         jobDispatcher.DispatchJob<CollectionExtrasJob, TmdbCollectionAppends>(collectionAppends);
 
-        logger.LogDebug("Collection: {Name}: Added to Library {Title}", collectionAppends.Name, library.Title);
+        logger.LogDebug("Collection: {Name}: Added to Library {Title}", [collectionAppends.Name, library.Title]);
 
         return collectionAppends;
     }

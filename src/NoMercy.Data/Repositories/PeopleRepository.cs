@@ -43,6 +43,7 @@ public class PeopleRepository(MediaContext context) : IPeopleRepository
                 person.Translations.Where(translation => translation.Iso6391 == language)
             )
             .OrderByDescending(person => person.Popularity)
+            .ThenBy(person => person.Id)
             .Skip(page * take)
             .Take(take)
             .ToListAsync(ct);

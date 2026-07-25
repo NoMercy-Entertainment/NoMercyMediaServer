@@ -19,20 +19,20 @@ namespace NoMercy.Tests.NmSystem;
 public class CleanSeriesTitleTests
 {
     [Theory]
-    [InlineData("Halo 2022", "Halo")]
-    [InlineData("New Amsterdam 2018", "New Amsterdam")]
-    [InlineData("Dark 2017", "Dark")]
-    [InlineData("Halo 2022 1080p WEB", "Halo")]
-    [InlineData("Breaking Bad", "Breaking Bad")]
-    [InlineData("Stranger Things", "Stranger Things")]
+    [InlineData(["Halo 2022", "Halo"])]
+    [InlineData(["New Amsterdam 2018", "New Amsterdam"])]
+    [InlineData(["Dark 2017", "Dark"])]
+    [InlineData(["Halo 2022 1080p WEB", "Halo"])]
+    [InlineData(["Breaking Bad", "Breaking Bad"])]
+    [InlineData(["Stranger Things", "Stranger Things"])]
     public void Strips_tags_and_trailing_year(string input, string expected) =>
         input.CleanSeriesTitle().Should().Be(expected);
 
     [Theory]
     // year-named shows: a leading year is the title, keep it
-    [InlineData("1883", "1883")]
-    [InlineData("1923", "1923")]
-    [InlineData("1899", "1899")]
+    [InlineData(["1883", "1883"])]
+    [InlineData(["1923", "1923"])]
+    [InlineData(["1899", "1899"])]
     public void Preserves_year_named_shows(string input, string expected) =>
         input.CleanSeriesTitle().Should().Be(expected);
 }

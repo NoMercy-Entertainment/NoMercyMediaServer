@@ -52,7 +52,7 @@ public class WebhookNotificationDispatcherTests
     [Fact]
     public async Task Notify_MultipleUrls_PostsToEach()
     {
-        EncoderOptions options = BuildOptions("https://a.example/hook", "https://b.example/hook");
+        EncoderOptions options = BuildOptions(["https://a.example/hook", "https://b.example/hook"]);
         CapturingHandler handler = new() { StatusCode = HttpStatusCode.OK };
         WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
 
@@ -126,9 +126,7 @@ public class WebhookNotificationDispatcherTests
     [Fact]
     public async Task Notify_OneUrlFails_OtherStillGetsNotified()
     {
-        EncoderOptions options = BuildOptions(
-            "https://bad.example/hook",
-            "https://good.example/hook"
+        EncoderOptions options = BuildOptions(["https://bad.example/hook", "https://good.example/hook"]
         );
         PerUrlHandler handler = new(
             new Dictionary<string, HttpStatusCode>
@@ -145,7 +143,7 @@ public class WebhookNotificationDispatcherTests
         // Good URL gets at least one request even though bad URL is failing.
         Assert.Contains(
             handler.Requests,
-            r => r.url == "https://good.example/hook" && r.statusCode == HttpStatusCode.OK
+            r => r is { url: "https://good.example/hook", statusCode: HttpStatusCode.OK }
         );
     }
 

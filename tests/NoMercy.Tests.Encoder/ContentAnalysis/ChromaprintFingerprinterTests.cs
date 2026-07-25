@@ -38,7 +38,7 @@ public class ChromaprintFingerprinterTests
     {
         uint[] result = ChromaprintFingerprinter.ParseRawOutput("123,456,789\n");
 
-        result.Should().Equal(123u, 456u, 789u);
+        result.Should().Equal([123u, 456u, 789u]);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class ChromaprintFingerprinterTests
         // drop everything up to and including the '=' sign.
         uint[] result = ChromaprintFingerprinter.ParseRawOutput("CHROMAPRINT=1,2,3");
 
-        result.Should().Equal(1u, 2u, 3u);
+        result.Should().Equal([1u, 2u, 3u]);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class ChromaprintFingerprinterTests
         captured.Should().Contain("300.000");
         captured.Should().Contain("-f");
         captured.Should().Contain("chromaprint");
-        result.Hashes.Should().Equal(1u, 2u, 3u);
+        result.Hashes.Should().Equal([1u, 2u, 3u]);
         result.StartTime.Should().Be(TimeSpan.FromSeconds(10));
     }
 
@@ -155,8 +155,8 @@ public class ChromaprintFingerprinterTests
 
         captured.Should().NotBeNull();
         captured!.Should().NotContain("-ss");
-        captured.Should().ContainInConsecutiveOrder("-sseof", "-240.000");
-        captured.Should().ContainInConsecutiveOrder("-t", "240.000");
+        captured.Should().ContainInConsecutiveOrder(["-sseof", "-240.000"]);
+        captured.Should().ContainInConsecutiveOrder(["-t", "240.000"]);
     }
 
     [Fact]

@@ -112,7 +112,7 @@ public class VideoFileRepositoryTests : IDisposable
             TvId = 1399,
             SeasonId = 9999,
         };
-        context.Episodes.AddRange(episodeWithVideo, episodeWithoutVideo);
+        context.Episodes.AddRange([episodeWithVideo, episodeWithoutVideo]);
 
         VideoFile videoFile = new()
         {
@@ -171,7 +171,7 @@ public class VideoFileRepositoryTests : IDisposable
             TvId = 1399,
             SeasonId = 8888,
         };
-        context.Episodes.AddRange(episode3, episode1, episode2);
+        context.Episodes.AddRange([episode3, episode1, episode2]);
 
         foreach (Episode ep in new[] { episode1, episode2, episode3 })
         {

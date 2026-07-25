@@ -49,7 +49,7 @@ public class MovieImportJob : AbstractMediaJob
     {
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
-
+        
         MovieRepository movieRepository = new(context);
         MovieManager movieManager = new(
             movieRepository,
@@ -59,17 +59,15 @@ public class MovieImportJob : AbstractMediaJob
         );
 
         Library? movieLibrary = await context
-            .Libraries.Where(f => f.Id == LibraryId)
-            .Include(f => f.FolderLibraries)
-                .ThenInclude(f => f.Folder)
+            .Libraries.Where(library => library.Id == LibraryId)
+            .Include(library => library.FolderLibraries)
+                .ThenInclude(folderLibrary => folderLibrary.Folder)
             .FirstOrDefaultAsync();
 
         if (movieLibrary is null)
         {
             Log.LogInformation(
-                "MovieImportJob: library {LibraryId} not found, skipping movie {Id}",
-                LibraryId,
-                Id
+                "MovieImportJob: library {LibraryId} not found, skipping movie {Id}", LibraryId, Id
             );
             return;
         }
@@ -96,7 +94,7 @@ public class MovieImportJob : AbstractMediaJob
                 {
                     MediaId = Id,
                     MediaType = "movie",
-                    Title = movieAppends.Title ?? $"Movie {Id}",
+                    Title = movieAppends.Title,
                     LibraryId = LibraryId,
                 }
             );

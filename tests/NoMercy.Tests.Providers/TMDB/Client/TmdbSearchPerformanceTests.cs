@@ -315,7 +315,7 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
         Task<TmdbPaginatedResponse<TmdbMovie>?> task1 = client1.Movie("Interstellar");
         Task<TmdbPaginatedResponse<TmdbTvShow>?> task2 = client2.TvShow("Stranger Things");
 
-        await Task.WhenAll(task1, task2);
+        await Task.WhenAll([task1, task2]);
         stopwatch.Stop();
 
         // Assert

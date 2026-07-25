@@ -40,6 +40,12 @@ public class QueueRunner
 
     private volatile bool _isInitialized;
 
+    // Guards the check-and-set of _isInitialized. Initialize() is invoked from
+    // several boot paths (bootstrapper, deferred init, HTTPS/port rebuild) that can
+    // overlap; without this a plain check-then-set let two callers both pass the
+    // guard and spawn duplicate worker sets.
+    private readonly object _initializationLock = new();
+
     private readonly ConcurrentDictionary<string, Thread> _activeWorkerThreads = new();
 
     private readonly JobQueue _jobQueue;
@@ -114,13 +120,16 @@ public class QueueRunner
 
     public async Task Initialize()
     {
-        if (_isInitialized)
+        lock (_initializationLock)
         {
-            _logger.LogDebug("QueueRunner.Initialize() skipped — already initialized");
-            return;
-        }
+            if (_isInitialized)
+            {
+                _logger.LogDebug("QueueRunner.Initialize() skipped — already initialized");
+                return;
+            }
 
-        _isInitialized = true;
+            _isInitialized = true;
+        }
 
         _jobQueue.ResetAllReservedJobs();
 
@@ -138,9 +147,7 @@ public class QueueRunner
         }
 
         _logger.LogInformation(
-            "Queue workers spawned per queue: {Counts} (total {Total})",
-            string.Join(", ", spawnedPerQueue.Select(kvp => $"{kvp.Key}={kvp.Value}")),
-            workerCount
+            "Queue workers spawned per queue: {Counts} (total {Total})", [string.Join(", ", spawnedPerQueue.Select(kvp => $"{kvp.Key}={kvp.Value}")), workerCount]
         );
 
         // Restore any queues that were persisted as paused before the last shutdown.
@@ -183,7 +190,7 @@ public class QueueRunner
             }
             catch (Exception ex)
             {
-                _logger.LogError("Worker {Name} crashed: {Message}", name, ex.Message);
+                _logger.LogError("Worker {Name} crashed: {Message}", [name, ex.Message]);
             }
             finally
             {
@@ -206,8 +213,8 @@ public class QueueRunner
 
         QueueWorker queueWorkerInstance = new(
             _jobQueue,
-            name,
-            this,
+            name: name,
+            runner: this,
             scopeFactory: _scopeFactory,
             phaseTracker: _phaseTracker,
             resourceBudget: budget,
@@ -447,9 +454,7 @@ public class QueueRunner
         workerTask.ContinueWith(
             t =>
                 _logger.LogError(
-                    "UpdateRunningWorkerCounts for {Name} failed: {Message}",
-                    name,
-                    t.Exception?.GetBaseException().Message
+                    "UpdateRunningWorkerCounts for {Name} failed: {Message}", [name, t.Exception?.GetBaseException().Message]
                 ),
             TaskContinuationOptions.OnlyOnFaulted
         );
@@ -473,7 +478,7 @@ public class QueueRunner
             await _configurationStore.SetValueAsync($"{name}Runners", max.ToString(), userId);
         }
 
-        _logger.LogInformation("Setting queue {Name} to {Max} workers", name, max);
+        _logger.LogInformation("Setting queue {Name} to {Max} workers", [name, max]);
 
         CancellationToken token;
         lock (_workersLock)

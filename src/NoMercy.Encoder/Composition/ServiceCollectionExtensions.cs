@@ -402,6 +402,10 @@ public static class ServiceCollectionExtensions
         // At startup: delete any lts-* orphan dirs left by a previous crash.
         services.AddHostedService<LiveTranscodeOrphanSweeper>();
 
+        // At startup: delete batch-encode working dirs (nomercy-enc-* and
+        // output-mirrored show dirs) left under the transcode root by a crash.
+        services.AddHostedService<TranscodeRootOrphanSweeper>();
+
         // Every 30 s: evict sessions with no playlist/segment hit in the last N minutes.
         services.AddHostedService<LiveSessionIdleReaper>();
 
@@ -508,7 +512,6 @@ public static class ServiceCollectionExtensions
         // per-library. Each subscriber here has its own opt-out flag on
         // EncoderOptions for hard disable.
         services.AddSingleton<IntroDetectSubscriber>();
-        services.AddSingleton<OcrPostEncodeSubscriber>();
         services.AddSingleton<CropDetectSubscriber>();
         services.AddHostedService<V3SubscriberActivator>();
 

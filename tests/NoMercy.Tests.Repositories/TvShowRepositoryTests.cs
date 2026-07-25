@@ -333,7 +333,7 @@ public class TvShowRepositoryTests : IDisposable
             Name = "Vince Gilligan",
             TitleSort = "gilligan, vince",
         };
-        context.People.AddRange(person1, person2);
+        context.People.AddRange([person1, person2]);
 
         // Role and Job
         Role role1 = new() { Character = "Walter White", EpisodeCount = 62 };

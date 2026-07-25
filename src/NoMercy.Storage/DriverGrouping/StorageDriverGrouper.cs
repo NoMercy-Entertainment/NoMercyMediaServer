@@ -109,7 +109,7 @@ public static class StorageDriverGrouper
             return new(endpointKey, StorageEndpointKind.Smb);
         }
 
-        if (normalized.Length >= 2 && normalized[1] == ':')
+        if (normalized is [_, ':', ..])
         {
             string driveKey = normalized[..2].ToUpperInvariant();
             return new(driveKey, StorageEndpointKind.Local);
@@ -193,7 +193,7 @@ public static class StorageDriverGrouper
 
     private static char LocalSeparator(string path)
     {
-        return path.Length >= 2 && path[1] == ':' ? '\\' : '/';
+        return path is [_, ':', ..] ? '\\' : '/';
     }
 
     private static string[] SplitPath(string path, char separator)
@@ -211,7 +211,7 @@ public static class StorageDriverGrouper
             return "/";
 
         string first = segments[0];
-        bool isWindowsDrive = first.Length == 2 && first[1] == ':';
+        bool isWindowsDrive = first is [_, ':'];
 
         if (isWindowsDrive)
         {

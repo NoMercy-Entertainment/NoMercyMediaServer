@@ -11,7 +11,6 @@
 
 using Moq;
 using NoMercy.Encoder.Analysis;
-using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Tests.Encoder.Storage;
 

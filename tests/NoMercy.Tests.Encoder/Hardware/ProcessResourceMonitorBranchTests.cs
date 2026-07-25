@@ -191,7 +191,7 @@ public class ProcessResourceMonitorBranchTests
                 sut.SampleProcessFamilyCpu();
         });
 
-        Func<Task> act = () => Task.WhenAll(cpuUsageLoop, familyLoop);
+        Func<Task> act = () => Task.WhenAll([cpuUsageLoop, familyLoop]);
 
         await act.Should().NotThrowAsync();
     }

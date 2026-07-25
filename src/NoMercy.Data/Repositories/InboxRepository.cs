@@ -26,7 +26,10 @@ public class InboxRepository(MediaContext context, InboxRoutingService routingSe
         if (!string.IsNullOrWhiteSpace(status))
             query = query.Where(item => item.Status == status);
 
-        return query.OrderByDescending(item => item.CreatedAt).ToListAsync(ct);
+        return query
+            .OrderByDescending(item => item.CreatedAt)
+            .ThenByDescending(item => item.Id)
+            .ToListAsync(ct);
     }
 
     public Task<InboxItem?> GetByIdAsync(Ulid id, CancellationToken ct = default)

@@ -22,26 +22,28 @@ namespace NoMercy.Tests.Encoder.Subtitles;
 
 /// <summary>
 /// End-to-end arg-building and output-placement contract for
-/// <see cref="SubtitleOcrEngine.OcrAsync"/>. Pins the two regressions that
-/// shipped bitmap-subtitle OCR completely broken in production:
+/// <see cref="SubtitleOcrEngine.OcrAsync"/>. Pins the regressions that shipped
+/// bitmap-subtitle OCR completely broken in production:
 ///
-/// • Bug 1 — the tesseract <c>datapath=</c> option was never passed to the
-///   <c>ocr</c> filter, so every run failed with "Error opening data file"
-///   against the BUILD MACHINE's baked-in tessdata path. The datapath
-///   assertions below must fail if that wiring is ever dropped again — a
-///   mock that only checks the process exited 0 is fake coverage for this
-///   regression.
+/// • Bug 1 — the tesseract data dir and the metadata output file were placed
+///   INSIDE the ffmpeg filtergraph (<c>datapath=C:/…</c>, <c>file=C:\…</c>). A
+///   Windows drive colon inside a filtergraph value is unescapable — every
+///   escaping attempt is parsed as an option separator — so the <c>ocr</c>
+///   filter aborted at parse on every run and no <c>.vtt</c> was ever produced.
+///   The data dir now rides on the <c>TESSDATA_PREFIX</c> env var and the
+///   metadata file is a bare name resolved against the working directory, so no
+///   colon path enters the graph. The assertions below fail if one leaks back.
+///   (The prior test asserted the broken <c>datapath=C\\:/…</c> string was
+///   built, never that ffmpeg could parse it — green while production was 100%
+///   broken. That is the fake coverage this rewrite removes.)
 /// • Bug 2 — the OCR .vtt was written next to the SOURCE file instead of the
-///   encode output directory, so the post-encode library scan never
-///   registered it. The sidecar assertions confirm it lands under
+///   encode output directory, so the post-encode library scan never registered
+///   it. The sidecar assertions confirm it lands under
 ///   <c>{outputDirectory}/subtitles/</c>.
-/// • Bug 3 — the sidecar was named <c>{lang}.ocr{streamIndex}.{ext}</c>, which
-///   these tests used to assert. The library scan keys subtitles by
-///   <c>{lang}.{type}</c> and pairs a bitmap track with the text sidecar
-///   sharing its key, so "ocr0" parsed as a variant of its own: the .mks stayed
-///   orphaned and no player ever listed the result. The name has to be the
-///   bitmap track's sibling — <c>{title}.{lang}.{variant}.{ext}</c>, the same
-///   template the extraction pass writes.
+/// • Bug 3 — the sidecar was named <c>{lang}.ocr{streamIndex}.{ext}</c>. The
+///   library scan keys subtitles by <c>{lang}.{type}</c> and pairs a bitmap
+///   track with the text sidecar sharing its key, so the name has to be the
+///   bitmap track's sibling — <c>{title}.{lang}.{variant}.{ext}</c>.
 /// </summary>
 public class SubtitleOcrEngineOcrAsyncTests
 {
@@ -49,41 +51,58 @@ public class SubtitleOcrEngineOcrAsyncTests
     private const string InputPath = "/media/movie.mkv";
     private const string ModelDirectory = "/models/tessdata";
 
-    // ── Datapath wiring (Bug 1 regression) ───────────────────────────────────
+    // ── Filtergraph carries no colon path (Bug 1 regression) ─────────────────
 
     [Fact]
-    public async Task Filter_includes_datapath_pointing_at_model_directory()
+    public async Task Tessdata_directory_rides_in_on_env_not_the_filtergraph()
     {
-        string[]? capturedArgs = null;
-        Mock<IProcessRunner> processRunner = CaptureArgsProcess(args => capturedArgs = args);
-        Mock<IStorage> storage = StorageMock();
-        Mock<ITesseractModelManager> modelManager = ModelManagerMock();
+        string[]? args = null;
+        IReadOnlyDictionary<string, string>? env = null;
+        Mock<IProcessRunner> processRunner = CaptureProcess(
+            (a, e, _) =>
+            {
+                args = a;
+                env = e;
+            }
+        );
 
         SubtitleOcrEngine engine = new(
             Options(),
             processRunner.Object,
-            modelManager.Object,
-            storage.Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
             NullLogger<SubtitleOcrEngine>.Instance
         );
 
         await engine.OcrAsync(InputPath, 0, "eng", SubtitleCodecType.WebVtt, default);
 
-        capturedArgs.Should().NotBeNull();
-        int filterIndex = Array.IndexOf(capturedArgs!, "-filter_complex");
-        filterIndex.Should().BeGreaterThan(-1);
-        string filter = capturedArgs![filterIndex + 1];
+        string filter = Filter(args);
         filter.Should().Contain("ocr=language=eng");
-        filter.Should().Contain($"datapath={ModelDirectory}");
+        // datapath= put the model dir into the filtergraph; a drive colon there is
+        // unescapable and aborts the parse — it must never come back.
+        filter.Should().NotContain("datapath");
+        env.Should().ContainKey("TESSDATA_PREFIX");
+        // The prefix is the directory that holds the traineddata — the same value
+        // the code derives from the model path, separator-normalized per platform.
+        env!
+            ["TESSDATA_PREFIX"]
+            .Should()
+            .Be(Path.GetDirectoryName(Path.Combine(ModelDirectory, "eng.traineddata")));
     }
 
     [Fact]
-    public async Task Datapath_on_a_windows_model_directory_is_filter_escaped()
+    public async Task Windows_model_directory_never_enters_the_filtergraph()
     {
         const string windowsModelDir = @"C:\ffmpeg_build\tessdata";
-        string[]? capturedArgs = null;
-        Mock<IProcessRunner> processRunner = CaptureArgsProcess(args => capturedArgs = args);
-        Mock<IStorage> storage = StorageMock();
+        string[]? args = null;
+        IReadOnlyDictionary<string, string>? env = null;
+        Mock<IProcessRunner> processRunner = CaptureProcess(
+            (a, e, _) =>
+            {
+                args = a;
+                env = e;
+            }
+        );
         Mock<ITesseractModelManager> modelManager = new();
         modelManager
             .Setup(m => m.EnsureLanguageModelAsync("eng", It.IsAny<CancellationToken>()))
@@ -93,15 +112,57 @@ public class SubtitleOcrEngineOcrAsyncTests
             Options(),
             processRunner.Object,
             modelManager.Object,
-            storage.Object,
+            StorageMock().Object,
             NullLogger<SubtitleOcrEngine>.Instance
         );
 
         await engine.OcrAsync(InputPath, 0, "eng", SubtitleCodecType.WebVtt, default);
 
-        int filterIndex = Array.IndexOf(capturedArgs!, "-filter_complex");
-        string filter = capturedArgs![filterIndex + 1];
-        filter.Should().Contain(@"datapath=C\\:/ffmpeg_build/tessdata");
+        string filter = Filter(args);
+        // No drive letter and no backslash-escaped drive: the graph stays
+        // colon-path-free so ffmpeg can parse it. The raw path rides on the env.
+        filter.Should().NotContain("C:");
+        filter.Should().NotContain(@"C\");
+        filter.Should().NotContain("datapath");
+        env!
+            ["TESSDATA_PREFIX"]
+            .Should()
+            .Be(Path.GetDirectoryName(Path.Combine(windowsModelDir, "eng.traineddata")));
+    }
+
+    [Fact]
+    public async Task Metadata_file_is_a_bare_name_resolved_against_the_working_directory()
+    {
+        string[]? args = null;
+        string? workingDirectory = null;
+        Mock<IProcessRunner> processRunner = CaptureProcess(
+            (a, _, w) =>
+            {
+                args = a;
+                workingDirectory = w;
+            }
+        );
+
+        SubtitleOcrEngine engine = new(
+            Options(),
+            processRunner.Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
+            NullLogger<SubtitleOcrEngine>.Instance
+        );
+
+        await engine.OcrAsync(InputPath, 0, "eng", SubtitleCodecType.WebVtt, default);
+
+        string filter = Filter(args);
+        string fileValue = filter[(filter.IndexOf("file=", StringComparison.Ordinal) + 5)..];
+        // A bare name — no separators, no colon — so it can never reintroduce a
+        // path into the graph. It lands in the working directory the runner is
+        // handed, which must therefore be set.
+        fileValue.Should().MatchRegex(@"^ocr-[0-9a-fA-F]+\.txt$");
+        fileValue.Should().NotContain("/");
+        fileValue.Should().NotContain(@"\");
+        fileValue.Should().NotContain(":");
+        workingDirectory.Should().NotBeNullOrEmpty();
     }
 
     // ── Output placement (Bug 2 regression) ──────────────────────────────────
@@ -109,15 +170,11 @@ public class SubtitleOcrEngineOcrAsyncTests
     [Fact]
     public async Task No_output_directory_keeps_legacy_next_to_input_naming()
     {
-        Mock<IProcessRunner> processRunner = SuccessProcess();
-        Mock<IStorage> storage = StorageMock();
-        Mock<ITesseractModelManager> modelManager = ModelManagerMock();
-
         SubtitleOcrEngine engine = new(
             Options(),
-            processRunner.Object,
-            modelManager.Object,
-            storage.Object,
+            SuccessProcess().Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
             NullLogger<SubtitleOcrEngine>.Instance
         );
 
@@ -135,27 +192,21 @@ public class SubtitleOcrEngineOcrAsyncTests
     [Fact]
     public async Task Sidecar_is_named_as_the_bitmap_tracks_sibling()
     {
-        // {title}.{lang}.{variant}.vtt — what FileManager.SubtitleFileRegex reads
-        // as eng|full, so it pairs with Show.S01E01.NoMercy.eng.full.mks and the
-        // player lists it. Anything else leaves the .mks orphaned.
-        Mock<IProcessRunner> processRunner = SuccessProcess();
         Mock<IStorage> storage = StorageMock();
-        Mock<ITesseractModelManager> modelManager = ModelManagerMock();
-
         SubtitleOcrEngine engine = new(
             Options(),
-            processRunner.Object,
-            modelManager.Object,
+            SuccessProcess().Object,
+            ModelManagerMock().Object,
             storage.Object,
             NullLogger<SubtitleOcrEngine>.Instance
         );
 
         SubtitleTrack track = await engine.OcrAsync(
             InputPath,
-            2,
-            "eng",
-            SubtitleCodecType.WebVtt,
-            default,
+            streamIndex: 2,
+            language: "eng",
+            outputFormat: SubtitleCodecType.WebVtt,
+            ct: default,
             sidecar: Sidecar(storage.Object, "full")
         );
 
@@ -167,35 +218,29 @@ public class SubtitleOcrEngineOcrAsyncTests
     [Fact]
     public async Task Two_streams_sharing_a_language_are_separated_by_variant()
     {
-        // Same language, different variant: the discriminator is the variant the
-        // extraction pass gave the .mks, never the stream index — an index-based
-        // name pairs with nothing.
-        Mock<IProcessRunner> processRunner = SuccessProcess();
         Mock<IStorage> storage = StorageMock();
-        Mock<ITesseractModelManager> modelManager = ModelManagerMock();
-
         SubtitleOcrEngine engine = new(
             Options(),
-            processRunner.Object,
-            modelManager.Object,
+            SuccessProcess().Object,
+            ModelManagerMock().Object,
             storage.Object,
             NullLogger<SubtitleOcrEngine>.Instance
         );
 
         SubtitleTrack full = await engine.OcrAsync(
             InputPath,
-            2,
-            "eng",
-            SubtitleCodecType.WebVtt,
-            default,
+            streamIndex: 2,
+            language: "eng",
+            outputFormat: SubtitleCodecType.WebVtt,
+            ct: default,
             sidecar: Sidecar(storage.Object, "full")
         );
         SubtitleTrack sign = await engine.OcrAsync(
             InputPath,
-            5,
-            "eng",
-            SubtitleCodecType.WebVtt,
-            default,
+            streamIndex: 5,
+            language: "eng",
+            outputFormat: SubtitleCodecType.WebVtt,
+            ct: default,
             sidecar: Sidecar(storage.Object, "sign")
         );
 
@@ -207,24 +252,21 @@ public class SubtitleOcrEngineOcrAsyncTests
     [Fact]
     public async Task Srt_format_keeps_the_same_sibling_naming()
     {
-        Mock<IProcessRunner> processRunner = SuccessProcess();
         Mock<IStorage> storage = StorageMock();
-        Mock<ITesseractModelManager> modelManager = ModelManagerMock();
-
         SubtitleOcrEngine engine = new(
             Options(),
-            processRunner.Object,
-            modelManager.Object,
+            SuccessProcess().Object,
+            ModelManagerMock().Object,
             storage.Object,
             NullLogger<SubtitleOcrEngine>.Instance
         );
 
         SubtitleTrack track = await engine.OcrAsync(
             InputPath,
-            1,
-            "spa",
-            SubtitleCodecType.Srt,
-            default,
+            streamIndex: 1,
+            language: "spa",
+            outputFormat: SubtitleCodecType.Srt,
+            ct: default,
             sidecar: Sidecar(storage.Object, "forced")
         );
 
@@ -236,28 +278,21 @@ public class SubtitleOcrEngineOcrAsyncTests
     [Fact]
     public async Task Sidecar_is_written_through_its_own_storage_not_the_injected_one()
     {
-        // The bundle usually lives on a driver the engine's injected storage
-        // cannot address; writing through the injected one put the sidecar under
-        // the server's working directory instead of the library.
-        Mock<IProcessRunner> processRunner = SuccessProcess();
-        Mock<IStorage> injected = StorageMock();
         Mock<IStorage> destination = StorageMock();
-        Mock<ITesseractModelManager> modelManager = ModelManagerMock();
-
         SubtitleOcrEngine engine = new(
             Options(),
-            processRunner.Object,
-            modelManager.Object,
-            injected.Object,
+            SuccessProcess().Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
             NullLogger<SubtitleOcrEngine>.Instance
         );
 
         await engine.OcrAsync(
             InputPath,
-            0,
-            "eng",
-            SubtitleCodecType.WebVtt,
-            default,
+            streamIndex: 0,
+            language: "eng",
+            outputFormat: SubtitleCodecType.WebVtt,
+            ct: default,
             sidecar: Sidecar(destination.Object, "full")
         );
 
@@ -274,10 +309,10 @@ public class SubtitleOcrEngineOcrAsyncTests
 
     private static OcrSidecarTarget Sidecar(IStorage storage, string variant) =>
         new(
-            Storage: storage,
-            OutputDirectory: "/encoded/Show.S01E01",
-            MediaTitle: "Show.S01E01.NoMercy",
-            Variant: variant
+            storage,
+            "/encoded/Show.S01E01",
+            "Show.S01E01.NoMercy",
+            variant
         );
 
     // ── Failure surfacing ─────────────────────────────────────────────────────
@@ -291,28 +326,25 @@ public class SubtitleOcrEngineOcrAsyncTests
                 p.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<Action<string>?>(),
-                    It.IsAny<Action<string>?>(),
+                    It.IsAny<IReadOnlyDictionary<string, string>?>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
             .ReturnsAsync(
                 new ProcessResult(
-                    ExitCode: 1,
-                    StdOut: "",
-                    StdErr: "Error opening data file /ffmpeg_build/windows/share/tessdata/eng.traineddata",
-                    Duration: TimeSpan.Zero
+                    1,
+                    "",
+                    "Error opening data file /ffmpeg_build/windows/share/tessdata/eng.traineddata",
+                    TimeSpan.Zero
                 )
             );
-        Mock<IStorage> storage = StorageMock();
-        Mock<ITesseractModelManager> modelManager = ModelManagerMock();
 
         SubtitleOcrEngine engine = new(
             Options(),
             processRunner.Object,
-            modelManager.Object,
-            storage.Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
             NullLogger<SubtitleOcrEngine>.Instance
         );
 
@@ -324,6 +356,14 @@ public class SubtitleOcrEngineOcrAsyncTests
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static string Filter(string[]? args)
+    {
+        args.Should().NotBeNull();
+        int index = Array.IndexOf(args!, "-filter_complex");
+        index.Should().BeGreaterThan(-1);
+        return args![index + 1];
+    }
 
     private static EncoderOptions Options() => new() { FfmpegPathOverride = FfmpegPath };
 
@@ -357,19 +397,20 @@ public class SubtitleOcrEngineOcrAsyncTests
                 p.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<Action<string>?>(),
-                    It.IsAny<Action<string>?>(),
+                    It.IsAny<IReadOnlyDictionary<string, string>?>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                new ProcessResult(0, "", "", TimeSpan.Zero)
             );
         return processRunner;
     }
 
-    private static Mock<IProcessRunner> CaptureArgsProcess(Action<string[]> capture)
+    private static Mock<IProcessRunner> CaptureProcess(
+        Action<string[], IReadOnlyDictionary<string, string>?, string?> capture
+    )
     {
         Mock<IProcessRunner> processRunner = new();
         processRunner
@@ -377,8 +418,7 @@ public class SubtitleOcrEngineOcrAsyncTests
                 p.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<Action<string>?>(),
-                    It.IsAny<Action<string>?>(),
+                    It.IsAny<IReadOnlyDictionary<string, string>?>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 )
@@ -386,13 +426,12 @@ public class SubtitleOcrEngineOcrAsyncTests
             .Callback<
                 string,
                 string[],
-                Action<string>?,
-                Action<string>?,
+                IReadOnlyDictionary<string, string>?,
                 string?,
                 CancellationToken
-            >((_, args, _, _, _, _) => capture(args))
+            >((_, args, env, workingDirectory, _) => capture(args, env, workingDirectory))
             .ReturnsAsync(
-                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                new ProcessResult(0, "", "", TimeSpan.Zero)
             );
         return processRunner;
     }

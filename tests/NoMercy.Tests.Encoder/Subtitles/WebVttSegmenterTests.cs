@@ -145,10 +145,7 @@ public class WebVttSegmenterTests
     [Fact]
     public void SegmentIndexAndBoundaries_AreCorrect()
     {
-        string vttContent = Vtt(
-            Cue("00:00:01.000", "00:00:02.000", "A"),
-            Cue("00:00:07.000", "00:00:08.000", "B"),
-            Cue("00:00:13.000", "00:00:14.000", "C")
+        string vttContent = Vtt([Cue("00:00:01.000", "00:00:02.000", "A"), Cue("00:00:07.000", "00:00:08.000", "B"), Cue("00:00:13.000", "00:00:14.000", "C")]
         );
 
         IReadOnlyList<WebVttSegment> segments = _sut.SliceContent(
@@ -192,9 +189,7 @@ public class WebVttSegmenterTests
     public void MultipleCues_InSameSegment_BothPresent()
     {
         // Two cues fully inside segment 0 — both must land together.
-        string vttContent = Vtt(
-            Cue("00:00:01.000", "00:00:02.000", "First"),
-            Cue("00:00:03.000", "00:00:04.000", "Second")
+        string vttContent = Vtt([Cue("00:00:01.000", "00:00:02.000", "First"), Cue("00:00:03.000", "00:00:04.000", "Second")]
         );
 
         IReadOnlyList<WebVttSegment> segments = _sut.SliceContent(

@@ -103,9 +103,7 @@ public class FileWatcherEventHandler : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(
-                "FileWatcher: Error processing {FolderPath}: {Message}",
-                @event.FolderPath,
-                ex.Message
+                "FileWatcher: Error processing {FolderPath}: {Message}", [@event.FolderPath, ex.Message]
             );
         }
         finally
@@ -135,10 +133,7 @@ public class FileWatcherEventHandler : IDisposable
             int metadataDeleted = await fileRepository.DeleteMetadataByHostFolderAsync(hostFolder);
 
             _logger.LogInformation(
-                "FileWatcher: Deleted {VideoFilesDeleted} video file(s) and {MetadataDeleted} metadata record(s) for {HostFolder}",
-                videoFilesDeleted,
-                metadataDeleted,
-                hostFolder
+                "FileWatcher: Deleted {VideoFilesDeleted} video file(s) and {MetadataDeleted} metadata record(s) for {HostFolder}", [videoFilesDeleted, metadataDeleted, hostFolder]
             );
 
             if (videoFilesDeleted > 0 && EventBusProvider.IsConfigured)
@@ -151,9 +146,7 @@ public class FileWatcherEventHandler : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(
-                "FileWatcher: Error processing deletion of {FullPath}: {Message}",
-                @event.FullPath,
-                ex.Message
+                "FileWatcher: Error processing deletion of {FullPath}: {Message}", [@event.FullPath, ex.Message]
             );
         }
     }
@@ -163,9 +156,7 @@ public class FileWatcherEventHandler : IDisposable
         try
         {
             _logger.LogInformation(
-                "FileWatcher: Processing rename from {OldFullPath} to {NewFullPath}",
-                @event.OldFullPath,
-                @event.NewFullPath
+                "FileWatcher: Processing rename from {OldFullPath} to {NewFullPath}", [@event.OldFullPath, @event.NewFullPath]
             );
 
             string oldHostFolder = Path.GetDirectoryName(@event.OldFullPath).OrEmpty();
@@ -186,10 +177,7 @@ public class FileWatcherEventHandler : IDisposable
             if (updated > 0)
             {
                 _logger.LogInformation(
-                    "FileWatcher: Updated {Updated} video file path(s) from {OldHostFolder} to {NewHostFolder}",
-                    updated,
-                    oldHostFolder,
-                    newHostFolder
+                    "FileWatcher: Updated {Updated} video file path(s) from {OldHostFolder} to {NewHostFolder}", [updated, oldHostFolder, newHostFolder]
                 );
 
                 if (EventBusProvider.IsConfigured)
@@ -218,10 +206,7 @@ public class FileWatcherEventHandler : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(
-                "FileWatcher: Error processing rename from {OldFullPath} to {NewFullPath}: {Message}",
-                @event.OldFullPath,
-                @event.NewFullPath,
-                ex.Message
+                "FileWatcher: Error processing rename from {OldFullPath} to {NewFullPath}: {Message}", [@event.OldFullPath, @event.NewFullPath, ex.Message]
             );
         }
     }
@@ -235,9 +220,7 @@ public class FileWatcherEventHandler : IDisposable
         }
 
         _logger.LogInformation(
-            "FileWatcher: Movie {Path}: Searching TMDB for '{Title}'",
-            mediaFolder.Path,
-            mediaFolder.Parsed.Title
+            "FileWatcher: Movie {Path}: Searching TMDB for '{Title}'", [mediaFolder.Path, mediaFolder.Parsed.Title]
         );
 
         using TmdbSearchClient tmdbSearchClient = new();
@@ -277,9 +260,7 @@ public class FileWatcherEventHandler : IDisposable
         }
 
         _logger.LogInformation(
-            "FileWatcher: Movie '{Title}' found on TMDB (ID: {Id}), dispatching job",
-            movie.Title,
-            movie.Id
+            "FileWatcher: Movie '{Title}' found on TMDB (ID: {Id}), dispatching job", [movie.Title, movie.Id]
         );
 
         JobDispatcher jobDispatcher = new();
@@ -295,9 +276,7 @@ public class FileWatcherEventHandler : IDisposable
         }
 
         _logger.LogInformation(
-            "FileWatcher: TV Show {Path}: Searching TMDB for '{Title}'",
-            mediaFolder.Path,
-            mediaFolder.Parsed.Title
+            "FileWatcher: TV Show {Path}: Searching TMDB for '{Title}'", [mediaFolder.Path, mediaFolder.Parsed.Title]
         );
 
         using TmdbSearchClient tmdbSearchClient = new();
@@ -337,9 +316,7 @@ public class FileWatcherEventHandler : IDisposable
         }
 
         _logger.LogInformation(
-            "FileWatcher: TV Show '{Name}' found on TMDB (ID: {Id}), dispatching job",
-            show.Name,
-            show.Id
+            "FileWatcher: TV Show '{Name}' found on TMDB (ID: {Id}), dispatching job", [show.Name, show.Id]
         );
 
         JobDispatcher jobDispatcher = new();

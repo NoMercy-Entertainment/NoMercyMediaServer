@@ -28,9 +28,9 @@ public class AlphaBucketTests
     }
 
     [Theory]
-    [InlineData("matrix", "M")]
-    [InlineData("inception", "I")]
-    [InlineData("zelda", "Z")]
+    [InlineData(["matrix", "M"])]
+    [InlineData(["inception", "I"])]
+    [InlineData(["zelda", "Z"])]
     public void Matches_LetterBucket_IsCaseInsensitive(string titleSort, string bucket)
     {
         Assert.True(AlphaBucket.Matches(titleSort, bucket));

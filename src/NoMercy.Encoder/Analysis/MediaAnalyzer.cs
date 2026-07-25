@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using Newtonsoft.Json.Linq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
@@ -369,8 +370,18 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
         string[] parts = frac.Split('/');
         if (
             parts.Length == 2
-            && double.TryParse(parts[0], out double num)
-            && double.TryParse(parts[1], out double den)
+            && double.TryParse(
+                parts[0],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double num
+            )
+            && double.TryParse(
+                parts[1],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double den
+            )
             && den > 0
         )
             return num / den;
@@ -384,8 +395,18 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
         string[] parts = frac.Split('/');
         if (
             parts.Length == 2
-            && double.TryParse(parts[0], out double num)
-            && double.TryParse(parts[1], out double den)
+            && double.TryParse(
+                parts[0],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double num
+            )
+            && double.TryParse(
+                parts[1],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double den
+            )
             && den > 0
         )
             return num / den;

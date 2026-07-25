@@ -460,5 +460,16 @@ public static class Shell
                 FreeConsole();
             }
         }
+
+        /// <summary>
+        /// Bind an externally-started process to the server's kill-on-close job
+        /// object so it dies with this server even on a hard kill or crash —
+        /// the graceful-shutdown cancellation path does not run then. Callers
+        /// that launch their own process (e.g. the encoder's ProcessRunner)
+        /// should call this right after Process.Start. Safe off Windows (falls
+        /// back to a ProcessExit tree-kill) and if the process already exited.
+        /// </summary>
+        public static void AttachToParentLifetime(Process process) =>
+            ChildProcessManager.Attach(process);
     }
 }

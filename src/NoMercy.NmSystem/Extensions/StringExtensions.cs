@@ -226,7 +226,7 @@ public static partial class StringExtensions
         string title = raw.CleanReleaseTitle();
 
         Match year = MatchYearRegex().Match(title);
-        if (year.Success && year.Index > 0)
+        if (year is { Success: true, Index: > 0 })
             title = title[..year.Index];
 
         return title.TrimEnd('-', '.', '_', ' ').Trim();
@@ -587,17 +587,17 @@ public static partial class StringExtensions
         foreach (char c in str)
         {
             if (
-                (c >= '\u0590' && c <= '\u05FF')
+                c is >= '\u0590' and <= '\u05FF'
                 || // Hebrew
-                (c >= '\u0600' && c <= '\u06FF')
+                c is >= '\u0600' and <= '\u06FF'
                 || // Arabic
-                (c >= '\u0750' && c <= '\u077F')
+                c is >= '\u0750' and <= '\u077F'
                 || // Arabic Supplement
-                (c >= '\u08A0' && c <= '\u08FF')
+                c is >= '\u08A0' and <= '\u08FF'
                 || // Arabic Extended-A
-                (c >= '\uFB50' && c <= '\uFDFF')
+                c is >= '\uFB50' and <= '\uFDFF'
                 || // Arabic Presentation Forms-A
-                (c >= '\uFE70' && c <= '\uFEFF')
+                c is >= '\uFE70' and <= '\uFEFF'
             ) // Arabic Presentation Forms-B
             {
                 return TextDirection.RTL;

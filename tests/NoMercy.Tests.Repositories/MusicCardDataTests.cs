@@ -9,10 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Data.Repositories;
-using Xunit;
 
 namespace NoMercy.Tests.Repositories;
 

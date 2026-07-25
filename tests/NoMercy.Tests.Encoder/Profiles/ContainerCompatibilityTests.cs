@@ -17,53 +17,53 @@ namespace NoMercy.Tests.Encoder.Profiles;
 public class ContainerCompatibilityTests
 {
     [Theory]
-    [InlineData(Container.Mp4, VideoCodecType.H264, true)]
-    [InlineData(Container.Mp4, VideoCodecType.H265, true)]
-    [InlineData(Container.Mp4, VideoCodecType.Vp9, false)]
-    [InlineData(Container.HlsTs, VideoCodecType.H264, true)]
-    [InlineData(Container.HlsTs, VideoCodecType.H265, false)]
-    [InlineData(Container.HlsTs, VideoCodecType.Av1, false)]
-    [InlineData(Container.HlsFmp4, VideoCodecType.H264, true)]
-    [InlineData(Container.HlsFmp4, VideoCodecType.H265, true)]
-    [InlineData(Container.HlsFmp4, VideoCodecType.Av1, true)]
-    [InlineData(Container.Mkv, VideoCodecType.H264, true)]
-    [InlineData(Container.Mkv, VideoCodecType.Av1, true)]
+    [InlineData([Container.Mp4, VideoCodecType.H264, true])]
+    [InlineData([Container.Mp4, VideoCodecType.H265, true])]
+    [InlineData([Container.Mp4, VideoCodecType.Vp9, false])]
+    [InlineData([Container.HlsTs, VideoCodecType.H264, true])]
+    [InlineData([Container.HlsTs, VideoCodecType.H265, false])]
+    [InlineData([Container.HlsTs, VideoCodecType.Av1, false])]
+    [InlineData([Container.HlsFmp4, VideoCodecType.H264, true])]
+    [InlineData([Container.HlsFmp4, VideoCodecType.H265, true])]
+    [InlineData([Container.HlsFmp4, VideoCodecType.Av1, true])]
+    [InlineData([Container.Mkv, VideoCodecType.H264, true])]
+    [InlineData([Container.Mkv, VideoCodecType.Av1, true])]
     public void Video_codec_compatibility(Container container, VideoCodecType codec, bool expected)
     {
         ContainerCompatibility.SupportsVideo(container, codec).Should().Be(expected);
     }
 
     [Theory]
-    [InlineData(Container.Mp4, AudioCodecType.Aac, true)]
-    [InlineData(Container.Mp4, AudioCodecType.Opus, false)]
-    [InlineData(Container.HlsFmp4, AudioCodecType.Aac, true)]
-    [InlineData(Container.HlsFmp4, AudioCodecType.Eac3, true)]
-    [InlineData(Container.HlsFmp4, AudioCodecType.Opus, true)]
-    [InlineData(Container.AudioHlsFmp4, AudioCodecType.Opus, true)]
-    [InlineData(Container.Mkv, AudioCodecType.TrueHd, true)]
-    [InlineData(Container.Flac, AudioCodecType.Flac, true)]
-    [InlineData(Container.Mp3, AudioCodecType.Mp3, true)]
+    [InlineData([Container.Mp4, AudioCodecType.Aac, true])]
+    [InlineData([Container.Mp4, AudioCodecType.Opus, false])]
+    [InlineData([Container.HlsFmp4, AudioCodecType.Aac, true])]
+    [InlineData([Container.HlsFmp4, AudioCodecType.Eac3, true])]
+    [InlineData([Container.HlsFmp4, AudioCodecType.Opus, true])]
+    [InlineData([Container.AudioHlsFmp4, AudioCodecType.Opus, true])]
+    [InlineData([Container.Mkv, AudioCodecType.TrueHd, true])]
+    [InlineData([Container.Flac, AudioCodecType.Flac, true])]
+    [InlineData([Container.Mp3, AudioCodecType.Mp3, true])]
     public void Audio_codec_compatibility(Container container, AudioCodecType codec, bool expected)
     {
         ContainerCompatibility.SupportsAudio(container, codec).Should().Be(expected);
     }
 
     [Theory]
-    [InlineData(VideoCodecType.H264, true)]
-    [InlineData(VideoCodecType.H265, true)]
-    [InlineData(VideoCodecType.Av1, true)]
-    [InlineData(VideoCodecType.Vp9, false)]
+    [InlineData([VideoCodecType.H264, true])]
+    [InlineData([VideoCodecType.H265, true])]
+    [InlineData([VideoCodecType.Av1, true])]
+    [InlineData([VideoCodecType.Vp9, false])]
     public void Cmaf_compatible_video_codecs(VideoCodecType codec, bool expected)
     {
         ContainerCompatibility.IsCmafCompatible(codec).Should().Be(expected);
     }
 
     [Theory]
-    [InlineData(AudioCodecType.Aac, true)]
-    [InlineData(AudioCodecType.Eac3, true)]
-    [InlineData(AudioCodecType.Mp3, false)]
-    [InlineData(AudioCodecType.Opus, false)]
-    [InlineData(AudioCodecType.Flac, false)]
+    [InlineData([AudioCodecType.Aac, true])]
+    [InlineData([AudioCodecType.Eac3, true])]
+    [InlineData([AudioCodecType.Mp3, false])]
+    [InlineData([AudioCodecType.Opus, false])]
+    [InlineData([AudioCodecType.Flac, false])]
     public void Cmaf_compatible_audio_codecs(AudioCodecType codec, bool expected)
     {
         ContainerCompatibility.IsCmafCompatible(codec).Should().Be(expected);
@@ -166,24 +166,24 @@ public class ContainerCompatibilityTests
     }
 
     [Theory]
-    [InlineData(Container.Mkv, SubtitleCodecType.WebVtt, true)]
-    [InlineData(Container.Mkv, SubtitleCodecType.Srt, true)]
-    [InlineData(Container.Mkv, SubtitleCodecType.Ass, true)]
-    [InlineData(Container.Mkv, SubtitleCodecType.Pgs, true)]
-    [InlineData(Container.Mp4, SubtitleCodecType.WebVtt, true)]
-    [InlineData(Container.Mp4, SubtitleCodecType.Srt, true)]
-    [InlineData(Container.Mp4, SubtitleCodecType.Ass, false)] // ASS is MKV-only
-    [InlineData(Container.Mp4, SubtitleCodecType.Pgs, false)] // PGS bitmap is MKV-only
-    [InlineData(Container.HlsTs, SubtitleCodecType.WebVtt, true)]
-    [InlineData(Container.HlsTs, SubtitleCodecType.Ass, false)]
-    [InlineData(Container.HlsFmp4, SubtitleCodecType.WebVtt, true)]
-    [InlineData(Container.Dash, SubtitleCodecType.WebVtt, true)]
-    [InlineData(Container.Mp3, SubtitleCodecType.WebVtt, false)] // audio-only
-    [InlineData(Container.Aac, SubtitleCodecType.WebVtt, false)]
-    [InlineData(Container.Flac, SubtitleCodecType.WebVtt, false)]
-    [InlineData(Container.Mka, SubtitleCodecType.WebVtt, false)]
-    [InlineData(Container.AudioHlsTs, SubtitleCodecType.WebVtt, false)]
-    [InlineData(Container.AudioHlsFmp4, SubtitleCodecType.WebVtt, false)]
+    [InlineData([Container.Mkv, SubtitleCodecType.WebVtt, true])]
+    [InlineData([Container.Mkv, SubtitleCodecType.Srt, true])]
+    [InlineData([Container.Mkv, SubtitleCodecType.Ass, true])]
+    [InlineData([Container.Mkv, SubtitleCodecType.Pgs, true])]
+    [InlineData([Container.Mp4, SubtitleCodecType.WebVtt, true])]
+    [InlineData([Container.Mp4, SubtitleCodecType.Srt, true])]
+    [InlineData([Container.Mp4, SubtitleCodecType.Ass, false])] // ASS is MKV-only
+    [InlineData([Container.Mp4, SubtitleCodecType.Pgs, false])] // PGS bitmap is MKV-only
+    [InlineData([Container.HlsTs, SubtitleCodecType.WebVtt, true])]
+    [InlineData([Container.HlsTs, SubtitleCodecType.Ass, false])]
+    [InlineData([Container.HlsFmp4, SubtitleCodecType.WebVtt, true])]
+    [InlineData([Container.Dash, SubtitleCodecType.WebVtt, true])]
+    [InlineData([Container.Mp3, SubtitleCodecType.WebVtt, false])] // audio-only
+    [InlineData([Container.Aac, SubtitleCodecType.WebVtt, false])]
+    [InlineData([Container.Flac, SubtitleCodecType.WebVtt, false])]
+    [InlineData([Container.Mka, SubtitleCodecType.WebVtt, false])]
+    [InlineData([Container.AudioHlsTs, SubtitleCodecType.WebVtt, false])]
+    [InlineData([Container.AudioHlsFmp4, SubtitleCodecType.WebVtt, false])]
     public void Subtitle_codec_compatibility(
         Container container,
         SubtitleCodecType codec,

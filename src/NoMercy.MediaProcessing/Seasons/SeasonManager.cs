@@ -107,9 +107,7 @@ public class SeasonManager(
     {
         await seasonRepository.RemoveSeasonAsync(season.Id);
         logger.LogDebug(
-            "Show {ShowName}: Season {SeasonNumber}: Removed",
-            showName,
-            season.SeasonNumber
+            "Show {ShowName}: Season {SeasonNumber}: Removed", [showName, season.SeasonNumber]
         );
     }
 
@@ -133,9 +131,7 @@ public class SeasonManager(
 
         await seasonRepository.StoreTranslationsAsync(translations);
         logger.LogDebug(
-            "Show {ShowName}: Season {SeasonNumber}: Translations stored",
-            showName,
-            season.SeasonNumber
+            "Show {ShowName}: Season {SeasonNumber}: Translations stored", [showName, season.SeasonNumber]
         );
     }
 
@@ -159,9 +155,7 @@ public class SeasonManager(
 
         await seasonRepository.StoreImagesAsync(posters);
         logger.LogDebug(
-            "Show {ShowName}: Season {SeasonNumber}: Images stored",
-            showName,
-            season.SeasonNumber
+            "Show {ShowName}: Season {SeasonNumber}: Images stored", [showName, season.SeasonNumber]
         );
 
         await using MediaContext db = new();

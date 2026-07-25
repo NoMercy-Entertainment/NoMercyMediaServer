@@ -27,7 +27,7 @@ namespace NoMercy.Database.Models.TvShows;
 [Index(nameof(ImdbId))]
 [Index(nameof(TvdbId))]
 [Index(nameof(TvId), nameof(SeasonNumber))]
-[Index(nameof(TvId), nameof(SeasonNumber), nameof(EpisodeNumber))]
+[Index(nameof(TvId), [nameof(SeasonNumber), nameof(EpisodeNumber)])]
 public class Episode : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -103,41 +103,20 @@ public class Episode : ColorPaletteTimeStamps
     public string CreateFolderName()
     {
         return "/"
-            + string.Concat(
-                    Tv.Title.CleanFileName().Shorten(),
-                    ".S",
-                    SeasonNumber.ToString("00"),
-                    "E",
-                    EpisodeNumber.ToString("00")
+            + string.Concat([Tv.Title.CleanFileName().Shorten(), ".S", SeasonNumber.ToString("00"), "E", EpisodeNumber.ToString("00")]
                 )
                 .CleanFileName();
     }
 
     public string CreateTitle()
     {
-        return string.Concat(
-            Tv.Title,
-            " S",
-            SeasonNumber.ToString("00"),
-            "E",
-            EpisodeNumber.ToString("00"),
-            " ",
-            Title,
-            " NoMercy"
+        return string.Concat([Tv.Title, " S", SeasonNumber.ToString("00"), "E", EpisodeNumber.ToString("00"), " ", Title, " NoMercy"]
         );
     }
 
     public string CreateFileName()
     {
-        return string.Concat(
-                Tv.Title.CleanFileName().Shorten(),
-                ".S",
-                SeasonNumber.ToString("00"),
-                "E",
-                EpisodeNumber.ToString("00"),
-                ".",
-                Title.CleanFileName().Shorten(),
-                ".NoMercy"
+        return string.Concat([Tv.Title.CleanFileName().Shorten(), ".S", SeasonNumber.ToString("00"), "E", EpisodeNumber.ToString("00"), ".", Title.CleanFileName().Shorten(), ".NoMercy"]
             )
             .CleanFileName();
     }

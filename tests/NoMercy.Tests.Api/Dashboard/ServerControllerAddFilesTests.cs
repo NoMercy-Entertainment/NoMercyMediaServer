@@ -12,7 +12,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -70,7 +69,7 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
             AutoEncodeOnScan = false,
         };
 
-        ctx.Libraries.AddRange(autoEncodeLibrary, manualLibrary);
+        ctx.Libraries.AddRange([autoEncodeLibrary, manualLibrary]);
         await ctx.SaveChangesAsync();
     }
 
@@ -125,7 +124,7 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
             .OnlyContain(
                 p => p.Contains("VideoEncodeJob"),
                 "manual add-files is a deliberate import that always encodes the explicit source "
-                    + "file — AutoEncodeOnScan gates only the automatic scan path, not this endpoint"
+                         + "file — AutoEncodeOnScan gates only the automatic scan path, not this endpoint"
             );
     }
 

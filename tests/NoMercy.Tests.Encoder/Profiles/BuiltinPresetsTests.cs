@@ -95,10 +95,10 @@ public class BuiltinPresetsTests
     /// silently ships the wrong encode.
     /// </summary>
     [Theory]
-    [InlineData("H.264 Streaming (Universal)", VideoCodecType.H264)]
-    [InlineData("HEVC Streaming (Premium)", VideoCodecType.H265)]
-    [InlineData("HEVC HDR Streaming (Premium)", VideoCodecType.H265)]
-    [InlineData("AV1 Streaming (Efficient)", VideoCodecType.Av1)]
+    [InlineData(["H.264 Streaming (Universal)", VideoCodecType.H264])]
+    [InlineData(["HEVC Streaming (Premium)", VideoCodecType.H265])]
+    [InlineData(["HEVC HDR Streaming (Premium)", VideoCodecType.H265])]
+    [InlineData(["AV1 Streaming (Efficient)", VideoCodecType.Av1])]
     public void Ladder_preset_reference_uses_the_codec_it_advertises(
         string name,
         VideoCodecType expected
@@ -199,7 +199,7 @@ public class BuiltinPresetsTests
         preset.EncodeMode.Should().Be(EncodeMode.TwoPass);
         preset
             .Container.Should()
-            .BeOneOf(Container.Mp4, Container.HlsTs, Container.HlsFmp4, Container.Dash);
+            .BeOneOf([Container.Mp4, Container.HlsTs, Container.HlsFmp4, Container.Dash]);
 
         preset.Video.Should().NotBeNull();
         preset.Video!.RateControl.Should().Be(RateControlMode.Vbr);

@@ -44,7 +44,7 @@ public class BundleSlugRenamerBranchTests
         storage.Seed(
             path,
             Encoding.UTF8.GetBytes(
-                RenameTestHelpers.BuildBlueprintJson("preset-a-old", "preset-b-old", "untouched")
+                RenameTestHelpers.BuildBlueprintJson(["preset-a-old", "preset-b-old", "untouched"])
             )
         );
 
@@ -175,10 +175,10 @@ public class BundleSlugRenamerBranchTests
     }
 
     [Theory]
-    [InlineData("", "valid-new")]
-    [InlineData("valid-old", "")]
-    [InlineData("   ", "valid-new")]
-    [InlineData("valid-old", "   ")]
+    [InlineData(["", "valid-new"])]
+    [InlineData(["valid-old", ""])]
+    [InlineData(["   ", "valid-new"])]
+    [InlineData(["valid-old", "   "])]
     public async Task Empty_or_whitespace_slug_in_pair_skipped_to_prevent_mass_rewrite(
         string oldSlug,
         string newSlug

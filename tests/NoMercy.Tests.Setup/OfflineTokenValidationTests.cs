@@ -288,7 +288,7 @@ public class OfflineTokenValidationIntegrationTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "Auth", "AuthManager.cs");
+            string candidate = Path.Combine([dir, "src", "NoMercy.Setup", "Auth", "AuthManager.cs"]);
             if (File.Exists(candidate))
             {
                 string source = File.ReadAllText(candidate);
@@ -308,7 +308,7 @@ public class OfflineTokenValidationIntegrationTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "Auth", "AuthManager.cs");
+            string candidate = Path.Combine([dir, "src", "NoMercy.Setup", "Auth", "AuthManager.cs"]);
             if (File.Exists(candidate))
             {
                 string source = File.ReadAllText(candidate);

@@ -12,9 +12,10 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
+using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Users;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using static System.Int32;
 
 namespace NoMercy.Api.Services.Video;
@@ -40,6 +41,20 @@ public class VideoPlayerStateFactory
         // parse id once and safely
         TryParse(id, out int parsedId);
 
+        // Cast/remote-control needs the current item's structured chapter/audio/
+        // caption/quality lists (parsed chapter times, ordered track lists) which
+        // live on Metadata, not the slim wire DTO. Load them once for the current
+        // item so the state carries them for the VideoHub command handlers.
+        VideoFile? currentVideoFile = await context
+            .VideoFiles.AsNoTracking()
+            .Include(videoFile => videoFile.Metadata)
+            .FirstOrDefaultAsync(videoFile => videoFile.Id == item.VideoId);
+        Metadata? metadata = currentVideoFile?.Metadata;
+        List<IChapter> chapters = metadata?.Chapters ?? [];
+        List<IAudio> audioTracks = metadata?.Audio ?? [];
+        List<ISubtitle> captions = metadata?.Subtitles ?? [];
+        List<IVideo> qualities = metadata?.Video ?? [];
+
         // Include playback preferences and their Library collections to ensure data available for matching
         User? userPreference = await context
             .Users.Include(u => u.PlaybackPreferences)
@@ -61,6 +76,10 @@ public class VideoPlayerStateFactory
                 CurrentAudio = null,
                 CurrentCaption = null,
                 CurrentQuality = null,
+                Chapters = chapters,
+                Audio = audioTracks,
+                Captions = captions,
+                Qualities = qualities,
                 Playlist = playlist,
                 PlayState = true,
                 Time = (item.Progress?.Time ?? 0) * 1000,
@@ -91,7 +110,7 @@ public class VideoPlayerStateFactory
 
         if (playbackPreference is null)
         {
-            playbackPreference = CreateDefaultPlaybackPreference(item);
+            playbackPreference = CreateDefaultPlaybackPreference(qualities, audioTracks, captions);
         }
 
         return new()
@@ -102,6 +121,10 @@ public class VideoPlayerStateFactory
             CurrentAudio = playbackPreference.Audio,
             CurrentCaption = playbackPreference.Subtitle,
             CurrentQuality = playbackPreference.Video,
+            Chapters = chapters,
+            Audio = audioTracks,
+            Captions = captions,
+            Qualities = qualities,
             Playlist = playlist,
             PlayState = true,
             Time = (item.Progress?.Time ?? 0) * 1000,
@@ -131,7 +154,11 @@ public class VideoPlayerStateFactory
     )
     {
         PlaybackPreference? byIds = userPreference.PlaybackPreferences.FirstOrDefault(p =>
-            (p.MovieId is not null && p.MovieId.ToString() == id && MediaTypes.MovieMediaType == type)
+            (
+                p.MovieId is not null
+                && p.MovieId.ToString() == id
+                && MediaTypes.MovieMediaType == type
+            )
             || (p.TvId is not null && p.TvId.ToString() == id && MediaTypes.TvMediaType == type)
             || (
                 p.CollectionId is not null
@@ -152,7 +179,10 @@ public class VideoPlayerStateFactory
             p.Library != null
             && (
                 p.Library.Type == type
-                || (type == MediaTypes.TvMediaType && p.Library.LibraryTvs.Any(t => t.TvId == parsedId))
+                || (
+                    type == MediaTypes.TvMediaType
+                    && p.Library.LibraryTvs.Any(t => t.TvId == parsedId)
+                )
                 || (
                     type == MediaTypes.MovieMediaType
                     && p.Library.LibraryMovies.Any(m => m.MovieId == parsedId)
@@ -161,13 +191,17 @@ public class VideoPlayerStateFactory
         );
     }
 
-    private static PlaybackPreference CreateDefaultPlaybackPreference(VideoPlaylistResponseDto item)
+    private static PlaybackPreference CreateDefaultPlaybackPreference(
+        List<IVideo> qualities,
+        List<IAudio> audio,
+        List<ISubtitle> captions
+    )
     {
-        int? width = item.Qualities.Select(q => q.Width).FirstOrDefault();
-        string? audioLanguage = item.Audio.Select(a => a.Language).FirstOrDefault();
-        string? subtitleLanguage = item.Captions.FirstOrDefault()?.Language;
-        string? subtitleType = item.Captions.FirstOrDefault()?.Type;
-        string? subtitleCodec = item.Captions.FirstOrDefault()?.Codec;
+        int? width = qualities.Select(q => q.Width).FirstOrDefault();
+        string? audioLanguage = audio.Select(a => a.Language).FirstOrDefault();
+        string? subtitleLanguage = captions.FirstOrDefault()?.Language;
+        string? subtitleType = captions.FirstOrDefault()?.Type;
+        string? subtitleCodec = captions.FirstOrDefault()?.Codec;
 
         return new()
         {

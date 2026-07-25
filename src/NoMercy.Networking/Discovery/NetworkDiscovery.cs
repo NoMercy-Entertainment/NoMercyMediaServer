@@ -446,10 +446,19 @@ public class NetworkDiscovery : INetworkDiscovery
         return "127.0.0.1";
     }
 
-    private static bool IsVirtualNetworkInterface(NetworkInterface nic)
+    private static bool IsVirtualNetworkInterface(NetworkInterface nic) =>
+        IsVirtualNetworkInterface(nic.Description, nic.Name);
+
+    /// <summary>
+    /// Pure keyword match extracted from <see cref="IsVirtualNetworkInterface(NetworkInterface)"/>
+    /// so the classification rule is unit-testable without a real
+    /// <see cref="NetworkInterface"/>, which the platform only constructs via
+    /// <see cref="NetworkInterface.GetAllNetworkInterfaces"/>.
+    /// </summary>
+    internal static bool IsVirtualNetworkInterface(string description, string name)
     {
-        string description = nic.Description.ToLowerInvariant();
-        string name = nic.Name.ToLowerInvariant();
+        string lowerDescription = description.ToLowerInvariant();
+        string lowerName = name.ToLowerInvariant();
 
         string[] virtualKeywords =
         [
@@ -466,14 +475,14 @@ public class NetworkDiscovery : INetworkDiscovery
 
         foreach (string keyword in virtualKeywords)
         {
-            if (description.Contains(keyword) || name.Contains(keyword))
+            if (lowerDescription.Contains(keyword) || lowerName.Contains(keyword))
                 return true;
         }
 
         return false;
     }
 
-    private static bool IsDockerOrWslAddress(IPAddress address)
+    internal static bool IsDockerOrWslAddress(IPAddress address)
     {
         byte[] bytes = address.GetAddressBytes();
         if (bytes.Length != 4)
@@ -545,7 +554,14 @@ public class NetworkDiscovery : INetworkDiscovery
     private static string ExternalIpCacheFile =>
         Path.Combine(AppFiles.ConfigPath, "external_ip.cache");
 
-    private async Task<string> GetExternalIpAsync()
+    /// <summary>
+    /// API → UPnP → file-cache → empty fallback chain. Internal (rather than
+    /// private) so the fully-local branches (no auth token, no UPnP device,
+    /// cache hit/miss) are unit-testable without going through the public
+    /// <see cref="DiscoverExternalIpAsync"/>, which additionally blocks on a
+    /// hardcoded 15s UPnP discovery window that requires real network hardware.
+    /// </summary>
+    internal async Task<string> GetExternalIpAsync()
     {
         _logger.LogInformation("Getting external IP address");
 
@@ -709,7 +725,10 @@ public class NetworkDiscovery : INetworkDiscovery
         return null;
     }
 
-    private void CacheExternalIp(string ip)
+    // Internal so the cache-write half of the round trip is directly
+    // testable — reaching it through GetExternalIpAsync requires a live API
+    // response or a real UPnP device, neither available in a unit test.
+    internal void CacheExternalIp(string ip)
     {
         try
         {

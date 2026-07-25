@@ -37,11 +37,11 @@ public class HmacSignerBranchTests
     // ── Method normalization ────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("POST", "post")]
-    [InlineData("POST", "Post")]
-    [InlineData("GET", "get")]
-    [InlineData("DELETE", "delete")]
-    [InlineData("PUT", "Put")]
+    [InlineData(["POST", "post"])]
+    [InlineData(["POST", "Post"])]
+    [InlineData(["GET", "get"])]
+    [InlineData(["DELETE", "delete"])]
+    [InlineData(["PUT", "Put"])]
     public void Sign_method_is_normalized_to_uppercase(string upper, string mixed)
     {
         HmacSigner signer = new(Secret);

@@ -77,9 +77,14 @@ public class NoMercyLoggerTests
     }
 
     [Fact]
-    public void Log_WithScope_AppendsDimSuffix()
+    public void Log_WithScope_OmitsScopeFromConsoleButKeepsItInRecord()
     {
-        NoMercyLoggerOptions options = new() { Color = false };
+        NoMercyLogRecord? captured = null;
+        NoMercyLoggerOptions options = new()
+        {
+            Color = false,
+            OnRecord = record => captured = record,
+        };
         StringWriter sink = new();
         NoMercyLoggerProvider provider = new(options, sink);
         provider.SetScopeProvider(new LoggerExternalScopeProvider());
@@ -88,6 +93,9 @@ public class NoMercyLoggerTests
         using (logger.BeginScope("imp=7f3a"))
             logger.LogInformation("scoped");
 
-        sink.ToString().TrimEnd().Should().EndWith("· imp=7f3a");
+        // Scope is structured telemetry, not console noise: it must not reach the console
+        // line but must still ride along on the record (and the per-run JSON file).
+        sink.ToString().Should().NotContain("imp=7f3a").And.NotContain("·");
+        captured!.Scope.Should().Be("imp=7f3a");
     }
 }

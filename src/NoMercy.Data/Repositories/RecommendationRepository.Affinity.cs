@@ -46,6 +46,7 @@ public partial class RecommendationRepository
                 TimeWatched = m
                     .UserData.Where(ud => ud.UserId == userId)
                     .OrderByDescending(ud => ud.Time)
+                    .ThenByDescending(ud => ud.Id)
                     .Select(ud => ud.Time)
                     .FirstOrDefault(),
                 IsFavorited = m.MovieUser.Any(mu => mu.UserId == userId),
@@ -114,6 +115,7 @@ public partial class RecommendationRepository
                 TimeWatched = t
                     .UserData.Where(ud => ud.UserId == userId)
                     .OrderByDescending(ud => ud.Time)
+                    .ThenByDescending(ud => ud.Id)
                     .Select(ud => ud.Time)
                     .FirstOrDefault(),
                 IsFavorited = t.TvUser.Any(tu => tu.UserId == userId),
@@ -181,6 +183,7 @@ public partial class RecommendationRepository
                 TimeWatched = t
                     .UserData.Where(ud => ud.UserId == userId)
                     .OrderByDescending(ud => ud.Time)
+                    .ThenByDescending(ud => ud.Id)
                     .Select(ud => ud.Time)
                     .FirstOrDefault(),
                 IsFavorited = t.TvUser.Any(tu => tu.UserId == userId),

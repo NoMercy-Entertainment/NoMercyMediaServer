@@ -17,11 +17,7 @@ namespace NoMercy.Database.Models.Movies;
 
 [PrimaryKey(nameof(Id))]
 [Index(
-    nameof(WatchProviderId),
-    nameof(CountryCode),
-    nameof(ProviderType),
-    nameof(MovieId),
-    nameof(TvId),
+    nameof(WatchProviderId), [nameof(CountryCode), nameof(ProviderType), nameof(MovieId), nameof(TvId)],
     IsUnique = true
 )]
 public class WatchProviderMedia : Timestamps

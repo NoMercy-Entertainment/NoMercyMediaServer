@@ -96,24 +96,15 @@ internal static class S3SigV4
         const string signedHeaders = "host;x-amz-content-sha256;x-amz-date";
 
         string canonicalRequest = string.Join(
-            "\n",
-            method,
-            canonicalUri,
-            canonicalQueryString,
-            canonicalHeaders,
-            signedHeaders,
-            payloadHash
+            "\n", [method, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, payloadHash]
         );
 
         string credentialScope = $"{dateStamp}/{region}/s3/aws4_request";
         string stringToSign = string.Join(
-            "\n",
-            "AWS4-HMAC-SHA256",
-            amzDate,
-            credentialScope,
-            Convert
+            "\n", ["AWS4-HMAC-SHA256", amzDate, credentialScope, Convert
                 .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest)))
                 .ToLowerInvariant()
+            ]
         );
 
         byte[] signingKey = DeriveSigningKey(secretKey, dateStamp, region);
@@ -170,23 +161,14 @@ internal static class S3SigV4
         const string payloadHash = "UNSIGNED-PAYLOAD";
 
         string canonicalRequest = string.Join(
-            "\n",
-            "GET",
-            canonicalUri,
-            canonicalQs,
-            canonicalHeaders,
-            signedHeaders,
-            payloadHash
+            "\n", ["GET", canonicalUri, canonicalQs, canonicalHeaders, signedHeaders, payloadHash]
         );
 
         string stringToSign = string.Join(
-            "\n",
-            "AWS4-HMAC-SHA256",
-            amzDate,
-            credentialScope,
-            Convert
+            "\n", ["AWS4-HMAC-SHA256", amzDate, credentialScope, Convert
                 .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest)))
                 .ToLowerInvariant()
+            ]
         );
 
         byte[] signingKey = DeriveSigningKey(secretKey, dateStamp, region);

@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Moq;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Storage;
 

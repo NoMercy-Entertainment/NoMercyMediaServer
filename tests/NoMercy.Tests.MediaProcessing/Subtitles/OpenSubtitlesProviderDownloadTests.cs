@@ -12,7 +12,6 @@
 using System.IO.Compression;
 using System.Net;
 using System.Text;
-using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.MediaProcessing.Subtitles;
@@ -140,9 +139,9 @@ public class OpenSubtitlesProviderDownloadTests
 public class OpenSubtitlesLanguageCodeTests
 {
     [Theory]
-    [InlineData("nl", "dut")]
-    [InlineData("de", "ger")]
-    [InlineData("en", "eng")]
+    [InlineData(["nl", "dut"])]
+    [InlineData(["de", "ger"])]
+    [InlineData(["en", "eng"])]
     public void WatchRequestLanguage_BecomesTheCodeTheApiAccepts(string watch, string wire)
     {
         Culture.BibliographicLanguageCode(watch).Should().Be(wire);

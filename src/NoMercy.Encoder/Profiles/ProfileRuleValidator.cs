@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
@@ -517,7 +518,7 @@ public static class ProfileRuleValidator
 
         foreach (
             SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
-                s.Codec == SubtitleCodecType.Ass && s.Policy == SubtitlePolicy.Extract
+                s is { Codec: SubtitleCodecType.Ass, Policy: SubtitlePolicy.Extract }
             )
         )
         {
@@ -817,7 +818,8 @@ public static class ProfileRuleValidator
         );
 
         string fix = nextFit is not null
-            ? $"Raise video.level to {nextFit.Level} (supports up to {nextFit.MaxLumaSamplesPerSec:N0} luma samples/sec)."
+            ? $"Raise video.level to {nextFit.Level} (supports up to "
+                + $"{nextFit.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec)."
             : "No standard level supports this resolution at 30 fps.";
 
         rules.Add(
@@ -826,8 +828,9 @@ public static class ProfileRuleValidator
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.level",
                 Message: $"Level {video.Level} cannot sustain {width}x{height} at 30 fps "
-                    + $"({lumaSamplesPerSec:N0} luma samples/sec required, "
-                    + $"level {video.Level} allows {cap.MaxLumaSamplesPerSec:N0}).",
+                    + $"({lumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec required, "
+                    + $"level {video.Level} allows "
+                    + $"{cap.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)}).",
                 Fix: fix
             )
         );
@@ -1394,7 +1397,8 @@ public static class ProfileRuleValidator
         );
 
         string fix = nextFit is not null
-            ? $"Raise video.level to {nextFit.Level} (supports up to {nextFit.MaxLumaSamplesPerSec:N0} luma samples/sec)."
+            ? $"Raise video.level to {nextFit.Level} (supports up to "
+                + $"{nextFit.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec)."
             : "No standard level supports this resolution × frame rate.";
 
         rules.Add(
@@ -1402,9 +1406,11 @@ public static class ProfileRuleValidator
                 Id: EncoderRuleId.LevelFrameRateCapExceeded,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.level",
-                Message: $"Source {fps:F2} fps × {effectiveWidth}x{effectiveHeight} "
-                    + $"requires {lumaSamplesPerSec:N0} luma samples/sec; level "
-                    + $"{video.Level} allows {cap.MaxLumaSamplesPerSec:N0}.",
+                Message: $"Source {fps.ToString("F2", CultureInfo.InvariantCulture)} fps × "
+                    + $"{effectiveWidth}x{effectiveHeight} requires "
+                    + $"{lumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec; level "
+                    + $"{video.Level} allows "
+                    + $"{cap.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)}.",
                 Fix: fix
             )
         );

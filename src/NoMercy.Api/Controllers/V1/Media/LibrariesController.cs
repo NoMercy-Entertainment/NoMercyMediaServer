@@ -63,7 +63,7 @@ public class LibrariesController(
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
             return await new LibraryRepository(contextFactory).GetLibrariesLite(userId, ct);
-        });
+        }, ct);
         Task<Dictionary<Ulid, int>> countsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -71,7 +71,7 @@ public class LibrariesController(
                 userId,
                 ct
             );
-        });
+        }, ct);
         Task<List<CollectionListDto>> collectionsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -83,7 +83,7 @@ public class LibrariesController(
                 0,
                 ct
             );
-        });
+        }, ct);
         Task<List<SpecialCardDto>> specialsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -95,7 +95,7 @@ public class LibrariesController(
                 0,
                 ct
             );
-        });
+        }, ct);
         Task<HomeTvCardDto?> randomTvTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -105,7 +105,7 @@ public class LibrariesController(
                 country,
                 ct
             );
-        });
+        }, ct);
         Task<HomeMovieCardDto?> randomMovieTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -115,7 +115,7 @@ public class LibrariesController(
                 country,
                 ct
             );
-        });
+        }, ct);
         Task<FavoritesData> favoritesTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -125,7 +125,7 @@ public class LibrariesController(
                 country,
                 ct
             );
-        });
+        }, ct);
         Task<List<UserPlaylistSummary>> myListsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -133,17 +133,9 @@ public class LibrariesController(
                 userId,
                 ct
             );
-        });
+        }, ct);
 
-        await Task.WhenAll(
-            librariesTask,
-            countsTask,
-            collectionsTask,
-            specialsTask,
-            randomTvTask,
-            randomMovieTask,
-            favoritesTask,
-            myListsTask
+        await Task.WhenAll([librariesTask, countsTask, collectionsTask, specialsTask, randomTvTask, randomMovieTask, favoritesTask, myListsTask]
         );
 
         List<Library> libraries = librariesTask.Result;
@@ -416,14 +408,7 @@ public class LibrariesController(
             );
         });
 
-        await Task.WhenAll(
-            librariesTask,
-            collectionsTask,
-            specialsTask,
-            randomTvTask,
-            randomMovieTask,
-            favoritesTask,
-            myListsTask
+        await Task.WhenAll([librariesTask, collectionsTask, specialsTask, randomTvTask, randomMovieTask, favoritesTask, myListsTask]
         );
 
         List<Library> libraries = librariesTask.Result;
@@ -634,7 +619,7 @@ public class LibrariesController(
             );
         });
 
-        await Task.WhenAll(moviesTask, showsTask);
+        await Task.WhenAll([moviesTask, showsTask]);
 
         List<MovieCardDto> libraryMovies = moviesTask.Result;
         List<TvCardDto> libraryShows = showsTask.Result;
@@ -736,7 +721,7 @@ public class LibrariesController(
             );
         });
 
-        await Task.WhenAll(moviesTask, showsTask);
+        await Task.WhenAll([moviesTask, showsTask]);
 
         List<HomeMovieCardDto> movies = moviesTask.Result;
         List<HomeTvCardDto> shows = showsTask.Result;

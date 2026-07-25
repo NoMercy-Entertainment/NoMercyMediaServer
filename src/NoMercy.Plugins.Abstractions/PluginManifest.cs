@@ -41,4 +41,10 @@ public class PluginManifest
 
     [JsonPropertyName("autoEnabled")]
     public bool AutoEnabled { get; init; } = true;
+
+    [JsonPropertyName("capabilities")]
+    public PluginCapabilities? Capabilities { get; init; }
+
+    [JsonPropertyName("signature")]
+    public string? Signature { get; init; }
 }

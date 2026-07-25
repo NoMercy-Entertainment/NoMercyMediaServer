@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.NmSystem.Auth;
@@ -94,9 +93,7 @@ public class ServerUserSyncCronJob : ICronJobExecutor
         LogLevel syncLevel = result.RevokedCount > 0 ? LogLevel.Information : LogLevel.Debug;
         _logger.Log(
             syncLevel,
-            "Server user sync complete: {Count} upstream user(s), {Revoked} revoked locally",
-            result.UpstreamUserCount,
-            result.RevokedCount
+            "Server user sync complete: {Count} upstream user(s), {Revoked} revoked locally", [result.UpstreamUserCount, result.RevokedCount]
         );
     }
 }

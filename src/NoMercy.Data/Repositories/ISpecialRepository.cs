@@ -97,8 +97,10 @@ public interface ISpecialRepository
 
     Task<Special> CreateSpecialAsync(Guid userId, CancellationToken ct = default);
 
+    Task<Special?> GetSpecialWithTvAsync(Guid userId, Ulid id, CancellationToken ct = default);
+    
     Task<Special?> GetSpecialByIdAsync(Ulid id, CancellationToken ct = default);
-
+    
     Task<Special?> UpdateSpecialAsync(
         Ulid id,
         string? title,

@@ -12,7 +12,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -80,7 +79,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -109,7 +108,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { value = true })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -133,7 +132,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { offset = 100 })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -157,7 +156,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -187,7 +186,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { value = true })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -212,7 +211,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -252,7 +251,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { name = "Hijacked" })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -274,7 +273,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             EmptyMultipart()
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -302,7 +301,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { value = true })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -326,7 +325,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -360,7 +359,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/music/artists/{Guid.NewGuid()}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -399,7 +398,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { name = "Hijacked" })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -421,7 +420,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             EmptyMultipart()
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -449,7 +448,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { name = "Anonymous Music Playlist" })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -467,10 +466,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
         create.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using JsonDocument createDoc = JsonDocument.Parse(await create.Content.ReadAsStringAsync());
-        Guid createdId = createDoc
-            .RootElement.GetProperty("data")
-            .GetProperty("id")
-            .GetGuid();
+        Guid createdId = createDoc.RootElement.GetProperty("data").GetProperty("id").GetGuid();
 
         HttpResponseMessage delete = await _secondary.DeleteAsync(
             $"/api/v1/music/playlists/{createdId}"
@@ -478,9 +474,11 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
         delete.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using JsonDocument deleteDoc = JsonDocument.Parse(await delete.Content.ReadAsStringAsync());
-        deleteDoc.RootElement.GetProperty("data").GetString().Should().Be(
-            "Playlist deleted successfully"
-        );
+        deleteDoc
+            .RootElement.GetProperty("data")
+            .GetString()
+            .Should()
+            .Be("Playlist deleted successfully");
     }
 
     [Fact]
@@ -491,7 +489,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { name = "Hijacked" })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -514,7 +512,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/music/playlists/{Guid.NewGuid()}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -540,7 +538,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             EmptyMultipart()
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -564,7 +562,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             JsonBody(new { id = Guid.NewGuid() })
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -587,7 +585,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/music/playlists/{Guid.NewGuid()}/tracks/{Guid.NewGuid()}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Management;
 using NoMercy.Api.Middleware;
@@ -32,8 +33,6 @@ using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using NoMercyQueue;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
-
-using Microsoft.Extensions.Logging;
 namespace NoMercy.Api.Controllers;
 
 [ApiController]
@@ -266,7 +265,7 @@ public class ManagementController(
                 && diskVer > runVer
             )
             {
-                logger.LogInformation("Binary on disk is already {OnDiskVersion} (running {RunningVersion}), restart will apply the update.", onDiskVersion, runningVersion);
+                logger.LogInformation("Binary on disk is already {OnDiskVersion} (running {RunningVersion}), restart will apply the update.", [onDiskVersion, runningVersion]);
                 return Ok(
                     new
                     {
@@ -322,7 +321,7 @@ public class ManagementController(
                     }
 
                     long fileSize = storageDriver.GetFileSize(tempPath);
-                    logger.LogInformation("Server update staged at {TempPath} ({FileSize} bytes)", tempPath, fileSize);
+                    logger.LogInformation("Server update staged at {TempPath} ({FileSize} bytes)", [tempPath, fileSize]);
                     return Ok(
                         new
                         {

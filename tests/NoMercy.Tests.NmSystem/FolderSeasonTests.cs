@@ -19,17 +19,17 @@ namespace NoMercy.Tests.NmSystem;
 public class FolderSeasonTests
 {
     [Theory]
-    [InlineData("/media/Show Name/Season 2", 2)]
-    [InlineData("Show/Season 02", 2)]
-    [InlineData("/x/Season 0", 0)]
-    [InlineData("/x/Season 2/", 2)]
-    [InlineData("/x/S2", 2)]
-    [InlineData("S02", 2)]
-    [InlineData("/lib/Breaking Bad/Series 3", 3)]
-    [InlineData("/x/Staffel 4", 4)]
-    [InlineData("/x/Temporada 5", 5)]
-    [InlineData("/x/Saison 6", 6)]
-    [InlineData("/x/Stagione 7", 7)]
+    [InlineData(["/media/Show Name/Season 2", 2])]
+    [InlineData(["Show/Season 02", 2])]
+    [InlineData(["/x/Season 0", 0])]
+    [InlineData(["/x/Season 2/", 2])]
+    [InlineData(["/x/S2", 2])]
+    [InlineData(["S02", 2])]
+    [InlineData(["/lib/Breaking Bad/Series 3", 3])]
+    [InlineData(["/x/Staffel 4", 4])]
+    [InlineData(["/x/Temporada 5", 5])]
+    [InlineData(["/x/Saison 6", 6])]
+    [InlineData(["/x/Stagione 7", 7])]
     public void Resolves_season_folders(string dir, int expected) =>
         dir.TryGetFolderSeason().Should().Be(expected);
 

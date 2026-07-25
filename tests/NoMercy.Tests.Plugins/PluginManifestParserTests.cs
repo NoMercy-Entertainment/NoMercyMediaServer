@@ -146,6 +146,18 @@ public class PluginManifestParserTests : IDisposable
     }
 
     [Fact]
+    public void Parse_JsonNullLiteral_ThrowsInvalidOperation()
+    {
+        // "null" is valid, non-whitespace JSON — it clears the
+        // ArgumentException.ThrowIfNullOrWhiteSpace guard but deserializes to a
+        // null PluginManifest, which must be rejected explicitly rather than
+        // let a NullReferenceException surface from Validate().
+        Action act = () => PluginManifestParser.Parse("null");
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*deserialize*");
+    }
+
+    [Fact]
     public void Parse_EmptyGuid_ThrowsInvalidOperation()
     {
         string json = CreateValidManifestJson(id: Guid.Empty);

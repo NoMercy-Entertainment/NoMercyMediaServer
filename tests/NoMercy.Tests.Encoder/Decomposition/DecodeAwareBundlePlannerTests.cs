@@ -281,19 +281,28 @@ public class DecodeAwareBundlePlannerTests
                     + "total decodes = 2, not 3"
             );
 
-        DecomposedTask tonemapBundle = bundles.Single(b => b.VideoSliceIndexes!.Contains(1));
-        tonemapBundle.VideoSliceIndexes.Should().NotContain(0);
-        tonemapBundle
-            .IncludeThumbnails.Should()
-            .NotBe(false, "the sprite must ride the SDR-tonemap decode for correct Rec.709 color");
-        tonemapBundle.AudioSliceIndexes.Should().BeEquivalentTo([0]);
-
-        DecomposedTask hdrBundle = bundles.Single(b => b != tonemapBundle);
+        // Bundle 0 is the 4K HDR master: it runs FIRST so native-HDR clients can
+        // play immediately, and it carries the audio so that rendition is
+        // playable with sound the moment it lands.
+        DecomposedTask hdrBundle = bundles[0];
         hdrBundle.VideoSliceIndexes.Should().BeEquivalentTo([0]);
-        hdrBundle.IncludeThumbnails.Should().BeFalse("only the tonemap decode carries the sprite");
+        hdrBundle
+            .IncludeThumbnails.Should()
+            .Be(false, "the HDR master must not carry the sprite — it would sample raw HDR");
         hdrBundle
             .AudioSliceIndexes.Should()
-            .BeEmpty("copy audio rides the primary bundle only once");
+            .BeEquivalentTo([0], "the 4K master carries the audio so it is playable first");
+
+        // Bundle 1 is the SDR rung: it follows the master and carries the sprite,
+        // which reuses its HDR→SDR tonemap for correct Rec.709 colour.
+        DecomposedTask tonemapBundle = bundles[1];
+        tonemapBundle.VideoSliceIndexes.Should().BeEquivalentTo([1]);
+        tonemapBundle
+            .IncludeThumbnails.Should()
+            .NotBe(false, "the sprite rides the SDR-tonemap decode for correct Rec.709 color");
+        tonemapBundle
+            .AudioSliceIndexes.Should()
+            .BeEmpty("copy audio rides the 4K master only, not the SDR bundle");
     }
 
     // ------------------------------------------------------------------ (b) All-copy plan

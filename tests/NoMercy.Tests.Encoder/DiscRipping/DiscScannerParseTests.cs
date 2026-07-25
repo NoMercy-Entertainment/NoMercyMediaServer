@@ -163,6 +163,6 @@ public class DiscScannerParseTests
         DiscInfo info = DiscScanner.Parse(json, OpticalDiscType.BluRay);
 
         info.Titles[0].AudioStreams.Should().HaveCount(3);
-        info.Titles[0].AudioStreams.Select(a => a.Language).Should().Equal("eng", "fre", "spa");
+        info.Titles[0].AudioStreams.Select(a => a.Language).Should().Equal(["eng", "fre", "spa"]);
     }
 }

@@ -83,8 +83,8 @@ public class AcoustIdBaseClientTests
         Assert.False(
             hasIterationField,
             "PROV-H06 regression: State machine should NOT contain an 'iteration' field. "
-                + "The contradictory while loop and its iteration variable should be removed. "
-                + $"Fields found: [{string.Join(", ", allFields.Select(f => $"{f.Name}: {f.FieldType.Name}"))}]"
+                         + "The contradictory while loop and its iteration variable should be removed. "
+                         + $"Fields found: [{string.Join(", ", allFields.Select(f => $"{f.Name}: {f.FieldType.Name}"))}]"
         );
     }
 
@@ -177,7 +177,7 @@ public class AcoustIdBaseClientTests
         Assert.False(
             hasIterationLikeField,
             "PROV-H06 regression: No 'iteration' local variable should exist in the state machine "
-                + "after removing the contradictory while loop."
+                         + "after removing the contradictory while loop."
         );
     }
 

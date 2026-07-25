@@ -12,7 +12,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
@@ -50,7 +49,7 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
             new { type = "local", config = new { } }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -127,7 +126,7 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
             new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -182,7 +181,7 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
         JsonElement root = doc.RootElement;
 
         root.TryGetProperty("ok", out JsonElement ok).Should().BeTrue();
-        ok.ValueKind.Should().BeOneOf(JsonValueKind.True, JsonValueKind.False);
+        ok.ValueKind.Should().BeOneOf([JsonValueKind.True, JsonValueKind.False]);
         root.TryGetProperty("path", out _).Should().BeTrue();
     }
 
@@ -194,7 +193,7 @@ public class StorageBrowserControllerTests : IClassFixture<NoMercyApiFactory>
             new { driver_id = Driver.SystemLocalDriverId.ToString(), path = "some/sub/path" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

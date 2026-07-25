@@ -36,7 +36,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         Assert.True(
             element.TryGetProperty(propertyName, out _),
             $"Expected JSON property '{propertyName}' not found. "
-                + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
+                         + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
         );
 
     private static IEnumerable<string> EnumerateProperties(JsonElement element)
@@ -68,7 +68,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         Assert.True(
             hasCustomStatus || hasProblemDetails,
             $"Expected status response shape. "
-                + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
+                         + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
         );
     }
 
@@ -392,7 +392,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         JsonDocument json = JsonDocument.Parse(body);
         Assert.True(
             json.RootElement.TryGetProperty("data", out _)
-                || json.RootElement.TryGetProperty("component", out _),
+                       || json.RootElement.TryGetProperty("component", out _),
             $"Expected data or component property: {body}"
         );
     }
@@ -661,7 +661,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         AssertJsonHasProperty(json.RootElement, "data");
         Assert.True(
             json.RootElement.TryGetProperty("has_more", out _)
-                || json.RootElement.TryGetProperty("hasMore", out _),
+                       || json.RootElement.TryGetProperty("hasMore", out _),
             "Expected has_more or hasMore property in paginated response"
         );
     }
@@ -842,7 +842,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         JsonDocument json = JsonDocument.Parse(body);
         Assert.True(
             json.RootElement.TryGetProperty("data", out _)
-                || json.RootElement.TryGetProperty("component", out _),
+                       || json.RootElement.TryGetProperty("component", out _),
             $"Expected data or component property: {body}"
         );
     }

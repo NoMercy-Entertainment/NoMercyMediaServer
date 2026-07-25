@@ -42,7 +42,7 @@ public class MetadataInjector : IMetadataInjector
         if (media.Year.HasValue)
             AddMeta(args, "year", media.Year.Value.ToString());
 
-        if (media is MovieMediaRef movie && movie.Description is not null)
+        if (media is MovieMediaRef { Description: not null } movie)
             AddMeta(args, "description", movie.Description);
 
         if (media is EpisodeMediaRef episode)
@@ -78,7 +78,7 @@ public class MetadataInjector : IMetadataInjector
 
     private static void EmitDisposition(List<string> args, TrackMetadata track)
     {
-        if (!track.IsDefault && !track.IsForced)
+        if (track is { IsDefault: false, IsForced: false })
             return;
 
         string dispSpec = DispositionSpec(track.Kind, track.OutputIndex);

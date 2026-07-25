@@ -49,6 +49,26 @@ public class PlaylistGenerator : IPlaylistGenerator
         return version;
     }
 
+    /// <summary>
+    /// The metrics-dict key for a video variant: its resolved playlist path,
+    /// unique per resolution/HDR. MUST be used by whoever POPULATES the metrics
+    /// dict (HlsOutputStrategy) and whoever LOOKS UP (this generator), so a rung
+    /// that re-plans as MapLabel "[v0]" in its own bundle never collides with
+    /// another variant and collapses the whole ladder onto one BANDWIDTH.
+    /// </summary>
+    public static string VideoVariantKey(VideoOutputPlan video) =>
+        TemplateResolver.Resolve(
+            video.PlaylistNameTemplate,
+            TemplateResolver.VideoTokens(video.Width, video.Height, video.IsHdrOutput)
+        );
+
+    /// <summary>The audio-variant metrics key — same rationale as <see cref="VideoVariantKey"/>.</summary>
+    public static string AudioVariantKey(AudioOutputPlan audio) =>
+        TemplateResolver.Resolve(
+            audio.PlaylistNameTemplate,
+            TemplateResolver.AudioTokens(audio.Language ?? "und", audio.CodecToken, audio.Channels)
+        );
+
     public string GenerateMasterPlaylist(
         OutputPlan plan,
         string mediaTitle,
@@ -92,19 +112,20 @@ public class PlaylistGenerator : IPlaylistGenerator
         }
 
         bool defaultAudioEmitted = false;
+        // Tracks whether any EXT-X-MEDIA:TYPE=AUDIO line was actually written —
+        // NOT just whether plan.AudioOutputs is non-empty. A rendition can be
+        // planned but never materialise (missing segments, zero bandwidth) and
+        // gets skipped below; the STREAM-INF AUDIO="..." attribute must follow
+        // that same fate so it never references a group with zero members.
+        bool audioGroupEmitted = false;
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
         {
             if (audio.Action is not (StreamAction.Copy or StreamAction.Transcode))
                 continue;
 
-            // Skip audio variants whose segments never materialised. The
-            // analyzer returns zero bandwidth when the playlist or its
-            // segments are missing on disk — listing those in the master
-            // makes hls.js / VLC bail on the first variant fetch.
-            VariantMetrics audMetrics = audioMetrics.GetValueOrDefault(audio.MapLabel, new(0, 0));
-            if (audMetrics.PeakBandwidth == 0)
-                continue;
-
+            // Resolve this rendition's playlist path first — it is the metrics
+            // key (keyed by path, NOT MapLabel, so multiple audio renditions
+            // never collide on a shared label).
             Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
                 audio.Language ?? "und",
                 audio.CodecToken,
@@ -112,6 +133,15 @@ public class PlaylistGenerator : IPlaylistGenerator
             );
 
             string playlistResolved = TemplateResolver.Resolve(audio.PlaylistNameTemplate, tokens);
+
+            // Skip audio variants whose segments never materialised. The
+            // analyzer returns zero bandwidth when the playlist or its
+            // segments are missing on disk — listing those in the master
+            // makes hls.js / VLC bail on the first variant fetch.
+            VariantMetrics audMetrics = audioMetrics.GetValueOrDefault(playlistResolved, new(0, 0));
+            if (audMetrics.PeakBandwidth == 0)
+                continue;
+
             string subDir = StoragePathHelpers.GetParent(playlistResolved) ?? playlistResolved;
             string playlistFile = StoragePathHelpers.GetName(playlistResolved);
 
@@ -120,6 +150,7 @@ public class PlaylistGenerator : IPlaylistGenerator
             string displayName = GetAudioDisplayName(language);
             bool isDefault = !defaultAudioEmitted;
             defaultAudioEmitted = true;
+            audioGroupEmitted = true;
 
             sb.AppendLine(
                 $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{audioGroupId}\",LANGUAGE=\"{language}\",AUTOSELECT=YES,DEFAULT={YesNo(isDefault)},URI=\"{uri}\",NAME=\"{displayName}\""
@@ -168,9 +199,23 @@ public class PlaylistGenerator : IPlaylistGenerator
                 plan.AudioOutputs.Length > 0 ? GetAudioCodecTag(plan.AudioOutputs[0]) : null;
             string codecsAttr = BuildCodecsAttribute(videoCodecTag, audioCodecTag);
 
+            // Resolve this variant's own playlist path up front — it is the key
+            // into videoMetrics (HlsOutputStrategy stored each variant's measured
+            // bitrate under the SAME resolved path). Keying by MapLabel instead
+            // collapses every variant onto "[v0]" and gives them all one shared
+            // BANDWIDTH.
+            Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+                video.Width,
+                video.Height,
+                video.IsHdrOutput
+            );
+            string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
+            string subDir = StoragePathHelpers.GetParent(playlistResolved) ?? playlistResolved;
+            string playlistFile = StoragePathHelpers.GetName(playlistResolved);
+
             // Use measured bandwidth. Apple requires BANDWIDTH = peak, AVERAGE-BANDWIDTH = average.
             // Combine video + audio bandwidth for the STREAM-INF (Apple spec section 4.10).
-            VariantMetrics vidMetrics = videoMetrics.GetValueOrDefault(video.MapLabel, new(0, 0));
+            VariantMetrics vidMetrics = videoMetrics.GetValueOrDefault(playlistResolved, new(0, 0));
 
             // Skip video variants whose segments never materialised — bundle
             // got cancelled / failed / didn't publish. Listing them in the
@@ -180,22 +225,24 @@ public class PlaylistGenerator : IPlaylistGenerator
             if (vidMetrics.PeakBandwidth == 0)
                 continue;
 
-            VariantMetrics audMetrics =
-                plan.AudioOutputs.Length > 0
-                    ? audioMetrics.GetValueOrDefault(plan.AudioOutputs[0].MapLabel, new(0, 0))
-                    : new(0, 0);
+            VariantMetrics audMetrics = new(0, 0);
+            if (plan.AudioOutputs.Length > 0)
+            {
+                AudioOutputPlan primaryAudio = plan.AudioOutputs[0];
+                Dictionary<string, string> audioTokens = TemplateResolver.AudioTokens(
+                    primaryAudio.Language ?? "und",
+                    primaryAudio.CodecToken,
+                    primaryAudio.Channels
+                );
+                string audioResolved = TemplateResolver.Resolve(
+                    primaryAudio.PlaylistNameTemplate,
+                    audioTokens
+                );
+                audMetrics = audioMetrics.GetValueOrDefault(audioResolved, new(0, 0));
+            }
 
             int peakBandwidth = vidMetrics.PeakBandwidth + audMetrics.PeakBandwidth;
             int avgBandwidth = vidMetrics.AverageBandwidth + audMetrics.AverageBandwidth;
-
-            Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
-                video.Width,
-                video.Height,
-                video.IsHdrOutput
-            );
-            string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
-            string subDir = StoragePathHelpers.GetParent(playlistResolved) ?? playlistResolved;
-            string playlistFile = StoragePathHelpers.GetName(playlistResolved);
 
             // VIDEO-RANGE labels the colour pipeline (PQ/HLG = HDR transfer,
             // SDR otherwise) — not the bit depth. 10-bit anime / 10-bit BT.709
@@ -208,8 +255,13 @@ public class PlaylistGenerator : IPlaylistGenerator
             string subsAttr =
                 activeSubs.Length > 0 ? ",SUBTITLES=\"subs\"" : ",CLOSED-CAPTIONS=NONE";
 
+            // Never point AUDIO="..." at a group with zero EXT-X-MEDIA members —
+            // a title with genuinely no audio must emit neither the group nor
+            // this reference, not a dangling one a player fails to resolve.
+            string audioAttr = audioGroupEmitted ? $",AUDIO=\"{audioGroupId}\"" : string.Empty;
+
             sb.AppendLine(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate}{codecsAttr},VIDEO-RANGE={videoRange},AUDIO=\"{audioGroupId}\"{subsAttr}"
+                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate}{codecsAttr},VIDEO-RANGE={videoRange}{audioAttr}{subsAttr}"
             );
             sb.AppendLine($"{subDir}/{playlistFile}.m3u8");
         }
@@ -260,7 +312,10 @@ public class PlaylistGenerator : IPlaylistGenerator
             video.EncoderName,
             video.Profile,
             video.Level,
-            video.TenBit
+            video.TenBit,
+            video.Width,
+            video.Height,
+            video.FrameRate
         );
 
     private static string? GetAudioCodecTag(AudioOutputPlan audio) =>

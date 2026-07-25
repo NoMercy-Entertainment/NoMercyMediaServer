@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Events.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Capabilities;
+using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
@@ -29,7 +31,9 @@ internal sealed class PluginLoader(
     ILogger logger,
     string pluginsPath,
     IStorage storage,
-    IPluginRegistry registry
+    IPluginRegistry registry,
+    IPluginVerifier verifier,
+    IPluginConsentService consentService
 )
 {
     private readonly IEventBus _eventBus = eventBus;
@@ -38,6 +42,8 @@ internal sealed class PluginLoader(
     private readonly string _pluginsPath = pluginsPath;
     private readonly IStorage _storage = storage;
     private readonly IPluginRegistry _registry = registry;
+    private readonly IPluginVerifier _verifier = verifier;
+    private readonly IPluginConsentService _consentService = consentService;
 
     internal async Task LoadPluginFromManifestAsync(
         string manifestPath,
@@ -59,8 +65,7 @@ internal sealed class PluginLoader(
             {
                 _logger.LogWarning(
                     "Plugin manifest {ManifestPath} references assembly '{Assembly}' which was not found.",
-                    manifestPath,
-                    manifest.Assembly
+                    [manifestPath, manifest.Assembly]
                 );
 
                 await _eventBus.PublishAsync(
@@ -79,6 +84,48 @@ internal sealed class PluginLoader(
             }
 
             string absoluteAssemblyPath = ToLocalAssemblyPath(assemblyPath);
+
+            // Manual drops carry no repository checksum; only ABI is enforced here.
+            PluginVerificationResult verification = _verifier.Verify(
+                manifest,
+                absoluteAssemblyPath,
+                null
+            );
+
+            if (!verification.Verified)
+            {
+                string failureMessage = string.Join("; ", verification.Failures);
+
+                _logger.LogWarning(
+                    "Plugin {PluginName} failed verification and was marked malfunctioned: {Failures}",
+                    [manifest.Name, failureMessage]
+                );
+
+                PluginInfo malfunctionedInfo = PluginManifestParser.ToPluginInfo(
+                    manifest,
+                    assemblyPath,
+                    PluginStatus.Malfunctioned,
+                    manifestPath,
+                    verification.Verified,
+                    verification.Trusted
+                );
+
+                _registry[manifest.Id] = new(malfunctionedInfo, null, null);
+
+                await _eventBus.PublishAsync(
+                    new PluginErrorOccurredEvent
+                    {
+                        PluginId = manifest.Id.ToString(),
+                        PluginName = manifest.Name,
+                        ErrorMessage = failureMessage,
+                        ExceptionType = nameof(PluginVerificationException),
+                    },
+                    ct
+                );
+
+                return;
+            }
+
             PluginLoadContext loadContext = new(absoluteAssemblyPath);
 
             try
@@ -102,11 +149,22 @@ internal sealed class PluginLoader(
                         continue;
                     }
 
-                    PluginStatus initialStatus = manifest.AutoEnabled
+                    // An elevated plugin (declares network/rest/ws/auth capabilities)
+                    // must not silently start reaching the network or claims pipeline
+                    // on first install — it loads but stays Disabled until the owner
+                    // grants consent from the dashboard (Phase 2).
+                    bool mayAutoEnable =
+                        manifest.AutoEnabled
+                        && (
+                            _consentService.IsBaseline(manifest.Capabilities)
+                            || _consentService.HasConsent(manifest.Id)
+                        );
+
+                    PluginStatus initialStatus = mayAutoEnable
                         ? PluginStatus.Active
                         : PluginStatus.Disabled;
 
-                    if (manifest.AutoEnabled)
+                    if (mayAutoEnable)
                     {
                         string dataFolder = Path.Combine(
                             _pluginsPath,
@@ -123,7 +181,8 @@ internal sealed class PluginLoader(
                             _serviceProvider,
                             _logger,
                             dataFolder,
-                            _storage
+                            _storage,
+                            manifest.Capabilities
                         );
 
                         try
@@ -139,7 +198,9 @@ internal sealed class PluginLoader(
                                 manifest,
                                 assemblyPath,
                                 initialStatus,
-                                manifestPath
+                                manifestPath,
+                                verification.Verified,
+                                verification.Trusted
                             );
 
                             LoadedPlugin errorLoaded = new(errorInfo, null, loadContext);
@@ -165,7 +226,9 @@ internal sealed class PluginLoader(
                         manifest,
                         assemblyPath,
                         initialStatus,
-                        manifestPath
+                        manifestPath,
+                        verification.Verified,
+                        verification.Trusted
                     );
 
                     IPlugin? storedInstance =
@@ -214,8 +277,7 @@ internal sealed class PluginLoader(
 
                 _logger.LogWarning(
                     "Failed to load plugin assembly {AssemblyPath}: {Error}",
-                    assemblyPath,
-                    errorMessage
+                    [assemblyPath, errorMessage]
                 );
 
                 await _eventBus.PublishAsync(
@@ -235,8 +297,7 @@ internal sealed class PluginLoader(
             {
                 _logger.LogWarning(
                     "Failed to load plugin assembly {AssemblyPath}: {Error}",
-                    assemblyPath,
-                    ex.Message
+                    [assemblyPath, ex.Message]
                 );
 
                 await _eventBus.PublishAsync(
@@ -259,8 +320,7 @@ internal sealed class PluginLoader(
 
             _logger.LogWarning(
                 "Failed to parse plugin manifest {ManifestPath}: {Error}",
-                manifestPath,
-                ex.Message
+                [manifestPath, ex.Message]
             );
 
             await _eventBus.PublishAsync(
@@ -294,8 +354,7 @@ internal sealed class PluginLoader(
         {
             _logger.LogWarning(
                 "Failed to initialize plugin load context for {AssemblyPath}: {Error}",
-                assemblyPath,
-                loadContextEx.Message
+                [assemblyPath, loadContextEx.Message]
             );
 
             await _eventBus.PublishAsync(
@@ -343,9 +402,9 @@ internal sealed class PluginLoader(
                         "data",
                         instance.Id.ToString("N")
                     );
-                    if (!_storage.Exists(dataFolder))
+                    if (!await _storage.ExistsAsync(dataFolder, ct))
                     {
-                        _storage.CreateDirectory(dataFolder);
+                        await _storage.CreateDirectoryAsync(dataFolder, ct);
                     }
 
                     PluginContext context = new(
@@ -391,9 +450,7 @@ internal sealed class PluginLoader(
                     _logger.LogError(
                         ex,
                         "Plugin {PluginName} in assembly {AssemblyPath} failed to load and was marked malfunctioned: {Error}",
-                        identity.Name,
-                        assemblyPath,
-                        ex.Message
+                        [identity.Name, assemblyPath, ex.Message]
                     );
 
                     if (instance is not null)
@@ -456,8 +513,7 @@ internal sealed class PluginLoader(
 
             _logger.LogWarning(
                 "Failed to load plugin assembly {AssemblyPath}: {Error}",
-                assemblyPath,
-                errorMessage
+                [assemblyPath, errorMessage]
             );
 
             await _eventBus.PublishAsync(
@@ -479,8 +535,7 @@ internal sealed class PluginLoader(
 
             _logger.LogWarning(
                 "Failed to load plugin assembly {AssemblyPath}: {Error}",
-                assemblyPath,
-                ex.Message
+                [assemblyPath, ex.Message]
             );
 
             await _eventBus.PublishAsync(

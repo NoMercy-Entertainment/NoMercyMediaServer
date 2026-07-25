@@ -254,7 +254,13 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             );
 
             measuredVariantPaths.Add(variantPath);
-            videoMetrics[video.MapLabel] = analyzer.Measure(variantPath);
+            // Key by the variant's resolved playlist path, NOT MapLabel: every
+            // rung re-plans as "[v0]" in its own bundle, so keying by MapLabel
+            // collapses every variant onto one entry and the master advertises a
+            // single shared BANDWIDTH for all resolutions. The resolved path is
+            // unique per variant (width/height/HDR), and PlaylistGenerator looks
+            // up by the same key.
+            videoMetrics[playlistResolved] = analyzer.Measure(variantPath);
         }
 
         Dictionary<string, VariantMetrics> audioMetrics = [];
@@ -277,7 +283,9 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             );
 
             measuredVariantPaths.Add(variantPath);
-            audioMetrics[audio.MapLabel] = analyzer.Measure(variantPath);
+            // Same reasoning as video: key by the resolved playlist path so
+            // multiple audio renditions never collide on a shared MapLabel.
+            audioMetrics[playlistResolved] = analyzer.Measure(variantPath);
         }
 
         // A master that lists zero variants is unplayable; writing it would also
@@ -386,6 +394,17 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         {
             string lang = sub.Language ?? "und";
             string variant = string.IsNullOrEmpty(sub.Variant) ? "full" : sub.Variant;
+
+            // Idempotent: when a rescan reconstructs an already-published output
+            // the chunk playlist + segments are already on disk. Re-slicing would
+            // redo work (and needlessly hammer the NAS for every track); skip it
+            // and let the master keep advertising the existing playlist.
+            string existingPlaylistPath = storage.CombinePath(
+                storage.CombinePath(subtitlesDir, lang),
+                $"{variant}.m3u8"
+            );
+            if (storage.Exists(existingPlaylistPath))
+                continue;
 
             // Match the source .vtt the extractor produced.
             string? sourceVttPath = vttFiles.FirstOrDefault(f =>

@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Extensions;
-
 namespace NoMercy.Tests.NmSystem;
 
 [Trait("Category", "Unit")]
@@ -29,7 +27,7 @@ public class MutatorsExtensionsTests
     {
         int[] input = [1, 2, 3, 4, 5];
         IEnumerable<int> result = input.Randomize().OrderBy(x => x).ToList();
-        result.Should().Equal(1, 2, 3, 4, 5);
+        result.Should().Equal([1, 2, 3, 4, 5]);
     }
 
     [Fact]

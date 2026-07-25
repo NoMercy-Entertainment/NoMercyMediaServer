@@ -19,13 +19,13 @@ namespace NoMercy.Tests.Encoder.Output;
 public class OutputStrategyFactoryTests
 {
     [Theory]
-    [InlineData(OutputFormat.Hls, typeof(HlsOutputStrategy))]
-    [InlineData(OutputFormat.Mkv, typeof(MkvOutputStrategy))]
-    [InlineData(OutputFormat.Mp4, typeof(Mp4OutputStrategy))]
-    [InlineData(OutputFormat.Dash, typeof(DashOutputStrategy))]
-    [InlineData(OutputFormat.Mp3, typeof(Mp3OutputStrategy))]
-    [InlineData(OutputFormat.Flac, typeof(FlacOutputStrategy))]
-    [InlineData(OutputFormat.Ogg, typeof(OggOutputStrategy))]
+    [InlineData([OutputFormat.Hls, typeof(HlsOutputStrategy)])]
+    [InlineData([OutputFormat.Mkv, typeof(MkvOutputStrategy)])]
+    [InlineData([OutputFormat.Mp4, typeof(Mp4OutputStrategy)])]
+    [InlineData([OutputFormat.Dash, typeof(DashOutputStrategy)])]
+    [InlineData([OutputFormat.Mp3, typeof(Mp3OutputStrategy)])]
+    [InlineData([OutputFormat.Flac, typeof(FlacOutputStrategy)])]
+    [InlineData([OutputFormat.Ogg, typeof(OggOutputStrategy)])]
     public void Resolve_BuiltInFormat_ReturnsMatchingStrategy(OutputFormat format, Type expected)
     {
         OutputStrategyFactory factory = new([

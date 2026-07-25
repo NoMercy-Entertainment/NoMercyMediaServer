@@ -127,7 +127,7 @@ public class HlsSinglePassStrategy(
             );
         }
 
-        if (plan.GenerateChapterThumbs && plan.Chapters is { Count: > 0 })
+        if (plan is { GenerateChapterThumbs: true, Chapters.Count: > 0 })
         {
             int count = plan.Chapters.Count;
             for (int i = 0; i < count; i++)

@@ -56,9 +56,7 @@ public class SignalREncodingEventHandler : IDisposable
             }
         );
         _logger.LogInformation(
-            "Encoding started: Job={JobId}, Profile={ProfileName}",
-            @event.JobId,
-            @event.ProfileName
+            "Encoding started: Job={JobId}, Profile={ProfileName}", [@event.JobId, @event.ProfileName]
         );
     }
 
@@ -114,9 +112,7 @@ public class SignalREncodingEventHandler : IDisposable
             }
         );
         _logger.LogInformation(
-            "Encoding failed: Job={JobId}, Error={ErrorMessage}",
-            @event.JobId,
-            @event.ErrorMessage
+            "Encoding failed: Job={JobId}, Error={ErrorMessage}", [@event.JobId, @event.ErrorMessage]
         );
     }
 

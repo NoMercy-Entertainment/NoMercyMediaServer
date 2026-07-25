@@ -80,10 +80,7 @@ public class TmdbChangesCronJob : ICronJobExecutor
         );
 
         _logger.LogInformation(
-            "TMDB changes sync queued refreshes — movies: {Movies}, shows: {Shows}, people: {People}",
-            movies,
-            shows,
-            people
+            "TMDB changes sync queued refreshes — movies: {Movies}, shows: {Shows}, people: {People}", [movies, shows, people]
         );
     }
 

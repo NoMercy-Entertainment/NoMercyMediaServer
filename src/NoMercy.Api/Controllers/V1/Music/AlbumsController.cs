@@ -134,7 +134,7 @@ public class AlbumsController : BaseController
         if (string.IsNullOrEmpty(name))
             return "#";
         char first = char.ToLowerInvariant(name[0]);
-        return first >= 'a' && first <= 'z' ? first.ToString().ToUpperInvariant() : "#";
+        return first is >= 'a' and <= 'z' ? first.ToString().ToUpperInvariant() : "#";
     }
 
     [HttpGet]

@@ -15,7 +15,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NoMercy.Database;
-using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Events;
 using NoMercy.Events.FileWatcher;

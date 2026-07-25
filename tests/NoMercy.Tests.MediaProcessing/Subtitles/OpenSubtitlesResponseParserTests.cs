@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.MediaProcessing.Subtitles;
 using NoMercy.NmSystem.Extensions;

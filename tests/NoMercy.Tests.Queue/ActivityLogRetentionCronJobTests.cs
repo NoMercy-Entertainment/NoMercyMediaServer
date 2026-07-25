@@ -143,4 +143,16 @@ public class ActivityLogRetentionCronJobTests : IDisposable
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ctx.ActivityLogs.Should().BeEmpty();
     }
+
+    [Fact]
+    public void CronExpression_IsDailyAt3Am_AndJobNameIsSet()
+    {
+        ActivityLogRetentionCronJob job = new(
+            CreateFactory(),
+            NullLogger<ActivityLogRetentionCronJob>.Instance
+        );
+
+        job.CronExpression.Should().Be("0 3 * * *");
+        job.JobName.Should().Be("Activity Log Retention");
+    }
 }

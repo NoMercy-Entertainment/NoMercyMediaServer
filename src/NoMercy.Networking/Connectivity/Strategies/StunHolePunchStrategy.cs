@@ -113,9 +113,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
 
             _connectivityStatus.NatStatus = NatStatus.HolePunched;
             _logger.LogInformation(
-                "STUN discovered public endpoint: {StunPublicIp}:{StunPublicPort}",
-                _connectivityStatus.StunPublicIp,
-                _connectivityStatus.StunPublicPort
+                "STUN discovered public endpoint: {StunPublicIp}:{StunPublicPort}", [_connectivityStatus.StunPublicIp, _connectivityStatus.StunPublicPort]
             );
 
             // Start keep-alive to maintain NAT mapping
@@ -207,10 +205,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         catch (Exception ex)
         {
             _logger.LogDebug(
-                "STUN request to {Host}:{Port} failed: {Message}",
-                host,
-                port,
-                ex.Message
+                "STUN request to {Host}:{Port} failed: {Message}", [host, port, ex.Message]
             );
             return null;
         }

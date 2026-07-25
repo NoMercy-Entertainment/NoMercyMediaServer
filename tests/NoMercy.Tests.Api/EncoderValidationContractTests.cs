@@ -94,32 +94,33 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         _builtInPresetId = Ulid.NewUlid();
         _childPresetId = Ulid.NewUlid();
 
-        ctx.EncodingPresets.AddRange(
-            new EncodingPreset
-            {
-                Id = _userPresetId,
-                Name = $"User Preset {_userPresetId}",
-                ProfileJson = ValidProfileJson,
-                IsBuiltIn = false,
-                Source = "db",
-            },
-            new EncodingPreset
-            {
-                Id = _builtInPresetId,
-                Name = $"BuiltIn Preset {_builtInPresetId}",
-                ProfileJson = ValidProfileJson,
-                IsBuiltIn = true,
-                Source = "seed",
-            },
-            new EncodingPreset
-            {
-                Id = _childPresetId,
-                Name = $"Child Preset {_childPresetId}",
-                ProfileJson = "{}",
-                ParentPresetId = _userPresetId,
-                IsBuiltIn = false,
-                Source = "db",
-            }
+        ctx.EncodingPresets.AddRange([
+                new EncodingPreset
+                {
+                    Id = _userPresetId,
+                    Name = $"User Preset {_userPresetId}",
+                    ProfileJson = ValidProfileJson,
+                    IsBuiltIn = false,
+                    Source = "db",
+                },
+                new EncodingPreset
+                {
+                    Id = _builtInPresetId,
+                    Name = $"BuiltIn Preset {_builtInPresetId}",
+                    ProfileJson = ValidProfileJson,
+                    IsBuiltIn = true,
+                    Source = "seed",
+                },
+                new EncodingPreset
+                {
+                    Id = _childPresetId,
+                    Name = $"Child Preset {_childPresetId}",
+                    ProfileJson = "{}",
+                    ParentPresetId = _userPresetId,
+                    IsBuiltIn = false,
+                    Source = "db",
+                }
+            ]
         );
 
         await ctx.SaveChangesAsync();
@@ -135,13 +136,13 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     // RULE: auth-required — all encoder/profile and dashboard/encoding/presets
 
     [Theory]
-    [InlineData("GET", "/api/v1/encoder/profiles")]
-    [InlineData("GET", "/api/v1/dashboard/encoding/presets")]
-    [InlineData("POST", "/api/v1/encoder/profiles/validate")]
-    [InlineData("POST", "/api/v1/dashboard/encoding/presets/validate")]
-    [InlineData("POST", "/api/v1/dashboard/drivers")]
-    [InlineData("GET", "/api/v1/dashboard/drivers")]
-    [InlineData("GET", "/api/v1/dashboard/drivers/types")]
+    [InlineData(["GET", "/api/v1/encoder/profiles"])]
+    [InlineData(["GET", "/api/v1/dashboard/encoding/presets"])]
+    [InlineData(["POST", "/api/v1/encoder/profiles/validate"])]
+    [InlineData(["POST", "/api/v1/dashboard/encoding/presets/validate"])]
+    [InlineData(["POST", "/api/v1/dashboard/drivers"])]
+    [InlineData(["GET", "/api/v1/dashboard/drivers"])]
+    [InlineData(["GET", "/api/v1/dashboard/drivers/types"])]
     public async Task AllEncoderEndpoints_Anonymous_Returns401Or403(string method, string path)
     {
         HttpRequestMessage req = new(new(method), path);
@@ -157,8 +158,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     }
 
     [Theory]
-    [InlineData("GET", "/api/v1/encoder/profiles")]
-    [InlineData("GET", "/api/v1/dashboard/drivers/types")]
+    [InlineData(["GET", "/api/v1/encoder/profiles"])]
+    [InlineData(["GET", "/api/v1/dashboard/drivers/types"])]
     public async Task ReadEndpoints_Authenticated_ReturnsOk(string method, string path)
     {
         HttpRequestMessage req = new(new(method), path);

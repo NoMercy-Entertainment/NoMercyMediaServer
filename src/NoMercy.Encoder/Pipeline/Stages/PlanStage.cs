@@ -829,7 +829,7 @@ public class PlanStage(
                             // fight the quality target), so the bitrate must NOT reach the
                             // output plan as a target bitrate.
                             int outputBitrateKbps = v.BitrateKbps;
-                            if (v.Crf > 0 && v.BitrateKbps > 0)
+                            if (v is { Crf: > 0, BitrateKbps: > 0 })
                             {
                                 int bufKbps = v.BitrateKbps * 2;
                                 extraFlags["-maxrate"] = $"{v.BitrateKbps}k";
@@ -840,7 +840,7 @@ public class PlanStage(
                             // HDR→HDR passthrough: preserve color metadata when source is HDR
                             // and the output keeps 10-bit without tonemapping.
                             bool preservesHdr =
-                                sourceIsHdr && v.BitDepth >= 10 && !v.ConvertHdrToSdr;
+                                sourceIsHdr && v is { BitDepth: >= 10, ConvertHdrToSdr: false };
                             if (preservesHdr)
                             {
                                 VideoStreamInfo src = media.VideoStreams[0];
@@ -1038,18 +1038,26 @@ public class PlanStage(
         int primaryBitDepth = primaryVideo?.BitDepth ?? 8;
         VideoCodecType primaryCodec = primaryVideo?.Codec ?? VideoCodecType.H264;
 
+        // Dolby Vision RPU survives only a bitstream copy — a re-encode (any
+        // crop / scale / tonemap, or nvenc at all) strips it, so DV may only be
+        // preserved when the primary video is stream-copied.
+        bool videoIsCopy =
+            (videoOutputs.Length > 0 && videoOutputs[0].Policy == StreamPolicy.Copy)
+            || videoOutputs.Length == 0;
+
         DolbyVisionDecision dvDecision = DolbyVisionGate.Resolve(
             media.DolbyVision,
             primaryCodec,
             primaryBitDepth,
             outputFormat,
             profile.HdrPolicies,
+            videoIsCopy,
             context.DecisionsOrNoOp,
             hlsUsesFmp4Segments
         );
 
         // Merge DV container flags into the first video output's ExtraFlags.
-        if (dvDecision.Preserved && dvDecision.ExtraFlags.Count > 0 && videoPlan.Length > 0)
+        if (dvDecision is { Preserved: true, ExtraFlags.Count: > 0 } && videoPlan.Length > 0)
         {
             foreach ((string key, string value) in dvDecision.ExtraFlags)
                 videoPlan[0].ExtraFlags[key] = value;
@@ -1072,10 +1080,7 @@ public class PlanStage(
         // the smart-copy downgrade routed through Copy also gets the tag — the
         // author-declared always-copy preset still resolves the same way since
         // its single VideoOutput carries Policy: Copy from the start.
-        bool videoIsCopy =
-            (videoOutputs.Length > 0 && videoOutputs[0].Policy == StreamPolicy.Copy)
-            || videoOutputs.Length == 0;
-
+        // (videoIsCopy is computed above, before the Dolby Vision gate.)
         if (media.StereoMode is not null && videoIsCopy && videoPlan.Length > 0)
         {
             // MKV: -metadata:s:v stereo_mode=<value> tags the video track — the

@@ -48,17 +48,13 @@ public class CastProxyController(
     // the proxy answer 405 before the request ever reached the TV, so picking a
     // track from the web remote silently did nothing while the POST transport
     // controls (play/pause/seek) worked fine.
-    [AcceptVerbs("GET", "POST", "PUT", "PATCH", "DELETE")]
+    [AcceptVerbs(["GET", "POST", "PUT", "PATCH", "DELETE"])]
     [Route("{deviceId}/{**path}")]
     public async Task<IActionResult> Proxy(string deviceId, string path)
     {
         Guid userId = User.UserId();
         logger.LogInformation(
-            "[CastProxy] {Method} device={DeviceId} path=/{Path} user={User}",
-            Request.Method,
-            deviceId,
-            path,
-            userId
+            "[CastProxy] {Method} device={DeviceId} path=/{Path} user={User}", [Request.Method, deviceId, path, userId]
         );
 
         if (userId == Guid.Empty)
@@ -74,9 +70,7 @@ public class CastProxyController(
         if (tv is null)
         {
             logger.LogWarning(
-                "[CastProxy] no owned TV device '{DeviceId}' for user {User}",
-                deviceId,
-                userId
+                "[CastProxy] no owned TV device '{DeviceId}' for user {User}", [deviceId, userId]
             );
             return NotFoundResponse($"No owned TV device '{deviceId}' found");
         }
@@ -122,10 +116,7 @@ public class CastProxyController(
 
             byte[] body = await upstream.Content.ReadAsByteArrayAsync();
             logger.LogInformation(
-                "[CastProxy] TV {Ip} replied {Status} ({Bytes} bytes)",
-                tv.Ip,
-                (int)upstream.StatusCode,
-                body.Length
+                "[CastProxy] TV {Ip} replied {Status} ({Bytes} bytes)", [tv.Ip, (int)upstream.StatusCode, body.Length]
             );
 
             Response.StatusCode = (int)upstream.StatusCode;
@@ -136,16 +127,13 @@ public class CastProxyController(
         }
         catch (TaskCanceledException)
         {
-            logger.LogWarning("[CastProxy] TV '{Name}' ({Ip}) timed out", tv.Name, tv.Ip);
+            logger.LogWarning("[CastProxy] TV '{Name}' ({Ip}) timed out", [tv.Name, tv.Ip]);
             return GatewayTimeoutResponse($"TV '{tv.Name}' did not respond in time");
         }
         catch (HttpRequestException ex)
         {
             logger.LogWarning(
-                "[CastProxy] could not reach TV '{Name}' ({Ip}): {Message}",
-                tv.Name,
-                tv.Ip,
-                ex.Message
+                "[CastProxy] could not reach TV '{Name}' ({Ip}): {Message}", [tv.Name, tv.Ip, ex.Message]
             );
             return ServiceUnavailableResponse($"Could not reach TV '{tv.Name}': {ex.Message}");
         }

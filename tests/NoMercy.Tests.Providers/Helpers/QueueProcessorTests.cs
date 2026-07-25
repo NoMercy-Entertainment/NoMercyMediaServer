@@ -140,6 +140,6 @@ public class QueueProcessorTests
 
         result1.Should().Be(1);
         result2.Should().Be(2);
-        executionOrder.Should().ContainInOrder(1, 2);
+        executionOrder.Should().ContainInOrder([1, 2]);
     }
 }

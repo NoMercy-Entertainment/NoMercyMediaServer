@@ -99,9 +99,7 @@ public static class LocalizationHelper
                 return;
 
             XElement newEntry = new(
-                "Entry",
-                new XElement("Key", key),
-                new XElement("Value", new XAttribute("lang", "nl"), key)
+                "Entry", [new XElement("Key", key), new XElement("Value", [new XAttribute("lang", "nl"), key])]
             );
 
             doc.Root?.Add(newEntry);

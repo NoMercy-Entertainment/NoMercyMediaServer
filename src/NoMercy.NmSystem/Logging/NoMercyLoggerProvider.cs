@@ -14,9 +14,8 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Logging.Rendering;
-using LegacyLogger = NoMercy.NmSystem.SystemCalls.Logger;
-
 using Serilog.Events;
+using LegacyLogger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.NmSystem.Logging;
 
@@ -138,7 +137,6 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
             category,
             entry.Message,
             null,
-            null,
             _options.Theme,
             _color,
             _options.WidthProvider()
@@ -177,7 +175,6 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
             level,
             category,
             message,
-            scope,
             exception,
             _options.Theme,
             _color,

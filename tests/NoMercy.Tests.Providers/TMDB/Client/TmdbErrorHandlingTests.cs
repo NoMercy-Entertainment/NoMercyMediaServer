@@ -103,7 +103,7 @@ public class TmdbErrorHandlingTests : TmdbTestBase
         Task<TmdbImages?> imagesTask = client.Images();
 
         Func<Task> allTasksCompletion = async () =>
-            await Task.WhenAll(detailsTask, creditsTask, externalIdsTask, keywordsTask, imagesTask);
+            await Task.WhenAll([detailsTask, creditsTask, externalIdsTask, keywordsTask, imagesTask]);
         await allTasksCompletion.Should().NotThrowAsync();
     }
 

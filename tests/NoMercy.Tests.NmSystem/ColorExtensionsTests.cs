@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Drawing;
-using NoMercy.NmSystem.Extensions;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.Tests.NmSystem;
@@ -19,12 +18,12 @@ namespace NoMercy.Tests.NmSystem;
 public class ColorExtensionsTests
 {
     [Theory]
-    [InlineData(0, 0, 0, "#000000")]
-    [InlineData(255, 255, 255, "#FFFFFF")]
-    [InlineData(255, 0, 0, "#FF0000")]
-    [InlineData(0, 255, 0, "#00FF00")]
-    [InlineData(0, 0, 255, "#0000FF")]
-    [InlineData(128, 64, 192, "#8040C0")]
+    [InlineData([0, 0, 0, "#000000"])]
+    [InlineData([255, 255, 255, "#FFFFFF"])]
+    [InlineData([255, 0, 0, "#FF0000"])]
+    [InlineData([0, 255, 0, "#00FF00"])]
+    [InlineData([0, 0, 255, "#0000FF"])]
+    [InlineData([128, 64, 192, "#8040C0"])]
     public void ToHexString_ConvertsSdColorToHex(int red, int green, int blue, string expected)
     {
         Color color = Color.FromArgb(red, green, blue);
@@ -33,12 +32,12 @@ public class ColorExtensionsTests
     }
 
     [Theory]
-    [InlineData(0, 0, 0, "#000000")]
-    [InlineData(255, 255, 255, "#FFFFFF")]
-    [InlineData(255, 0, 0, "#FF0000")]
-    [InlineData(0, 255, 0, "#00FF00")]
-    [InlineData(0, 0, 255, "#0000FF")]
-    [InlineData(128, 64, 192, "#8040C0")]
+    [InlineData([0, 0, 0, "#000000"])]
+    [InlineData([255, 255, 255, "#FFFFFF"])]
+    [InlineData([255, 0, 0, "#FF0000"])]
+    [InlineData([0, 255, 0, "#00FF00"])]
+    [InlineData([0, 0, 255, "#0000FF"])]
+    [InlineData([128, 64, 192, "#8040C0"])]
     public void ToHexString_ConvertsImageSharpRgb24ToHex(
         byte red,
         byte green,

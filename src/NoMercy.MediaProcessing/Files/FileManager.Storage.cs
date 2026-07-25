@@ -15,11 +15,16 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.Encoder.Output;
+using NoMercy.Encoder.Subtitles;
+using NoMercy.MediaProcessing.Jobs.SubtitleJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
+using NoMercyQueue;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
+using QueueJobDispatcher = NoMercyQueue.JobDispatcher;
 
 namespace NoMercy.MediaProcessing.Files;
 
@@ -131,6 +136,8 @@ public partial class FileManager
 
         List<Subtitle> subtitles = GetSubtitles(storage, hostFolder);
 
+        DispatchOrphanedBitmapOcrBackfill(storage, folder, hostFolder);
+
         List<VideoTrack> tracks = GetExtraFiles(storage, hostFolder);
 
         Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
@@ -199,6 +206,98 @@ public partial class FileManager
         await fileRepository.StoreVideoFile(videoFile);
     }
 
+    /// <summary>
+    /// Queues an OCR backfill for every preserved bitmap subtitle
+    /// (<c>.sup</c>/<c>.sub</c>) under <paramref name="hostFolder"/> that has no
+    /// text sibling carrying the same <c>{lang}.{variant}</c>. A title encoded
+    /// before the OCR pipeline worked keeps its bitmap sidecar but never got a
+    /// <c>.vtt</c>, so clients that cannot render PGS show nothing. OCR is minutes
+    /// of ffmpeg per track, far too slow for the scan thread, so the actual work
+    /// runs as a low-priority <see cref="SubtitleOcrBackfillJob"/> on the encoder
+    /// queue; the job is idempotent, so re-queuing across scans until it lands is
+    /// harmless. A bitmap track that already has an <c>.ass</c>/<c>.srt</c>/<c>.vtt</c>
+    /// is left alone — OCRing it would double the track in the picker.
+    /// </summary>
+    private static void DispatchOrphanedBitmapOcrBackfill(
+        IStorage storage,
+        Folder folder,
+        string hostFolder
+    )
+    {
+        string subtitleFolder = storage.CombinePath(hostFolder, "subtitles");
+        if (!storage.Exists(subtitleFolder))
+            return;
+
+        QueueJobDispatcher? dispatcher = QueueRunner.Current?.Dispatcher;
+        if (dispatcher is null)
+            return;
+
+        IReadOnlyList<OrphanedBitmapSubtitle> orphans = SelectOrphanedBitmapSubtitles(
+            storage
+                .List(subtitleFolder, null, recursive: false)
+                .Where(candidate => !candidate.IsDirectory)
+                .Select(candidate => storage.GetName(candidate.Path))
+        );
+
+        foreach ((string supName, string mediaTitle, string language, string variant) in orphans)
+        {
+            dispatcher.Dispatch(
+                new SubtitleOcrBackfillJob(
+                    folder.Id.ToString(),
+                    folder.DriverId.ToString(),
+                    hostFolder,
+                    supName,
+                    mediaTitle,
+                    language,
+                    variant
+                ),
+                "encoder",
+                2
+            );
+
+            Logger.App(
+                $"[SubtitleOcrBackfill] queued OCR for orphaned bitmap subtitle {supName}",
+                LogEventLevel.Information
+            );
+        }
+    }
+
+    /// <summary>
+    /// From a flat list of <c>subtitles/</c> filenames, returns each bitmap
+    /// sidecar (<c>.sup</c>/<c>.sub</c>) that has no text track (<c>.vtt</c>,
+    /// <c>.ass</c>, <c>.srt</c>, …) carrying the same <c>{lang}.{variant}</c>. A
+    /// bitmap already backed by a text track is skipped so OCR never produces a
+    /// duplicate track in the picker. The <c>MediaTitle</c> is the filename stem
+    /// before <c>.{lang}.{variant}.{ext}</c>, reproduced on the OCR output so the
+    /// scan pairs the new <c>.vtt</c> with its bitmap sibling.
+    /// </summary>
+    internal static IReadOnlyList<OrphanedBitmapSubtitle> SelectOrphanedBitmapSubtitles(
+        IEnumerable<string> subtitleFileNames
+    )
+    {
+        HashSet<string> textKeys = new(StringComparer.OrdinalIgnoreCase);
+        List<OrphanedBitmapSubtitle> bitmaps = [];
+
+        foreach (string name in subtitleFileNames)
+        {
+            Match match = SubtitleFileRegex().Match(name);
+            if (!match.Success)
+                continue;
+
+            string language = match.Groups["lang"].Value;
+            string variant = match.Groups["type"].Value;
+
+            if (SubtitleClassifier.IsBitmapSidecarExtension(match.Groups["ext"].Value))
+                bitmaps.Add(new(name, name[..match.Index].TrimEnd('.'), language, variant));
+            else
+                textKeys.Add($"{language}|{variant}");
+        }
+
+        return bitmaps
+            .Where(bitmap => !textKeys.Contains($"{bitmap.Language}|{bitmap.Variant}"))
+            .ToList();
+    }
+
     private async Task<Metadata> MakeMetadata(
         IStorage storage,
         MediaFile item,
@@ -213,6 +312,8 @@ public partial class FileManager
         List<ISubtitle> subtitles = GetSubtitleHashList(storage, hostFolder);
         List<IFont> fonts = GetFontHashList(storage, hostFolder);
         List<IPreview> previews = GetPreviewHashList(storage, hostFolder, extraFiles);
+
+        await RebuildHlsMasterFromDiskAsync(storage, hostFolder, fileName, video);
 
         VideoTrack? chaptersFile = extraFiles.FirstOrDefault(file => file.Kind == "chapters");
 
@@ -288,5 +389,168 @@ public partial class FileManager
         };
 
         return metadata;
+    }
+
+    /// <summary>
+    /// Rebuilds <c>{masterTitle}.m3u8</c> from the renditions actually on disk
+    /// under <paramref name="hostFolder"/> — the fully-published media root a
+    /// scan walks, with none of the encode-finalize path's staging/scope
+    /// fragility (a coordinator's finalize can resolve against a scope that
+    /// only sees the last bundle's own rendition when a preset gets split
+    /// into several self-finalizing dispatch bundles; a completed scan always
+    /// sees every rendition every bundle ever published). A no-op for a
+    /// non-HLS item (<paramref name="video"/> empty — GetVideoHashList only
+    /// ever populates from <c>video_*/</c> dirs, which only exist for HLS
+    /// output). Best-effort: a rebuild failure must never fail the scan.
+    /// </summary>
+    private async Task RebuildHlsMasterFromDiskAsync(
+        IStorage storage,
+        string hostFolder,
+        string fileName,
+        List<IVideo> video
+    )
+    {
+        if (video.Count == 0)
+            return;
+
+        string masterTitle = fileName.TrimStart('/');
+        if (masterTitle.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase))
+            masterTitle = masterTitle[..^".m3u8".Length];
+
+        // The rebuild ffprobes every video rendition over the network (a remote
+        // backend copies each probe segment off first) and rewrites the master —
+        // encode-finalize cost re-paid on every catalog scan. When the on-disk
+        // master already advertises every rendition present on disk, that whole
+        // pass reproduces the same master byte-for-byte, so skip it. Only a
+        // genuinely incomplete master — the multi-bundle ladder split this exists
+        // for, where a later bundle publishes a rung the current master never
+        // listed — falls through to the full reconstruction.
+        if (MasterCoversDiskOutput(storage, hostFolder, masterTitle, video))
+            return;
+
+        // Only logged when the rebuild actually runs (a missing or incomplete
+        // master), so it stays quiet on the common already-complete rescan.
+        Logger.App(
+            $"[MasterRebuild] {masterTitle}: rebuilding (master missing or incomplete)",
+            LogEventLevel.Information
+        );
+
+        try
+        {
+            HlsOnDiskPlanReconstructor reconstructor = new(mediaAnalyzer);
+            OutputPlan plan = await reconstructor.ReconstructAsync(
+                storage,
+                hostFolder,
+                CancellationToken.None
+            );
+
+            if (plan.VideoOutputs.Length == 0)
+                return;
+
+            HlsOutputStrategy hlsOutputStrategy = new(storage);
+            await hlsOutputStrategy.FinalizeAsync(
+                hostFolder,
+                plan,
+                masterTitle,
+                CancellationToken.None
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.App(
+                $"[RebuildHlsMasterFromDisk] {masterTitle}: master rebuild failed — {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
+    }
+
+    /// <summary>
+    /// True when the on-disk master <c>{masterTitle}.m3u8</c> already advertises
+    /// every rendition present under <paramref name="hostFolder"/> — every
+    /// <paramref name="video"/> and <c>audio_*/</c> playlist, and every
+    /// <c>subtitles/{lang}/{variant}.{m3u8|ass|srt}</c> language-subdir track the
+    /// master references (never the raw root sidecar the OCR pass drops; that
+    /// surfaces through <see cref="GetSubtitles"/> on the VideoFile, not the
+    /// master). In that state a rebuild reproduces the same master byte-for-byte,
+    /// so the caller skips the per-rendition ffprobe + master rewrite. A missing
+    /// master or any on-disk rendition the master does not list returns false so
+    /// the rebuild runs — the multi-bundle self-heal, where a later bundle
+    /// publishes a rung the current master never advertised. Only checks disk ⊆
+    /// master: a rendition deleted after finalize leaves a stale over-reference the
+    /// next real finalize prunes — not a scan concern.
+    /// </summary>
+    internal static bool MasterCoversDiskOutput(
+        IStorage storage,
+        string hostFolder,
+        string masterTitle,
+        List<IVideo> video
+    )
+    {
+        string masterPath = storage.CombinePath(hostFolder, masterTitle + ".m3u8");
+        if (!storage.Exists(masterPath))
+            return false;
+
+        string master;
+        try
+        {
+            master = storage
+                .ReadAllTextAsync(masterPath, CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch
+        {
+            return false;
+        }
+
+        foreach (IVideo entry in video)
+        {
+            string renditionDir = entry.FileName.TrimStart('/').Split('/')[0];
+            if (!master.Contains(renditionDir + "/", StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        foreach (
+            StorageEntry dir in storage
+                .List(hostFolder, "audio_*", recursive: false)
+                .Where(entry => entry.IsDirectory)
+        )
+        {
+            string renditionDir = storage.GetName(dir.Path);
+            if (!master.Contains(renditionDir + "/", StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        string subtitleFolder = storage.CombinePath(hostFolder, "subtitles");
+        if (!storage.Exists(subtitleFolder))
+            return true;
+
+        foreach (
+            StorageEntry languageDir in storage
+                .List(subtitleFolder, "*", recursive: false)
+                .Where(entry => entry.IsDirectory)
+        )
+        {
+            string language = storage.GetName(languageDir.Path);
+            foreach (
+                StorageEntry track in storage
+                    .List(languageDir.Path, "*", recursive: false)
+                    .Where(entry => !entry.IsDirectory)
+            )
+            {
+                string trackName = storage.GetName(track.Path);
+                bool isAdvertised =
+                    trackName.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
+                    || trackName.EndsWith(".ass", StringComparison.OrdinalIgnoreCase)
+                    || trackName.EndsWith(".srt", StringComparison.OrdinalIgnoreCase);
+                if (!isAdvertised)
+                    continue;
+
+                if (!master.Contains($"{language}/{trackName}", StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
+        }
+
+        return true;
     }
 }

@@ -97,7 +97,7 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
             CreatedAt = DateTime.UtcNow.AddMinutes(-1),
         };
 
-        ctx.QueueJobs.AddRange(unparseable, reserved, pending);
+        ctx.QueueJobs.AddRange([unparseable, reserved, pending]);
         await ctx.SaveChangesAsync();
 
         _reservedRowId = reserved.Id;
@@ -148,7 +148,7 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
             .Be(
                 "running",
                 "the row carries ReservedAt, so the job is in flight — the payload's own "
-                    + "\"status\" is a stale enqueue-time snapshot and must not be trusted"
+                         + "\"status\" is a stale enqueue-time snapshot and must not be trusted"
             );
     }
 

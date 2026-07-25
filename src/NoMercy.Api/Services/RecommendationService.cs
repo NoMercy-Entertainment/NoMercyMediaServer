@@ -130,22 +130,11 @@ public class RecommendationService
             : Task.FromResult(new List<RecommendationCandidateDto>());
         Task<UserAffinityProfile> affinityTask = GetOrBuildAffinityProfileAsync(userId, ct);
 
-        await Task.WhenAll(
-            movieRecsTask,
-            tvRecsTask,
-            animeRecsTask,
-            movieSimTask,
-            tvSimTask,
-            animeSimTask,
-            affinityTask
+        await Task.WhenAll([movieRecsTask, tvRecsTask, animeRecsTask, movieSimTask, tvSimTask, animeSimTask, affinityTask]
         );
 
         _logger.LogDebug(
-            "Recommendations [{MediaTypeFilter}]: recs={Count}, similar={Count2}, affinity sources={Count3}",
-            mediaTypeFilter,
-            animeRecsTask.Result.Count + movieRecsTask.Result.Count + tvRecsTask.Result.Count,
-            animeSimTask.Result.Count + movieSimTask.Result.Count + tvSimTask.Result.Count,
-            affinityTask.Result.SourceItems.Count
+            "Recommendations [{MediaTypeFilter}]: recs={Count}, similar={Count2}, affinity sources={Count3}", [mediaTypeFilter, animeRecsTask.Result.Count + movieRecsTask.Result.Count + tvRecsTask.Result.Count, animeSimTask.Result.Count + movieSimTask.Result.Count + tvSimTask.Result.Count, affinityTask.Result.SourceItems.Count]
         );
 
         UserAffinityProfile profile = affinityTask.Result;
@@ -163,10 +152,9 @@ public class RecommendationService
 
             bool isHighSignal =
                 src.IsFavorited
-                || (src.Rating.HasValue && src.Rating.Value >= 6)
+                || src.Rating is >= 6
                 || (
-                    src.TimeWatched is > 0
-                    && src.Duration is > 0
+                    src is { TimeWatched: > 0, Duration: > 0 }
                     && (double)src.TimeWatched / src.Duration.Value > 0.5
                 );
             if (!isHighSignal)
@@ -193,7 +181,7 @@ public class RecommendationService
                     {
                         return await _recommendationRepository.GetKeywordCrossTypeTvCandidatesAsync(
                             userId,
-                            movieKeywordMap,
+                            movieKeywordMap: movieKeywordMap,
                             minSharedKeywords: 3,
                             maxCandidates: 100,
                             ct: ct
@@ -210,7 +198,7 @@ public class RecommendationService
                     {
                         return await _recommendationRepository.GetKeywordCrossTypeMovieCandidatesAsync(
                             userId,
-                            nonMovieKeywordMap,
+                            tvKeywordMap: nonMovieKeywordMap,
                             minSharedKeywords: 3,
                             maxCandidates: 100,
                             ct: ct
@@ -227,7 +215,7 @@ public class RecommendationService
                     {
                         return await _recommendationRepository.GetKeywordCrossTypeAnimeCandidatesAsync(
                             userId,
-                            movieKeywordMap,
+                            movieKeywordMap: movieKeywordMap,
                             minSharedKeywords: 3,
                             maxCandidates: 100,
                             ct: ct
@@ -237,19 +225,10 @@ public class RecommendationService
                 )
                 : Task.FromResult(new List<RecommendationCandidateDto>());
 
-        await Task.WhenAll(crossTypeTvTask, crossTypeMovieTask, crossTypeAnimeTask);
+        await Task.WhenAll([crossTypeTvTask, crossTypeMovieTask, crossTypeAnimeTask]);
 
         // Phase 2: Merge candidates (same MediaId+MediaType from Recommendation + Similar + Keywords = higher frequency)
-        List<RecommendationCandidateDto> allCandidates = MergeCandidates(
-            movieRecsTask.Result,
-            tvRecsTask.Result,
-            animeRecsTask.Result,
-            movieSimTask.Result,
-            tvSimTask.Result,
-            animeSimTask.Result,
-            crossTypeTvTask.Result,
-            crossTypeMovieTask.Result,
-            crossTypeAnimeTask.Result
+        List<RecommendationCandidateDto> allCandidates = MergeCandidates([movieRecsTask.Result, tvRecsTask.Result, animeRecsTask.Result, movieSimTask.Result, tvSimTask.Result, animeSimTask.Result, crossTypeTvTask.Result, crossTypeMovieTask.Result, crossTypeAnimeTask.Result]
         );
 
         // Phase 3: Get genre maps for source items — use actual source type from profile, not candidate type
@@ -285,7 +264,7 @@ public class RecommendationService
             ct
         );
 
-        await Task.WhenAll(movieGenreMapTask, tvGenreMapTask);
+        await Task.WhenAll([movieGenreMapTask, tvGenreMapTask]);
 
         Dictionary<int, List<int>> combinedGenreMap = new(movieGenreMapTask.Result);
         foreach (KeyValuePair<int, List<int>> kv in tvGenreMapTask.Result)
@@ -317,11 +296,7 @@ public class RecommendationService
             .ToList();
 
         _logger.LogDebug(
-            "Recommendations [{MediaTypeFilter}]: merged={Count}, scored={Count2}, deduped={Count3}",
-            mediaTypeFilter,
-            allCandidates.Count,
-            scored.Count,
-            deduped.Count
+            "Recommendations [{MediaTypeFilter}]: merged={Count}, scored={Count2}, deduped={Count3}", [mediaTypeFilter, allCandidates.Count, scored.Count, deduped.Count]
         );
 
         // Phase 5: Diversity selection — guarantee floor representation per media type
@@ -365,7 +340,7 @@ public class RecommendationService
             ? _recommendationRepository.GetSourceTvShowsForMediaAsync(userId, mediaId, ct)
             : Task.FromResult<(List<Tv>, string?)>(([], null));
 
-        await Task.WhenAll(movieAppendsTask, tvAppendsTask, sourceMoviesTask, sourceTvsTask);
+        await Task.WhenAll([movieAppendsTask, tvAppendsTask, sourceMoviesTask, sourceTvsTask]);
 
         // Keyword-based source enrichment: same-type (exclude already-found Rec/Similar sources) + cross-type
         HashSet<int> existingMovieSourceIds = sourceMoviesTask
@@ -669,7 +644,7 @@ public class RecommendationService
             .Select(id =>
             {
                 UserAffinitySourceDto src = profile.SourceItems[id];
-                if (src.TimeWatched is > 0 && src.Duration is > 0)
+                if (src is { TimeWatched: > 0, Duration: > 0 })
                     return Math.Min((double)src.TimeWatched / src.Duration.Value, 1.0);
                 return 0.0;
             })
@@ -831,7 +806,7 @@ public class RecommendationService
             ct
         );
 
-        await Task.WhenAll(movieAffinityTask, tvAffinityTask, animeAffinityTask);
+        await Task.WhenAll([movieAffinityTask, tvAffinityTask, animeAffinityTask]);
 
         List<UserAffinitySourceDto> allSources = movieAffinityTask
             .Result.Concat(tvAffinityTask.Result)
@@ -858,8 +833,7 @@ public class RecommendationService
             if (src.Rating.HasValue)
                 weight += (src.Rating.Value - 5) / 5.0;
             if (
-                src.TimeWatched is > 0
-                && src.Duration is > 0
+                src is { TimeWatched: > 0, Duration: > 0 }
                 && (double)src.TimeWatched / src.Duration.Value > 0.8
             )
                 weight += 0.5;

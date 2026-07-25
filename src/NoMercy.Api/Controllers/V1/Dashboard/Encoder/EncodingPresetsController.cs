@@ -18,6 +18,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
+using NoMercy.NmSystem.Networking;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
@@ -332,6 +333,11 @@ public class EncodingPresetsController(
         // trust to certificate validation, which is what we want.
         if (parsed.Scheme != Uri.UriSchemeHttps)
             return BadRequestResponse("Only https:// URLs are supported for preset imports");
+
+        // Even over https, don't let a Moderator make the server fetch an internal
+        // host (LAN / loopback / cloud link-local metadata) — reject non-public hosts.
+        if (!await ServerSideRequestGuard.IsSafePublicHttpUrlAsync(request.Url, ct))
+            return BadRequestResponse("Preset URL must resolve to a publicly routable host");
 
         PresetExport? export;
         try

@@ -168,17 +168,17 @@ public class LibraryJsonPropertyTests
     }
 
     [Theory]
-    [InlineData("ChapterImages", "chapter_images")]
-    [InlineData("ExtractChapters", "extract_chapters")]
-    [InlineData("ExtractChaptersDuring", "extract_chapters_during")]
-    [InlineData("AutoRefreshInterval", "auto_refresh_interval")]
-    [InlineData("Image", "image")]
-    [InlineData("Order", "order")]
-    [InlineData("PerfectSubtitleMatch", "perfect_subtitle_match")]
-    [InlineData("Realtime", "realtime")]
-    [InlineData("SpecialSeasonName", "special_season_name")]
-    [InlineData("Title", "title")]
-    [InlineData("Type", "type")]
+    [InlineData(["ChapterImages", "chapter_images"])]
+    [InlineData(["ExtractChapters", "extract_chapters"])]
+    [InlineData(["ExtractChaptersDuring", "extract_chapters_during"])]
+    [InlineData(["AutoRefreshInterval", "auto_refresh_interval"])]
+    [InlineData(["Image", "image"])]
+    [InlineData(["Order", "order"])]
+    [InlineData(["PerfectSubtitleMatch", "perfect_subtitle_match"])]
+    [InlineData(["Realtime", "realtime"])]
+    [InlineData(["SpecialSeasonName", "special_season_name"])]
+    [InlineData(["Title", "title"])]
+    [InlineData(["Type", "type"])]
     public void JsonPropertyName_MatchesSnakeCaseOfPropertyName(
         string propertyName,
         string expectedJsonName

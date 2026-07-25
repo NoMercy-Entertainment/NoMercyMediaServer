@@ -187,18 +187,30 @@ public class VideoPlaylistResponseDto
             },
         ];
 
-        Tracks = videoFile
-            .Tracks.Select(t => new VideoTrack
-            {
-                Label = t.Label,
-                File = $"{baseFolder}{t.File}",
-                Language = t.Language,
-                Kind = t.Kind,
-            })
-            .Concat(subs.TextTracks)
-            .Concat([new() { File = $"{baseFolder}/fonts.json", Kind = "fonts" }])
-            .OrderBy(track => track.Language)
-            .ToList();
+        List<VideoTrack> fontsTrack = videoFile.Metadata?.Fonts is { Count: > 0 }
+            ? [new() { File = $"{baseFolder}/fonts.json", Kind = "fonts" }]
+            : [];
+
+        List<VideoTrack> chaptersTrack = videoFile.Metadata?.ChapterFile
+            is { FileSize: > 0 } chaptersFile
+            ? [new() { File = $"{baseFolder}{chaptersFile.FileName}", Kind = "chapters" }]
+            : [];
+
+        Tracks = NormalizePreviewTracks(
+            videoFile
+                .Tracks.Select(t => new VideoTrack
+                {
+                    Label = t.Label,
+                    File = $"{baseFolder}{t.File}",
+                    Language = t.Language,
+                    Kind = t.Kind,
+                })
+                .Concat(subs.TextTracks)
+                .Concat(fontsTrack)
+                .Concat(chaptersTrack)
+                .OrderBy(track => track.Language)
+                .ToList()
+        );
 
         Season = index is not null ? 0 : episode.SeasonNumber;
         Episode = index ?? episode.EpisodeNumber;
@@ -298,18 +310,30 @@ public class VideoPlaylistResponseDto
             },
         ];
 
-        Tracks = videoFile
-            .Tracks.Select(t => new VideoTrack
-            {
-                Label = t.Label,
-                File = $"{baseFolder}{t.File}",
-                Language = t.Language,
-                Kind = t.Kind,
-            })
-            .Concat(subs.TextTracks)
-            .Concat([new() { File = $"{baseFolder}/fonts.json", Kind = "fonts" }])
-            .OrderBy(track => track.Language)
-            .ToList();
+        List<VideoTrack> fontsTrack = videoFile.Metadata?.Fonts is { Count: > 0 }
+            ? [new() { File = $"{baseFolder}/fonts.json", Kind = "fonts" }]
+            : [];
+
+        List<VideoTrack> chaptersTrack = videoFile.Metadata?.ChapterFile
+            is { FileSize: > 0 } chaptersFile
+            ? [new() { File = $"{baseFolder}{chaptersFile.FileName}", Kind = "chapters" }]
+            : [];
+
+        Tracks = NormalizePreviewTracks(
+            videoFile
+                .Tracks.Select(t => new VideoTrack
+                {
+                    Label = t.Label,
+                    File = $"{baseFolder}{t.File}",
+                    Language = t.Language,
+                    Kind = t.Kind,
+                })
+                .Concat(subs.TextTracks)
+                .Concat(fontsTrack)
+                .Concat(chaptersTrack)
+                .OrderBy(track => track.Language)
+                .ToList()
+        );
 
         Chapters = videoFile.Metadata?.Chapters ?? [];
         Fonts =
@@ -409,5 +433,35 @@ public class VideoPlaylistResponseDto
         }
 
         return new() { TextTracks = textTracks };
+    }
+
+    /// <summary>
+    /// Presents scrub-bar preview tracks the way every client looks for them.
+    /// A track stored as <c>sprite</c> is exposed as <c>thumbnails</c>: the video
+    /// player resolves previews with <c>tracks.find(t =&gt; t.kind === 'thumbnails')</c>
+    /// and has no <c>sprite</c> branch, so an unmapped track silently yields no
+    /// previews at all. When more than one track resolves to <c>thumbnails</c> only
+    /// one survives — the <c>.vtt</c> cue file if there is one, since that is what
+    /// the player parses, otherwise the first. A single preview track, and every
+    /// other kind, passes through untouched.
+    /// </summary>
+    private static List<VideoTrack> NormalizePreviewTracks(List<VideoTrack> tracks)
+    {
+        foreach (VideoTrack track in tracks)
+        {
+            if (track.Kind == "sprite")
+                track.Kind = "thumbnails";
+        }
+
+        List<VideoTrack> previews = tracks.Where(track => track.Kind == "thumbnails").ToList();
+        if (previews.Count < 2)
+            return tracks;
+
+        VideoTrack keep =
+            previews.FirstOrDefault(track =>
+                track.File.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase)
+            ) ?? previews[0];
+
+        return tracks.Where(track => track.Kind != "thumbnails" || track == keep).ToList();
     }
 }

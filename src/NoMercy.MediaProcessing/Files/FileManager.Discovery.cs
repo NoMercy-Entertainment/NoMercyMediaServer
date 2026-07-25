@@ -243,6 +243,10 @@ public partial class FileManager
     [GeneratedRegex(@"^video_(?<width>\d+)x(?<height>\d+)(?:_(?:SDR|HDR))?$")]
     private static partial Regex VideoDirectoryRegex();
 
-    [GeneratedRegex(@"^audio_(?<lang>\w+)_(?<codec>\w+)$")]
+    // Older encodes name the rendition dir `audio_<lang>` (no codec suffix);
+    // newer ones `audio_<lang>_<codec>` (e.g. audio_jpn_aac). Match both — the
+    // codec group is optional — or a rescan drops the audio group from the
+    // rebuilt master and the title plays silent.
+    [GeneratedRegex(@"^audio_(?<lang>[a-z]{2,3})(?:_(?<codec>\w+))?$")]
     private static partial Regex AudioDirectoryRegex();
 }

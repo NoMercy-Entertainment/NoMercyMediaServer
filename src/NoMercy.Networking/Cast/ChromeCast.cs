@@ -206,7 +206,10 @@ public class ChromeCastService : IChromeCastService
 
     // --- Pool helpers ---
 
-    private ChromecastClient BuildClient(string receiverName)
+    // Internal (not private) so the event-wiring can be exercised directly
+    // against a real, unconnected Sharpcaster ChromecastClient — no live
+    // Chromecast device is needed to construct one or register handlers on it.
+    internal ChromecastClient BuildClient(string receiverName)
     {
         ChromecastClient client = new();
 
@@ -280,7 +283,9 @@ public class ChromeCastService : IChromeCastService
         BindingFlags.NonPublic | BindingFlags.Instance
     );
 
-    private void DisableSharpcasterHeartbeat(ChromecastClient client)
+    // Internal so the reflection-based neutralization can be verified directly
+    // against a bare (unconnected) ChromecastClient in tests.
+    internal void DisableSharpcasterHeartbeat(ChromecastClient client)
     {
         try
         {
@@ -388,7 +393,10 @@ public class ChromeCastService : IChromeCastService
         };
     }
 
-    private void NeutralizeTimersIn(object owner)
+    // Internal so the pure reflection-walk can be tested against a plain
+    // object graph with a private System.Timers.Timer field — no Chromecast
+    // client or network is involved.
+    internal void NeutralizeTimersIn(object owner)
     {
         foreach (
             FieldInfo field in owner
@@ -411,7 +419,9 @@ public class ChromeCastService : IChromeCastService
         }
     }
 
-    private void NeutralizeTimer(System.Timers.Timer timer)
+    // Internal so the timer-neutering behavior (Stop, AutoReset=false, private
+    // _onIntervalElapsed swap) can be verified against a real System.Timers.Timer.
+    internal void NeutralizeTimer(System.Timers.Timer timer)
     {
         try
         {
@@ -752,7 +762,11 @@ public class ChromeCastService : IChromeCastService
         }
     }
 
-    private string BuildLaunchJson(int requestId, object? customData, bool useAndroidReceiver)
+    // Internal so all four LAUNCH-payload permutations (customData present/absent
+    // x androidReceiver/webReceiver) are directly unit-testable — reaching this
+    // through LaunchAndroidReceiver's public surface requires a live Chromecast
+    // connection already present in ClientPool.
+    internal string BuildLaunchJson(int requestId, object? customData, bool useAndroidReceiver)
     {
         // Newtonsoft.Json honours [JsonProperty("snake_case")] on
         // LaunchCustomData so the receiver sees access_token / refresh_token /

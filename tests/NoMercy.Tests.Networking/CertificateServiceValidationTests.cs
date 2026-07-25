@@ -48,10 +48,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
 
     private static CertificateService BuildService(IHttpClientFactory? factory = null)
     {
-        return new(
-            NullLogger<CertificateService>.Instance,
-            factory ?? new NullHttpClientFactory()
-        );
+        return new(NullLogger<CertificateService>.Instance, factory ?? new NullHttpClientFactory());
     }
 
     /// <summary>
@@ -364,10 +361,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new(HttpStatusCode.BadRequest)
-            {
-                Content = new StringContent(string.Empty),
-            };
+            return new(HttpStatusCode.BadRequest) { Content = new StringContent(string.Empty) };
         });
         CertificateService service = BuildService(factory);
 

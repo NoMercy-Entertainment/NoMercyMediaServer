@@ -139,7 +139,7 @@ public class StartupParallelizationTests
                 TaskCreationOptions.LongRunning
             );
 
-        bool[] reachedBarrier = await Task.WhenAll(RunParticipant(), RunParticipant());
+        bool[] reachedBarrier = await Task.WhenAll([RunParticipant(), RunParticipant()]);
 
         Assert.True(
             reachedBarrier[0] && reachedBarrier[1],
@@ -207,9 +207,7 @@ public class StartupParallelizationTests
         });
 
         // Phase 3: other parallel tasks
-        await Task.WhenAll(
-            Task.Run(async () => await Task.Delay(30)),
-            Task.Run(async () => await Task.Delay(20))
+        await Task.WhenAll([Task.Run(async () => await Task.Delay(30)), Task.Run(async () => await Task.Delay(20))]
         );
 
         // Phase 4: Wait for networking then register

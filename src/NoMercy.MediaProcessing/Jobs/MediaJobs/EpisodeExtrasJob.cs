@@ -72,9 +72,7 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
         }
 
         Log.LogDebug(
-            "Show {Name}: Season {SeasonNumber} Episodes: Images and Translations stored",
-            Name,
-            Storage.FirstOrDefault()?.SeasonNumber
+            "Show {Name}: Season {SeasonNumber} Episodes: Images and Translations stored", [Name, Storage.FirstOrDefault()?.SeasonNumber]
         );
     }
 }

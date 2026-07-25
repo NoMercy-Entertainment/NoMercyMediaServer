@@ -65,16 +65,16 @@ public class ReleaseTagVocabularyTests
         StringExtensions.MatchFlagTag().IsMatch(token).Should().BeTrue();
 
     [Theory]
-    [InlineData("The Bureau SDTV", "The Bureau")]
-    [InlineData("Some Doc SCREENER", "Some Doc")]
-    [InlineData("Planet Earth WORKPRINT", "Planet Earth")]
-    [InlineData("Short Film AV1", "Short Film")]
-    [InlineData("Old Clip MPEG4", "Old Clip")]
-    [InlineData("Concert LPCM", "Concert")]
-    [InlineData("The Mix DD+", "The Mix")]
-    [InlineData("Demo Scene SDR", "Demo Scene")]
-    [InlineData("Some Release DIRFIX", "Some Release")]
-    [InlineData("The File NFOFIX", "The File")]
+    [InlineData(["The Bureau SDTV", "The Bureau"])]
+    [InlineData(["Some Doc SCREENER", "Some Doc"])]
+    [InlineData(["Planet Earth WORKPRINT", "Planet Earth"])]
+    [InlineData(["Short Film AV1", "Short Film"])]
+    [InlineData(["Old Clip MPEG4", "Old Clip"])]
+    [InlineData(["Concert LPCM", "Concert"])]
+    [InlineData(["The Mix DD+", "The Mix"])]
+    [InlineData(["Demo Scene SDR", "Demo Scene"])]
+    [InlineData(["Some Release DIRFIX", "Some Release"])]
+    [InlineData(["The File NFOFIX", "The File"])]
     public void CleanReleaseTitle_StripsNewTokens(string raw, string expected) =>
         raw.CleanReleaseTitle().Should().Be(expected);
 

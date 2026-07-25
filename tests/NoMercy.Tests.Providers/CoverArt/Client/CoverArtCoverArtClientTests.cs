@@ -125,7 +125,7 @@ public class CoverArtCoverArtClientTests
         Assert.False(
             callsReadAsStream,
             "PROV-H12 regression: Download should NOT call ReadAsStreamAsync. "
-                + "Content must be read once as byte[] to avoid stream-consumed-then-reused bug."
+                         + "Content must be read once as byte[] to avoid stream-consumed-then-reused bug."
         );
     }
 
@@ -301,7 +301,7 @@ public class CoverArtCoverArtClientTests
         Assert.True(
             hasImageLoadWithByteArray,
             "PROV-H12: Image.Load should use the byte[] overload, not Stream, "
-                + "to avoid consuming a stream that might be reused."
+                         + "to avoid consuming a stream that might be reused."
         );
     }
 }

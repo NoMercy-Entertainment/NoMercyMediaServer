@@ -71,76 +71,78 @@ public class SearchController : BaseController
             .ToList();
 
         return Ok(
-            ComponentResponse.From(
-                Component
-                    .Container()
-                    .WithId("search-results")
-                    .WithItems(
-                        Component
-                            .TopResultCard(topResultData!)
-                            .WithId("top-result")
-                            .WithTitle("Top Result".Localize())
-                            .Build(),
-                        Component
-                            .List()
-                            .WithId("tracks")
-                            .WithProperties(
-                                new()
-                                {
-                                    { "paddingTop", 0 },
-                                    { "paddingBottom", 0 },
-                                    { "paddingStart", 0 },
-                                    { "paddingEnd", 0 },
-                                }
-                            )
-                            .WithTitle("Tracks".Localize())
-                            .WithItems(
-                                songResults.Select(track =>
-                                    Component
-                                        .TrackRow(track)
-                                        .WithProperties(
-                                            new()
-                                            {
-                                                { "paddingTop", 0 },
-                                                { "paddingBottom", 0 },
-                                                { "paddingStart", 0 },
-                                                { "paddingEnd", 0 },
-                                            }
+            ComponentResponse.From([
+                    Component
+                        .Container()
+                        .WithId("search-results")
+                        .WithItems([
+                                Component
+                                    .TopResultCard(topResultData!)
+                                    .WithId("top-result")
+                                    .WithTitle("Top Result".Localize())
+                                    .Build(),
+                                Component
+                                    .List()
+                                    .WithId("tracks")
+                                    .WithProperties(
+                                        new()
+                                        {
+                                            { "paddingTop", 0 },
+                                            { "paddingBottom", 0 },
+                                            { "paddingStart", 0 },
+                                            { "paddingEnd", 0 },
+                                        }
+                                    )
+                                    .WithTitle("Tracks".Localize())
+                                    .WithItems(
+                                        songResults.Select(track =>
+                                            Component
+                                                .TrackRow(track)
+                                                .WithProperties(
+                                                    new()
+                                                    {
+                                                        { "paddingTop", 0 },
+                                                        { "paddingBottom", 0 },
+                                                        { "paddingStart", 0 },
+                                                        { "paddingEnd", 0 },
+                                                    }
+                                                )
+                                                .WithDisplayList(songResults)
                                         )
-                                        .WithDisplayList(songResults)
-                                )
-                            )
-                    ),
-                Component
-                    .Carousel()
-                    .WithId("artists")
-                    .WithTitle("Artist".Localize())
-                    .WithItems(
-                        artists
-                            .GroupBy(artist => artist.Id)
-                            .Select(group => group.First())
-                            .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))
-                    ),
-                Component
-                    .Carousel()
-                    .WithId("albums")
-                    .WithTitle("Albums".Localize())
-                    .WithItems(
-                        albums
-                            .GroupBy(album => album.Id)
-                            .Select(group => group.First())
-                            .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))
-                    ),
-                Component
-                    .Carousel()
-                    .WithId("playlists")
-                    .WithTitle("Playlists".Localize())
-                    .WithItems(
-                        playlists
-                            .GroupBy(playlist => playlist.Id)
-                            .Select(group => group.First())
-                            .Select(item => Component.MusicCard(new PlaylistResponseItemDto(item)))
-                    )
+                                    )
+                            ]
+                        ),
+                    Component
+                        .Carousel()
+                        .WithId("artists")
+                        .WithTitle("Artist".Localize())
+                        .WithItems(
+                            artists
+                                .GroupBy(artist => artist.Id)
+                                .Select(group => group.First())
+                                .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))
+                        ),
+                    Component
+                        .Carousel()
+                        .WithId("albums")
+                        .WithTitle("Albums".Localize())
+                        .WithItems(
+                            albums
+                                .GroupBy(album => album.Id)
+                                .Select(group => group.First())
+                                .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))
+                        ),
+                    Component
+                        .Carousel()
+                        .WithId("playlists")
+                        .WithTitle("Playlists".Localize())
+                        .WithItems(
+                            playlists
+                                .GroupBy(playlist => playlist.Id)
+                                .Select(group => group.First())
+                                .Select(item => Component.MusicCard(new PlaylistResponseItemDto(item)))
+                        )
+                ]
             )
         );
     }

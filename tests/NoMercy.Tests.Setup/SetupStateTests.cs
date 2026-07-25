@@ -238,6 +238,14 @@ public class SetupStateTests
     [InlineData(SetupPhase.Unauthenticated, SetupPhase.Complete, false)]
     [InlineData(SetupPhase.Unauthenticated, SetupPhase.Registered, false)]
     [InlineData(SetupPhase.Complete, SetupPhase.Unauthenticated, false)]
+    // Degraded-complete: BootOrchestrator.RunRegistrationAsync reaches Complete even
+    // when the certificate isn't ready yet (Registered, no cert) or registration
+    // itself failed (still at Registering when its own catch block runs) — see the
+    // BootOrchestratorAdditionalTests that exercise these two call sites directly.
+    // Regression coverage for a real bug: before these were added, both call sites'
+    // TransitionTo(Complete) was silently rejected and left setup permanently stuck.
+    [InlineData(SetupPhase.Registered, SetupPhase.Complete, true)]
+    [InlineData(SetupPhase.Registering, SetupPhase.Complete, true)]
     public void IsValidTransition_ReturnsExpected(SetupPhase from, SetupPhase to, bool expected)
     {
         Assert.Equal(expected, SetupState.IsValidTransition(from, to));

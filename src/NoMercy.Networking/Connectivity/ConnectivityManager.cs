@@ -138,7 +138,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Strategy {Name} failed: {Message}", strategy.Name, ex.Message);
+                _logger.LogWarning("Strategy {Name} failed: {Message}", [strategy.Name, ex.Message]);
             }
         }
 

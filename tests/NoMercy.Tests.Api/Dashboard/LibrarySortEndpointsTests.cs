@@ -12,7 +12,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -59,7 +58,7 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -78,7 +77,7 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
         );
 
         response.StatusCode.Should().NotBe(HttpStatusCode.BadRequest);
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.OK, HttpStatusCode.NotFound]);
     }
 
     [Fact]
@@ -123,7 +122,7 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -142,7 +141,7 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
         );
 
         response.StatusCode.Should().NotBe(HttpStatusCode.BadRequest);
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.OK, HttpStatusCode.NotFound]);
     }
 
     [Fact]

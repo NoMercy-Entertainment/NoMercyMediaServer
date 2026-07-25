@@ -228,9 +228,7 @@ public partial class PlatformHardwareDetector(
         if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
         {
             logger.LogWarning(
-                "PowerShell Get-CimInstance failed (exit {Code}): {Err}",
-                result.ExitCode,
-                result.StdErr
+                "PowerShell Get-CimInstance failed (exit {Code}): {Err}", [result.ExitCode, result.StdErr]
             );
             return [];
         }
@@ -296,7 +294,7 @@ public partial class PlatformHardwareDetector(
 
         if (!result.IsSuccess)
         {
-            logger.LogWarning("lspci failed (exit {Code}): {Err}", result.ExitCode, result.StdErr);
+            logger.LogWarning("lspci failed (exit {Code}): {Err}", [result.ExitCode, result.StdErr]);
             return nvidiaDevices;
         }
 
@@ -405,9 +403,7 @@ public partial class PlatformHardwareDetector(
         if (!result.IsSuccess)
         {
             logger.LogWarning(
-                "system_profiler failed (exit {Code}): {Err}",
-                result.ExitCode,
-                result.StdErr
+                "system_profiler failed (exit {Code}): {Err}", [result.ExitCode, result.StdErr]
             );
             return [];
         }

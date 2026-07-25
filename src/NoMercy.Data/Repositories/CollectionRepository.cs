@@ -59,7 +59,13 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                 )
             )
             .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
-            .Include(collection => collection.Images.Where(i => i.Type == "logo").Take(1))
+            .Include(collection =>
+                collection
+                    .Images.Where(i => i.Type == "logo")
+                    .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
+                    .Take(1)
+            )
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(cm => cm.Movie)
                     .ThenInclude(m => m.VideoFiles.Where(v => v.Folder != null))
@@ -67,10 +73,12 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                 .ThenInclude(cm => cm.Movie)
                     .ThenInclude(m =>
                         m.CertificationMovies.Where(cert => cert.Certification.Iso31661 == "US")
+                            .OrderBy(cert => cert.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(cert => cert.Certification)
             .OrderBy(collection => collection.TitleSort)
+            .ThenBy(collection => collection.Id)
             .Skip(page * take)
             .Take(take)
             .ToListAsync(ct);
@@ -97,6 +105,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                 )
             )
             .OrderBy(collection => collection.TitleSort)
+            .ThenBy(collection => collection.Id)
             .Skip(page * take)
             .Take(take)
             .Select(collection => new CollectionListDto
@@ -124,6 +133,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                 FirstMovieYear = collection
                     .CollectionMovies.Where(cm => cm.Movie.ReleaseDate != null)
                     .OrderBy(cm => cm.Movie.ReleaseDate)
+                    .ThenBy(cm => cm.MovieId)
                     .Select(cm => cm.Movie.ReleaseDate!.Value.Year)
                     .FirstOrDefault(),
                 TotalMovies = collection.CollectionMovies.Count,
@@ -231,6 +241,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                                 )
                             )
                             .OrderByDescending(image => image.VoteAverage)
+                            .ThenBy(image => image.Id)
                             .Take(30)
                     )
             .Include(collection => collection.CollectionMovies)
@@ -250,6 +261,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                         )
                     )
                     .OrderByDescending(image => image.VoteAverage)
+                    .ThenBy(image => image.Id)
             )
             .AsSplitQuery()
             .FirstOrDefaultAsync(ct);
@@ -306,6 +318,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                 )
             )
             .OrderBy(collection => collection.TitleSort)
+            .ThenBy(collection => collection.Id)
             .Skip(page * take)
             .Take(take)
             .Select(collection => new CollectionListDto
@@ -333,6 +346,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                 FirstMovieYear = collection
                     .CollectionMovies.Where(cm => cm.Movie.ReleaseDate != null)
                     .OrderBy(cm => cm.Movie.ReleaseDate)
+                    .ThenBy(cm => cm.MovieId)
                     .Select(cm => cm.Movie.ReleaseDate!.Value.Year)
                     .FirstOrDefault(),
                 TotalMovies = collection.CollectionMovies.Count,
@@ -378,7 +392,13 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
             )
             .Include(collection => collection.CollectionUser.Where(x => x.UserId == userId))
             .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
-            .Include(collection => collection.Images.Where(i => i.Type == "logo").Take(1))
+            .Include(collection =>
+                collection
+                    .Images.Where(i => i.Type == "logo")
+                    .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
+                    .Take(1)
+            )
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(cm => cm.Movie)
                     .ThenInclude(m => m.Translations.Where(t => t.Iso6391 == language))
@@ -392,13 +412,20 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                                 cert.Certification.Iso31661 == "US"
                                 || cert.Certification.Iso31661 == country
                             )
+                            .OrderBy(cert => cert.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(cert => cert.Certification)
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(cm => cm.Movie)
-                    .ThenInclude(m => m.Images.Where(i => i.Type == "logo").Take(1))
+                    .ThenInclude(m =>
+                        m.Images.Where(i => i.Type == "logo")
+                            .OrderByDescending(i => i.VoteAverage)
+                            .ThenBy(i => i.Id)
+                            .Take(1)
+                    )
             .OrderBy(c => c.TitleSort)
+            .ThenBy(c => c.Id)
             .Skip(page * take)
             .Take(take)
             .ToListAsync(ct);
@@ -447,13 +474,24 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
             .Where(collection => collection.Id == id)
             .ForUser(userId)
             .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
-            .Include(collection => collection.Images.Where(i => i.Type == "logo").Take(1))
+            .Include(collection =>
+                collection
+                    .Images.Where(i => i.Type == "logo")
+                    .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
+                    .Take(1)
+            )
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(cm => cm.Movie)
                     .ThenInclude(m => m.Translations.Where(t => t.Iso6391 == language))
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(cm => cm.Movie)
-                    .ThenInclude(m => m.Images.Where(i => i.Type == "logo").Take(1))
+                    .ThenInclude(m =>
+                        m.Images.Where(i => i.Type == "logo")
+                            .OrderByDescending(i => i.VoteAverage)
+                            .ThenBy(i => i.Id)
+                            .Take(1)
+                    )
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(cm => cm.Movie)
                     .ThenInclude(m => m.Media.Where(media => media.Type == "video"))
@@ -474,6 +512,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                                 cert.Certification.Iso31661 == "US"
                                 || cert.Certification.Iso31661 == country
                             )
+                            .OrderBy(cert => cert.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(cert => cert.Certification)
@@ -545,6 +584,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                 .Include(cm => cm.Movie)
                     .ThenInclude(m => m.VideoFiles)
                 .OrderBy(cm => cm.Movie.TitleSort)
+                .ThenBy(cm => cm.MovieId)
                 .FirstOrDefaultAsync(ct);
 
             if (

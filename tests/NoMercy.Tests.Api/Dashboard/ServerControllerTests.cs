@@ -12,7 +12,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -41,7 +40,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/server");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -57,7 +56,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/server/info");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -106,7 +105,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
         data.TryGetProperty("setup_complete", out JsonElement setupComplete)
             .Should()
             .BeTrue("clients read 'setup_complete' to decide whether to run setup wizard");
-        setupComplete.ValueKind.Should().BeOneOf(JsonValueKind.True, JsonValueKind.False);
+        setupComplete.ValueKind.Should().BeOneOf([JsonValueKind.True, JsonValueKind.False]);
     }
 
     [Fact]
@@ -114,7 +113,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/server/setup");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -133,7 +132,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
         data.TryGetProperty("setup_complete", out JsonElement setupComplete)
             .Should()
             .BeTrue("data must have 'setup_complete' boolean for setup-wizard gate");
-        setupComplete.ValueKind.Should().BeOneOf(JsonValueKind.True, JsonValueKind.False);
+        setupComplete.ValueKind.Should().BeOneOf([JsonValueKind.True, JsonValueKind.False]);
     }
 
     [Fact]
@@ -143,7 +142,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             "/api/v1/dashboard/server/resources"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -164,7 +163,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/server/paths");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -203,7 +202,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             "/api/v1/dashboard/server/update/check"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -221,7 +220,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
         doc.RootElement.TryGetProperty("updateAvailable", out JsonElement updateAvailable)
             .Should()
             .BeTrue("clients poll 'updateAvailable' to show the update banner");
-        updateAvailable.ValueKind.Should().BeOneOf(JsonValueKind.True, JsonValueKind.False);
+        updateAvailable.ValueKind.Should().BeOneOf([JsonValueKind.True, JsonValueKind.False]);
     }
 
     [Fact]
@@ -232,7 +231,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             null
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -254,7 +253,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             null
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -265,7 +264,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             null
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.NotFound);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.BadRequest, HttpStatusCode.NotFound]);
     }
 
     [Fact]
@@ -277,7 +276,7 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             new { ip = "10.0.0.1" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

@@ -56,9 +56,7 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                 "You don't have access to our Cloudflare tunnel service, this is a paid feature."
             );
             _logger.LogInformation(
-                "You need to manually forward port {InternalServerPort} to {ExternalServerPort} if you want to use the server outside your local network",
-                RuntimeServerSettings.Current.InternalServerPort,
-                RuntimeServerSettings.Current.ExternalServerPort
+                "You need to manually forward port {InternalServerPort} to {ExternalServerPort} if you want to use the server outside your local network", [RuntimeServerSettings.Current.InternalServerPort, RuntimeServerSettings.Current.ExternalServerPort]
             );
             _logger.LogInformation(
                 "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide"

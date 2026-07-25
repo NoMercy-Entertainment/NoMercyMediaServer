@@ -27,7 +27,7 @@ public class BinariesCloudflaredArchTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "Server", "Binaries.cs");
+            string candidate = Path.Combine([dir, "src", "NoMercy.Setup", "Server", "Binaries.cs"]);
             if (File.Exists(candidate))
                 return candidate;
             dir = Path.GetDirectoryName(dir)!;
@@ -40,7 +40,7 @@ public class BinariesCloudflaredArchTests
     private static string ExtractDownloadCloudflaredMethod(string source)
     {
         int start = source.IndexOf(
-            "private async Task DownloadCloudflared()",
+            "internal async Task DownloadCloudflared()",
             StringComparison.Ordinal
         );
         Assert.True(start >= 0, "Could not find DownloadCloudflared method in source");

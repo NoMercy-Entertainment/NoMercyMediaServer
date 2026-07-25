@@ -18,10 +18,10 @@ namespace NoMercy.Tests.Api;
 public class MusicHubVolumeTests
 {
     [Theory]
-    [InlineData(-10, 0)]
-    [InlineData(0, 0)]
-    [InlineData(55, 55)]
-    [InlineData(150, 100)]
+    [InlineData([-10, 0])]
+    [InlineData([0, 0])]
+    [InlineData([55, 55])]
+    [InlineData([150, 100])]
     public void Volume_IsClampedToZeroHundred(int input, int expected)
     {
         int clamped = Math.Clamp(input, 0, 100);

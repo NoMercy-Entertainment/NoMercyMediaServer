@@ -153,6 +153,24 @@ public sealed class PortForwardStrategyTests
         Assert.Equal(ConnectivityType.PortForward, strategy.Type);
     }
 
+    [Fact]
+    public void Name_IsPortForward()
+    {
+        PortForwardStrategy strategy = BuildStrategy(new());
+
+        Assert.Equal("PortForward", strategy.Name);
+    }
+
+    [Fact]
+    public async Task TeardownAsync_DoesNotThrow_AndCompletes()
+    {
+        PortForwardStrategy strategy = BuildStrategy(new());
+
+        Exception? ex = await Record.ExceptionAsync(strategy.TeardownAsync);
+
+        Assert.Null(ex);
+    }
+
     private sealed class TrackingNetworkDiscovery : INetworkDiscovery
     {
         public bool IsPortOpenCalled { get; private set; }

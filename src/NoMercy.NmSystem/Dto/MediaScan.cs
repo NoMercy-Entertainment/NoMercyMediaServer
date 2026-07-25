@@ -365,7 +365,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         if (!epMatch.Success)
                             epMatch = StringExtensions.MatchSeasonEpisode().Match(cleanedFileName);
 
-                        if (epMatch.Success && epMatch.Groups.Count >= 3)
+                        if (epMatch is { Success: true, Groups.Count: >= 3 })
                         {
                             movieFile.Season = int.Parse(epMatch.Groups[1].Value);
                             movieFile.Episode = int.Parse(epMatch.Groups[2].Value);

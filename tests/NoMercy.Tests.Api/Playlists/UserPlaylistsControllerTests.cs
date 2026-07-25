@@ -12,7 +12,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -80,7 +79,7 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync(BaseUrl);
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -136,7 +135,7 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
             new { name = "Anonymous Playlist" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -274,7 +273,7 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
         items
             .Select(i => i.GetProperty("kind").GetString())
             .Should()
-            .Equal("movie", "episode", "special");
+            .Equal(["movie", "episode", "special"]);
 
         JsonElement movieItem = items[0];
         movieItem.GetProperty("media_id").GetString().Should().Be("129");
@@ -343,7 +342,7 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
             .EnumerateArray()
             .Select(i => i.GetProperty("kind").GetString())
             .Should()
-            .Equal("special", "episode", "movie");
+            .Equal(["special", "episode", "movie"]);
 
         // Remove the special item.
         HttpResponseMessage remove = await _authed.DeleteAsync(

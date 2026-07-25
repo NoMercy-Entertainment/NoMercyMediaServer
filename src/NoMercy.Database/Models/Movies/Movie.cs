@@ -176,22 +176,18 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
 
     public string CreateFolderName()
     {
-        return string.Concat(Title.CleanFileName().Shorten(), ".(", ReleaseDate.ParseYear(), ")")
+        return string.Concat([Title.CleanFileName().Shorten(), ".(", ReleaseDate.ParseYear(), ")"])
             .CleanFileName();
     }
 
     public string CreateTitle()
     {
-        return string.Concat(Title, " (", ReleaseDate.ParseYear(), ") NoMercy");
+        return string.Concat([Title, " (", ReleaseDate.ParseYear(), ") NoMercy"]);
     }
 
     public string CreateFileName()
     {
-        return string.Concat(
-            Title.CleanFileName().Shorten(),
-            ".(",
-            ReleaseDate.ParseYear(),
-            ").NoMercy"
+        return string.Concat([Title.CleanFileName().Shorten(), ".(", ReleaseDate.ParseYear(), ").NoMercy"]
         );
     }
 }

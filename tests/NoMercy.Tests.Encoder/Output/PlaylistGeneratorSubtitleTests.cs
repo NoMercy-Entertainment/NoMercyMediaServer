@@ -26,10 +26,16 @@ public class PlaylistGeneratorSubtitleTests
         // skips any variant whose measured bandwidth is zero (dead-variant guard).
         Dictionary<string, VariantMetrics> videoMetrics = plan
             .VideoOutputs.Where(v => !string.IsNullOrEmpty(v.MapLabel))
-            .ToDictionary(v => v.MapLabel, _ => new VariantMetrics(5_000_000, 4_500_000));
+            .ToDictionary(
+                PlaylistGenerator.VideoVariantKey,
+                _ => new VariantMetrics(5_000_000, 4_500_000)
+            );
         Dictionary<string, VariantMetrics> audioMetrics = plan
             .AudioOutputs.Where(a => !string.IsNullOrEmpty(a.MapLabel))
-            .ToDictionary(a => a.MapLabel, _ => new VariantMetrics(192_000, 180_000));
+            .ToDictionary(
+                PlaylistGenerator.AudioVariantKey,
+                _ => new VariantMetrics(192_000, 180_000)
+            );
 
         PlaylistGenerator generator = new();
         return generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);

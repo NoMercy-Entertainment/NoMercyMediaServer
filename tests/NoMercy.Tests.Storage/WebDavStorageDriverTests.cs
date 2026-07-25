@@ -194,11 +194,7 @@ public class WebDavStorageDriverFactoryTests
     {
         Mock<IDriverConfigResolver> resolver = new();
         resolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
-        return new(
-            new LocalStorageDriver(),
-            NullLogger<StorageFactory>.Instance,
-            resolver.Object
-        );
+        return new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance, resolver.Object);
     }
 
     [Fact]

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <resheader name="resmimetype">
+        <value>text/microsoft-resx</value>
+    </resheader>
+    <resheader name="version">
+        <value>2.0</value>
+    </resheader>
+    <resheader name="reader">
+        <value>System.Resources.ResXResourceReader</value>
+    </resheader>
+    <resheader name="writer">
+        <value>System.Resources.ResXResourceWriter</value>
+    </resheader>
+
+    <data name="RequireNamedTitle" xml:space="preserve">
+        <value>Rename callback parameter</value>
+    </data>
+
+    <data name="RequireNamedArgumentsTitle" xml:space="preserve">
+        <value>Use named arguments where position is not self-explanatory</value>
+    </data>
+    
+    <data name="RequireNamedArgumentsMessage" xml:space="preserve">
+        <value>Name this argument: the call has more than three arguments, or the value is a bare true/false/null</value>
+    </data>
+    
+    <data name="RequireNamedArgumentsMessageFormat" xml:space="preserve">
+        <value>Name this argument: the call has more than three arguments, or the value is a bare true/false/null</value>
+    </data>
+    
+    <data name="RequireNamedArgumentsDescription" xml:space="preserve">
+        <value>Enforces named arguments where positional order stops being readable: calls with more than three arguments, and bare true/false/null values whose parameter cannot be inferred at the call site</value>
+    </data>
+    
+    <data name="CallbackParameterShouldBeRenamedTitle" xml:space="preserve">
+        <value>Callback parameter should be renamed</value>
+    </data>
+    
+    <data name="CallbackParameterShouldBeRenamedMessageFormat" xml:space="preserve">
+        <value>Callback parameter '{0}' should be renamed</value>
+    </data>
+    
+    <data name="CallbackParameterShouldBeRenamedDescription" xml:space="preserve">
+        <value>Enforces renaming of callback parameters to follow naming conventions</value>
+    </data>
+    
+    <data name="CallbackParameterTitle" xml:space="preserve">
+        <value>Rename callback parameter</value>
+    </data>
+</root>

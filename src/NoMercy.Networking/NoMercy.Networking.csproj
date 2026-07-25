@@ -34,4 +34,8 @@
     <ProjectReference Include="..\NoMercy.Authorization\NoMercy.Authorization.csproj" />
     <ProjectReference Include="..\NoMercy.Storage\NoMercy.Storage.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="NoMercy.Tests.Networking" />
+  </ItemGroup>
 </Project>

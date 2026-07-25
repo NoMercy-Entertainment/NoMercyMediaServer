@@ -146,52 +146,62 @@ public static class DecodeAwareBundlePlanner
                 ?.VideoTaskIndexes.ToArray()
             ?? [];
 
-        // Tonemap bundles are ordered before Transcode bundles so the FIRST
-        // real-decode bundle — the one that inherits aux/copy/sprite below —
-        // is always a Tonemap bundle whenever the plan has one. That is what
-        // gives the thumbnail sprite the shared [sdr] intermediate (correct
-        // Rec.709 color) instead of a raw-HDR sample.
-        List<int[]> orderedRealUnits = new();
-        foreach (DecodeGroup group in decodeGroups.Where(g => g.Class == DecodeClass.Tonemap))
-            orderedRealUnits.AddRange(
-                ChunkByCapacity(group.VideoTaskIndexes, stamped, gpuCap, cpuCap)
-            );
+        // Transcode (HDR-preserve 4K master) bundles are ordered BEFORE Tonemap
+        // (SDR) bundles: the 4K HDR master must land first so native-HDR clients
+        // (Android / Apple) can play the moment it exists, and — since each
+        // bundle is one ffmpeg dispatched sequentially — the host never runs the
+        // heavy 4K encode and the tonemap+downscale at the same time. The SDR
+        // rungs derive from the 4K master (see the cascade wiring below), so
+        // their order after it is also their data dependency.
+        List<(int[] Video, bool IsTonemap)> orderedRealUnits = new();
         foreach (DecodeGroup group in decodeGroups.Where(g => g.Class == DecodeClass.Transcode))
-            orderedRealUnits.AddRange(
-                ChunkByCapacity(group.VideoTaskIndexes, stamped, gpuCap, cpuCap)
-            );
+        foreach (int[] chunk in ChunkByCapacity(group.VideoTaskIndexes, stamped, gpuCap, cpuCap))
+            orderedRealUnits.Add((chunk, false));
+        foreach (DecodeGroup group in decodeGroups.Where(g => g.Class == DecodeClass.Tonemap))
+        foreach (int[] chunk in ChunkByCapacity(group.VideoTaskIndexes, stamped, gpuCap, cpuCap))
+            orderedRealUnits.Add((chunk, true));
 
         bool hasThumbs = stamped.Any(task => task.Kind == EncodeTaskKind.Thumbnails);
         int[] audioIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Audio);
         int[] subIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Subtitle);
         int[] chapterIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Chapters);
 
+        // The thumbnail sprite must be Rec.709 (SDR), so it rides a Tonemap
+        // bundle to reuse its HDR→SDR pass instead of sampling raw HDR. With the
+        // 4K master now first, the first bundle is HDR-preserve — putting the
+        // sprite there would crush its colours. Route it to the first Tonemap
+        // bundle; fall back to bundle 0 only when the plan has no tonemap at all
+        // (a pure-SDR ladder, where bundle 0 is already Rec.709).
+        int firstTonemapUnit = orderedRealUnits.FindIndex(unit => unit.IsTonemap);
+        int spriteUnit = firstTonemapUnit >= 0 ? firstTonemapUnit : 0;
+
         List<DecomposedTask> bundles = new();
-        bool auxAttached = false;
+        bool auxAttached = orderedRealUnits.Count > 0;
         int bundleIndex = 0;
 
-        foreach (int[] videoChunk in orderedRealUnits)
+        for (int unitIndex = 0; unitIndex < orderedRealUnits.Count; unitIndex++)
         {
+            int[] videoChunk = orderedRealUnits[unitIndex].Video;
             int[] videoForBundle = videoChunk;
             int[] audioForBundle = [];
             int[] subsForBundle = [];
             bool thumbsForBundle = false;
             int[] chaptersForBundle = [];
 
-            if (!auxAttached)
+            if (unitIndex == 0)
             {
-                // The first real decode bundle rides everything that needs no
-                // decode of its own: copy video (free — this ffmpeg already
-                // has the stream open), every audio/subtitle/chapter task
-                // (cheap regardless of copy or transcode), and the thumbnail
-                // sprite when the plan has one.
+                // Bundle 0 (the 4K HDR master) rides everything that needs no
+                // decode of its own: copy video (free — this ffmpeg already has
+                // the stream open) and every audio / subtitle / chapter task, so
+                // the master rendition is immediately playable with sound.
                 videoForBundle = videoChunk.Concat(copyVideoIndexes).ToArray();
                 audioForBundle = audioIndexes;
                 subsForBundle = subIndexes;
-                thumbsForBundle = hasThumbs;
                 chaptersForBundle = chapterIndexes;
-                auxAttached = true;
             }
+
+            if (hasThumbs && unitIndex == spriteUnit)
+                thumbsForBundle = true;
 
             bundles.Add(
                 BuildBundleTask(

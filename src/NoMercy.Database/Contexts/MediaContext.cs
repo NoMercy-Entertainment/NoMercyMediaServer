@@ -55,10 +55,7 @@ public class MediaContext : DbContext
         if (Config.IsDev)
             options.EnableSensitiveDataLogging();
 
-        options.AddInterceptors(
-            new EntityBaseUpdatedAtInterceptor(),
-            new SqliteNormalizeSearchInterceptor(),
-            new SqliteConnectionInterceptor()
+        options.AddInterceptors([new EntityBaseUpdatedAtInterceptor(), new SqliteNormalizeSearchInterceptor(), new SqliteConnectionInterceptor()]
         );
     }
 
@@ -210,6 +207,41 @@ public class MediaContext : DbContext
             .Entity<Movie>()
             .HasQueryFilter(movie => ShowAdultContent || !movie.Adult);
         modelBuilder.Entity<Person>().HasQueryFilter(person => ShowAdultContent || !person.Adult);
+
+        // Required dependents mirror their principal's filter. EF Core needs a matching
+        // filter on the required end of a filtered relationship, otherwise a hidden adult
+        // Movie/Person still surfaces its join rows (the linkid=2131316 warning).
+        modelBuilder
+            .Entity<CertificationMovie>()
+            .HasQueryFilter(certificationMovie =>
+                ShowAdultContent || !certificationMovie.Movie.Adult
+            );
+        modelBuilder
+            .Entity<CollectionMovie>()
+            .HasQueryFilter(collectionMovie => ShowAdultContent || !collectionMovie.Movie.Adult);
+        modelBuilder
+            .Entity<CompanyMovie>()
+            .HasQueryFilter(companyMovie => ShowAdultContent || !companyMovie.Movie.Adult);
+        modelBuilder
+            .Entity<GenreMovie>()
+            .HasQueryFilter(genreMovie => ShowAdultContent || !genreMovie.Movie.Adult);
+        modelBuilder
+            .Entity<KeywordMovie>()
+            .HasQueryFilter(keywordMovie => ShowAdultContent || !keywordMovie.Movie.Adult);
+        modelBuilder
+            .Entity<LibraryMovie>()
+            .HasQueryFilter(libraryMovie => ShowAdultContent || !libraryMovie.Movie.Adult);
+        modelBuilder
+            .Entity<MovieUser>()
+            .HasQueryFilter(movieUser => ShowAdultContent || !movieUser.Movie.Adult);
+        modelBuilder.Entity<Cast>().HasQueryFilter(cast => ShowAdultContent || !cast.Person.Adult);
+        modelBuilder.Entity<Crew>().HasQueryFilter(crew => ShowAdultContent || !crew.Person.Adult);
+        modelBuilder
+            .Entity<Creator>()
+            .HasQueryFilter(creator => ShowAdultContent || !creator.Person.Adult);
+        modelBuilder
+            .Entity<GuestStar>()
+            .HasQueryFilter(guestStar => ShowAdultContent || !guestStar.Person.Adult);
 
         modelBuilder
             .Entity<Album>()

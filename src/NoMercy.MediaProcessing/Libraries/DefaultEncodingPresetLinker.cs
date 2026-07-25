@@ -60,9 +60,7 @@ public class DefaultEncodingPresetLinker(
         if (presetId is null)
         {
             logger.LogWarning(
-                "DefaultEncodingPresetLinker: no default preset available (builtin '{Name}' missing, no existing IsDefault link to fall back to) — folder {FolderId} left without auto-encode",
-                DefaultBuiltinPresetName,
-                folderId
+                "DefaultEncodingPresetLinker: no default preset available (builtin '{Name}' missing, no existing IsDefault link to fall back to) — folder {FolderId} left without auto-encode", [DefaultBuiltinPresetName, folderId]
             );
             return false;
         }

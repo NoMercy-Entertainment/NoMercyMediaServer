@@ -22,12 +22,12 @@ namespace NoMercy.Tests.Api;
 public class LocalizationMiddlewareTests
 {
     [Theory]
-    [InlineData("en-US,nl;q=0.9", "en-US")]
-    [InlineData("nl;q=1.0,en;q=0.5", "nl")]
-    [InlineData("nl-NL,nl;q=0.9,en;q=0.8", "nl-NL")]
-    [InlineData("en;q=0.8,nl;q=0.9", "nl")]
-    [InlineData("*,nl;q=1.0", "nl")]
-    [InlineData("", "en-US")]
+    [InlineData(["en-US,nl;q=0.9", "en-US"])]
+    [InlineData(["nl;q=1.0,en;q=0.5", "nl"])]
+    [InlineData(["nl-NL,nl;q=0.9,en;q=0.8", "nl-NL"])]
+    [InlineData(["en;q=0.8,nl;q=0.9", "nl"])]
+    [InlineData(["*,nl;q=1.0", "nl"])]
+    [InlineData(["", "en-US"])]
     public void ParseBestLanguage_PicksHighestQualityWeight(string header, string expected)
     {
         Assert.Equal(expected, LocalizationMiddleware.ParseBestLanguage(header));

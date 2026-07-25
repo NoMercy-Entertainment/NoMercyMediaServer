@@ -225,7 +225,7 @@ public class NoMercyImageClientTests
         Assert.True(
             hasImageLoadWithByteArray,
             "PROV-H16: Image.Load should use the byte[] overload, not Stream, "
-                + "to avoid consuming a stream that might be reused."
+                         + "to avoid consuming a stream that might be reused."
         );
     }
 

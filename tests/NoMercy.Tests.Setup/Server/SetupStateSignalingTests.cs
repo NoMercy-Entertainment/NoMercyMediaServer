@@ -194,7 +194,7 @@ public class SetupStateSignalingTests
         await Task.Delay(10);
         state.TransitionTo(SetupPhase.Authenticating);
 
-        await Task.WhenAll(wait1, wait2, wait3);
+        await Task.WhenAll([wait1, wait2, wait3]);
     }
 
     [Fact]

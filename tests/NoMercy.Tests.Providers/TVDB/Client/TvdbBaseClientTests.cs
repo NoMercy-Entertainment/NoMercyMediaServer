@@ -76,9 +76,7 @@ public class TvdbBaseClientTests
                     continue;
 
                 if (
-                    method.Name == "get_Result"
-                    && method.DeclaringType is not null
-                    && method.DeclaringType.FullName is not null
+                    method is { Name: "get_Result", DeclaringType.FullName: not null }
                     && method.DeclaringType.FullName.Contains("Task")
                 )
                 {
@@ -95,7 +93,7 @@ public class TvdbBaseClientTests
         Assert.False(
             foundGetResult,
             "PROV-CRIT-03 regression: TvdbBaseClient.LoginAsync still calls .Result on a Task. "
-                + "Use 'await' instead of '.Result' to avoid deadlocks."
+                         + "Use 'await' instead of '.Result' to avoid deadlocks."
         );
     }
 
@@ -114,10 +112,10 @@ public class TvdbBaseClientTests
         Type returnType = loginMethod.ReturnType;
         Assert.True(
             returnType == typeof(Task)
-                || (
-                    returnType.IsGenericType
-                    && returnType.GetGenericTypeDefinition() == typeof(Task<>)
-                ),
+                       || (
+                           returnType.IsGenericType
+                           && returnType.GetGenericTypeDefinition() == typeof(Task<>)
+                       ),
             "LoginAsync should be async and return a Task or Task<T>"
         );
     }
@@ -168,9 +166,7 @@ public class TvdbBaseClientTests
                     continue;
 
                 if (
-                    method.Name == "GetResult"
-                    && method.DeclaringType is not null
-                    && method.DeclaringType.FullName is not null
+                    method is { Name: "GetResult", DeclaringType.FullName: not null }
                     && method.DeclaringType.FullName.Contains("TaskAwaiter")
                 )
                 {
@@ -188,7 +184,7 @@ public class TvdbBaseClientTests
         Assert.True(
             awaiterGetResultCount >= 2,
             $"Expected at least 2 await points (SendAsync + ReadAsStringAsync) in LoginAsync, "
-                + $"but found {awaiterGetResultCount}. The .Result blocking call may still be present."
+                         + $"but found {awaiterGetResultCount}. The .Result blocking call may still be present."
         );
     }
 }

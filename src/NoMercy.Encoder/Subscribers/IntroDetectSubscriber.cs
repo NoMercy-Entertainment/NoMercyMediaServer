@@ -103,18 +103,13 @@ public class IntroDetectSubscriber : IDisposable
         if (seasonIds.Count == 0)
         {
             _logger.LogDebug(
-                "IntroDetect: no TV content in library {LibraryName} ({LibraryId}) — skipping",
-                @event.LibraryName,
-                @event.LibraryId
+                "IntroDetect: no TV content in library {LibraryName} ({LibraryId}) — skipping", [@event.LibraryName, @event.LibraryId]
             );
             return;
         }
 
         _logger.LogInformation(
-            "IntroDetect: starting for library {LibraryName} ({LibraryId}) — {SeasonCount} season(s)",
-            @event.LibraryName,
-            @event.LibraryId,
-            seasonIds.Count
+            "IntroDetect: starting for library {LibraryName} ({LibraryId}) — {SeasonCount} season(s)", [@event.LibraryName, @event.LibraryId, seasonIds.Count]
         );
 
         foreach (int seasonId in seasonIds)
@@ -280,9 +275,7 @@ public class IntroDetectSubscriber : IDisposable
         }
 
         _logger.LogInformation(
-            "IntroDetect: persisted {Count} segment(s) for season {SeasonId}",
-            newSegments.Count,
-            seasonId
+            "IntroDetect: persisted {Count} segment(s) for season {SeasonId}", [newSegments.Count, seasonId]
         );
     }
 
@@ -334,9 +327,7 @@ public class IntroDetectSubscriber : IDisposable
             if (!_storage.Exists(filePath))
             {
                 _logger.LogDebug(
-                    "IntroDetect: file not found for episode {EpisodeId}: {FilePath}",
-                    episode.Id,
-                    filePath
+                    "IntroDetect: file not found for episode {EpisodeId}: {FilePath}", [episode.Id, filePath]
                 );
                 continue;
             }

@@ -15,7 +15,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Bundle;
 
 namespace NoMercy.Tests.Encoder.Bundle;
@@ -199,7 +198,7 @@ public class BundleGarbageCollectorBranchTests
         storage.Seed(
             $"{LibraryRoot}/Mixed Movie/.nomercy.json",
             ToJsonBytes(
-                MakeBlueprint(MakeEncode(aliveId, "alive-again"), MakeEncode(deadId, "dead-again"))
+                MakeBlueprint([MakeEncode(aliveId, "alive-again"), MakeEncode(deadId, "dead-again")])
             )
         );
 

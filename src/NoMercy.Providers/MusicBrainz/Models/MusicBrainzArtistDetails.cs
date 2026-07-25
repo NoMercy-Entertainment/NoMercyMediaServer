@@ -22,7 +22,7 @@ public class MusicBrainzArtistDetails : MusicBrainzArtist
     public object? ArtistAppendsEndArea { get; set; }
 
     [JsonProperty("gender-id")]
-    public Guid GenderId { get; set; }
+    public Guid? GenderId { get; set; }
 
     [JsonProperty("area")]
     public MusicBrainzArea? MusicBrainzArea { get; set; }

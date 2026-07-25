@@ -12,7 +12,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
@@ -54,34 +53,35 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
         _episodeSegmentId = Ulid.NewUlid();
 
         await using MediaContext ctx = new();
-        ctx.ContentSegments.AddRange(
-            new ContentSegment
-            {
-                Id = _introSegmentId,
-                MovieId = SeededMovieId,
-                SegmentType = ContentSegmentType.Intro,
-                StartSeconds = 0,
-                EndSeconds = 90,
-                Source = "detector",
-            },
-            new ContentSegment
-            {
-                Id = _outroSegmentId,
-                MovieId = SeededMovieId,
-                SegmentType = ContentSegmentType.Outro,
-                StartSeconds = 5400,
-                EndSeconds = 5460,
-                Source = "detector",
-            },
-            new ContentSegment
-            {
-                Id = _episodeSegmentId,
-                EpisodeId = SeededEpisodeId,
-                SegmentType = ContentSegmentType.Intro,
-                StartSeconds = 5,
-                EndSeconds = 35,
-                Source = "detector",
-            }
+        ctx.ContentSegments.AddRange([
+                new ContentSegment
+                {
+                    Id = _introSegmentId,
+                    MovieId = SeededMovieId,
+                    SegmentType = ContentSegmentType.Intro,
+                    StartSeconds = 0,
+                    EndSeconds = 90,
+                    Source = "detector",
+                },
+                new ContentSegment
+                {
+                    Id = _outroSegmentId,
+                    MovieId = SeededMovieId,
+                    SegmentType = ContentSegmentType.Outro,
+                    StartSeconds = 5400,
+                    EndSeconds = 5460,
+                    Source = "detector",
+                },
+                new ContentSegment
+                {
+                    Id = _episodeSegmentId,
+                    EpisodeId = SeededEpisodeId,
+                    SegmentType = ContentSegmentType.Intro,
+                    StartSeconds = 5,
+                    EndSeconds = 35,
+                    Source = "detector",
+                }
+            ]
         );
         await ctx.SaveChangesAsync();
     }
@@ -98,7 +98,7 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/content-segments");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -185,7 +185,7 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
             $"/api/v1/content-segments/episode/{SeededEpisodeId}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
             $"/api/v1/content-segments/movie/{SeededMovieId}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -262,7 +262,7 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
             payload
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -376,7 +376,7 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
             payload
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -441,7 +441,7 @@ public class ContentSegmentsControllerTests : IClassFixture<NoMercyApiFactory>, 
             $"/api/v1/content-segments/{_outroSegmentId}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

@@ -9,15 +9,12 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Networking.Certificate;
@@ -76,7 +73,10 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
         return (X509Certificate2?)field.GetValue(service);
     }
 
-    private static void InjectCachedRealCertificate(CertificateService service, X509Certificate2 cert)
+    private static void InjectCachedRealCertificate(
+        CertificateService service,
+        X509Certificate2 cert
+    )
     {
         FieldInfo field = typeof(CertificateService).GetField(
             "_cachedCertificate",
@@ -97,9 +97,11 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
         return req.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), notAfter);
     }
 
-    private static Func<Microsoft.AspNetCore.Connections.ConnectionContext?, string?, X509Certificate2?> GetServerCertificateSelector(
-        CertificateService service
-    )
+    private static Func<
+        Microsoft.AspNetCore.Connections.ConnectionContext?,
+        string?,
+        X509Certificate2?
+    > GetServerCertificateSelector(CertificateService service)
     {
         MethodInfo method = typeof(CertificateService).GetMethod(
             "HttpsConnectionAdapterOptions",
@@ -225,8 +227,11 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
         using X509Certificate2 forcedSelfSigned = CreateRealCert(DateTimeOffset.UtcNow.AddDays(30));
         selfSignedField.SetValue(service, forcedSelfSigned);
 
-        Func<Microsoft.AspNetCore.Connections.ConnectionContext?, string?, X509Certificate2?> selector =
-            GetServerCertificateSelector(service);
+        Func<
+            Microsoft.AspNetCore.Connections.ConnectionContext?,
+            string?,
+            X509Certificate2?
+        > selector = GetServerCertificateSelector(service);
         X509Certificate2? selected = selector(null, null);
 
         Assert.NotNull(selected);
@@ -243,8 +248,11 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
         X509Certificate2? generated = GetCachedSelfSignedCertificate(service);
         Assert.NotNull(generated);
 
-        Func<Microsoft.AspNetCore.Connections.ConnectionContext?, string?, X509Certificate2?> selector =
-            GetServerCertificateSelector(service);
+        Func<
+            Microsoft.AspNetCore.Connections.ConnectionContext?,
+            string?,
+            X509Certificate2?
+        > selector = GetServerCertificateSelector(service);
         X509Certificate2? selected = selector(null, null);
 
         Assert.NotNull(selected);

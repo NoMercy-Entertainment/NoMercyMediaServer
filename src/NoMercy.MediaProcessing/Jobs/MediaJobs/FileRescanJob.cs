@@ -13,14 +13,16 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Domain;
-using Microsoft.Extensions.Logging;
 using NoMercy.Storage;
+
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -34,16 +36,27 @@ public class FileRescanJob : AbstractMediaJob
     public FileRescanJob(
         IStorageFactory storageFactory,
         IStorageDriver storageDriver,
-        ILoggerFactory loggerFactory
+        ILoggerFactory loggerFactory,
+        IMediaAnalyzer mediaAnalyzer
     )
-        : base(storageFactory, storageDriver, loggerFactory) { }
+        : base(storageFactory, storageDriver, loggerFactory)
+    {
+        _mediaAnalyzer = mediaAnalyzer;
+    }
+
+    // Private field, not a [JsonIgnore] public property — SerializationHelper.Populate
+    // (Newtonsoft) only re-hydrates public members, so this survives the queue's
+    // rebuild-then-populate cycle (see QueueWorker.ExecuteWithTransientRetry) untouched.
+    private readonly IMediaAnalyzer _mediaAnalyzer = null!;
 
     public override string QueueName => "file";
     public override int Priority => 10;
 
     public override async Task Handle()
     {
-        Log.LogInformation("[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}", Id, LibraryId);
+        Log.LogInformation(
+            "[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}", [Id, LibraryId]
+        );
 
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
@@ -54,7 +67,9 @@ public class FileRescanJob : AbstractMediaJob
             jobDispatcher,
             context,
             StorageDriver,
-            StorageFactory, LoggerFactory.CreateLogger<LibraryManager>()
+            StorageFactory,
+            _mediaAnalyzer,
+            LoggerFactory.CreateLogger<LibraryManager>()
         );
 
         Library? library = await libraryManager.RescanFiles(LibraryId, Id);

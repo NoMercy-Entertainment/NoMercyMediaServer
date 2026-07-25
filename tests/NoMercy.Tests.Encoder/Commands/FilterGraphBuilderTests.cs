@@ -255,9 +255,9 @@ public class FilterGraphBuilderTests
     // ── Crop filter ─────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(1920, 800, 0, 140)]
-    [InlineData(1280, 720, 0, 0)]
-    [InlineData(1080, 1080, 420, 0)]
+    [InlineData([1920, 800, 0, 140])]
+    [InlineData([1280, 720, 0, 0])]
+    [InlineData([1080, 1080, 420, 0])]
     public void Crop_VaryingDimensions_AllFormatted(int w, int h, int x, int y)
     {
         string result = new FilterGraphBuilder().AddCrop("0:v", w, h, x, y, "cropped").Build();

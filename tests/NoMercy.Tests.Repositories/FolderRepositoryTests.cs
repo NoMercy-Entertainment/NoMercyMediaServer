@@ -259,19 +259,20 @@ public class FolderRepositoryTests : IDisposable
     {
         Ulid folder1Id = Ulid.NewUlid();
         Ulid folder2Id = Ulid.NewUlid();
-        _context.Folders.AddRange(
-            new Folder
-            {
-                Id = folder1Id,
-                Path = "/test1",
-                DriverId = Driver.SystemLocalDriverId,
-            },
-            new Folder
-            {
-                Id = folder2Id,
-                Path = "/test2",
-                DriverId = Driver.SystemLocalDriverId,
-            }
+        _context.Folders.AddRange([
+                new Folder
+                {
+                    Id = folder1Id,
+                    Path = "/test1",
+                    DriverId = Driver.SystemLocalDriverId,
+                },
+                new Folder
+                {
+                    Id = folder2Id,
+                    Path = "/test2",
+                    DriverId = Driver.SystemLocalDriverId,
+                }
+            ]
         );
         await _context.SaveChangesAsync();
 

@@ -29,7 +29,7 @@ public class LiveStreamingService(
     ILiveSegmentInventory segmentInventory,
     ILiveSessionTransport? transport = null,
     ISessionManager? sessionManager = null
-) : ILiveStreamingService
+) : ILiveStreamingService, IAsyncDisposable, IDisposable
 {
     private readonly ConcurrentDictionary<string, LiveRuntimeSession> _runtimes = new();
 
@@ -161,6 +161,39 @@ public class LiveStreamingService(
             sessionManager?.RemoveSession(sessionId);
             RecordRemoved(sessionId);
         }
+    }
+
+    /// <summary>
+    /// Host shutdown hook. The DI container disposes this singleton when the
+    /// server stops; without it, every in-flight live session's ffmpeg child
+    /// would keep running as an orphan (the session CTS is not linked to the
+    /// application lifetime). Tear down each session via the normal RemoveAsync
+    /// path so its process dies, audio children cascade, and scratch is cleaned.
+    ///
+    /// Both IAsyncDisposable and IDisposable are implemented: the Generic Host
+    /// shutdown path disposes async, but a synchronously-disposed container
+    /// throws on an async-only registration, so the sync fallback is required.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeAllSessionsAsync().ConfigureAwait(false);
+        GC.SuppressFinalize(this);
+    }
+
+    public void Dispose()
+    {
+        // Sync fallback for a synchronously-disposed container. Safe to block:
+        // the teardown uses ConfigureAwait(false) throughout, so there is no
+        // captured-context deadlock.
+        DisposeAllSessionsAsync().GetAwaiter().GetResult();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task DisposeAllSessionsAsync()
+    {
+        // Snapshot the keys — RemoveAsync mutates _runtimes as it goes.
+        foreach (string sessionId in _runtimes.Keys.ToList())
+            await RemoveAsync(sessionId).ConfigureAwait(false);
     }
 
     public bool WasRecentlyRemoved(string sessionId)

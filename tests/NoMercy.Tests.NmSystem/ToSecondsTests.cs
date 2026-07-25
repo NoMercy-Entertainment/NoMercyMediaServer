@@ -9,35 +9,33 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Extensions;
-
 namespace NoMercy.Tests.NmSystem;
 
 [Trait("Category", "Unit")]
 public class ToSecondsTests
 {
     [Theory]
-    [InlineData("45", 45)]
-    [InlineData("00", 0)]
-    [InlineData("05.500", 5)]
+    [InlineData(["45", 45])]
+    [InlineData(["00", 0])]
+    [InlineData(["05.500", 5])]
     public void ToSeconds_SingleSegment_ReturnsSeconds(string input, int expected)
     {
         input.ToSeconds().Should().Be(expected);
     }
 
     [Theory]
-    [InlineData("02:30", 150)]
-    [InlineData("00:05", 5)]
-    [InlineData("10:00", 600)]
+    [InlineData(["02:30", 150])]
+    [InlineData(["00:05", 5])]
+    [InlineData(["10:00", 600])]
     public void ToSeconds_TwoSegments_ReturnsMinutesAndSeconds(string input, int expected)
     {
         input.ToSeconds().Should().Be(expected);
     }
 
     [Theory]
-    [InlineData("01:02:03", 3723)]
-    [InlineData("00:00:00", 0)]
-    [InlineData("02:00:00.250", 7200)]
+    [InlineData(["01:02:03", 3723])]
+    [InlineData(["00:00:00", 0])]
+    [InlineData(["02:00:00.250", 7200])]
     public void ToSeconds_ThreeSegments_ReturnsHoursMinutesAndSeconds(string input, int expected)
     {
         input.ToSeconds().Should().Be(expected);

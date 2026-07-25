@@ -26,22 +26,22 @@ namespace NoMercy.Tests.Api;
 public class MusicPlayerStateFactoryRouteSegmentTests
 {
     [Theory]
-    [InlineData("album", "albums")]
-    [InlineData("artist", "artists")]
-    [InlineData("playlist", "playlists")]
-    [InlineData("track", "tracks")]
-    [InlineData("genre", "genres")]
+    [InlineData(["album", "albums"])]
+    [InlineData(["artist", "artists"])]
+    [InlineData(["playlist", "playlists"])]
+    [InlineData(["track", "tracks"])]
+    [InlineData(["genre", "genres"])]
     public void ToRouteSegment_MapsTypeToExpectedSegment(string type, string expectedSegment)
     {
         MusicPlayerStateFactory.ToRouteSegment(type).Should().Be(expectedSegment);
     }
 
     [Theory]
-    [InlineData("albums", "album")]
-    [InlineData("artists", "artist")]
-    [InlineData("playlists", "playlist")]
-    [InlineData("tracks", "track")]
-    [InlineData("genres", "genre")]
+    [InlineData(["albums", "album"])]
+    [InlineData(["artists", "artist"])]
+    [InlineData(["playlists", "playlist"])]
+    [InlineData(["tracks", "track"])]
+    [InlineData(["genres", "genre"])]
     public void FromRouteSegment_MapsSegmentToExpectedType(string segment, string expectedType)
     {
         MusicPlayerStateFactory.FromRouteSegment(segment).Should().Be(expectedType);

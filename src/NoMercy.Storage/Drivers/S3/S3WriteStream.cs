@@ -344,24 +344,15 @@ internal sealed class S3WriteStream : Stream
         const string signedHeaders = "content-length;host;x-amz-content-sha256;x-amz-date";
 
         string canonicalRequest = string.Join(
-            "\n",
-            method.Method,
-            canonicalUri,
-            canonicalQueryString,
-            canonicalHeaders,
-            signedHeaders,
-            payloadHash
+            "\n", [method.Method, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, payloadHash]
         );
 
         string credentialScope = $"{dateStamp}/{_region}/s3/aws4_request";
         string stringToSign = string.Join(
-            "\n",
-            "AWS4-HMAC-SHA256",
-            amzDate,
-            credentialScope,
-            Convert
+            "\n", ["AWS4-HMAC-SHA256", amzDate, credentialScope, Convert
                 .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest)))
                 .ToLowerInvariant()
+            ]
         );
 
         byte[] signingKey = S3SigV4.DeriveSigningKey(_secretKey, dateStamp, _region);

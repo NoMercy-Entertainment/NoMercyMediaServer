@@ -40,19 +40,20 @@ public class CollectionMovieDtoTests
     [Fact]
     public void Ctor_MovieWithLogoImage_SetsLogoFromBestVotedLogo()
     {
-        Movie movie = BuildMovieWithImages(
-            new Image
-            {
-                Type = "logo",
-                FilePath = "/logo-low.png",
-                VoteAverage = 1,
-            },
-            new Image
-            {
-                Type = "backdrop",
-                FilePath = "/backdrop.jpg",
-                VoteAverage = 9,
-            }
+        Movie movie = BuildMovieWithImages([
+                new Image
+                {
+                    Type = "logo",
+                    FilePath = "/logo-low.png",
+                    VoteAverage = 1,
+                },
+                new Image
+                {
+                    Type = "backdrop",
+                    FilePath = "/backdrop.jpg",
+                    VoteAverage = 9,
+                }
+            ]
         );
 
         CollectionMovieDto dto = new(movie);

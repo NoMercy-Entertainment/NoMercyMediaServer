@@ -119,6 +119,47 @@ public class PluginServiceRegistrationTests : IDisposable
             File.Copy(manifestSrc, Path.Combine(_echoPluginDir, "plugin.json"), overwrite: true);
     }
 
+    private static string GetFailuresPluginBinDir()
+    {
+        string testBinDir = Path.GetDirectoryName(
+            typeof(PluginServiceRegistrationTests).Assembly.Location
+        )!;
+        string tfmDir = testBinDir;
+        string configDir = Path.GetDirectoryName(tfmDir)!;
+        string buildConfig = Path.GetFileName(configDir);
+        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
+
+        return Path.Combine(
+            repoRoot,
+            "tests",
+            "NoMercy.Plugin.Samples.Failures",
+            "bin",
+            buildConfig,
+            "net10.0"
+        );
+    }
+
+    private void StageFailuresPlugin(string targetDir)
+    {
+        string binDir = GetFailuresPluginBinDir();
+        string dllSrc = Path.Combine(binDir, "NoMercy.Plugin.Samples.Failures.dll");
+        string manifestSrc = Path.Combine(binDir, "plugin.json");
+
+        if (!File.Exists(dllSrc))
+            throw new FileNotFoundException(
+                $"Failures plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Failures first."
+            );
+
+        Directory.CreateDirectory(targetDir);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
+            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), overwrite: true);
+
+        if (File.Exists(manifestSrc))
+            File.Copy(manifestSrc, Path.Combine(targetDir, "plugin.json"), overwrite: true);
+    }
+
     [Fact]
     public void RegisterPluginServicesFromManifests_EmptyDir_DoesNotThrow()
     {
@@ -185,5 +226,74 @@ public class PluginServiceRegistrationTests : IDisposable
         Action act = () => services.RegisterPluginServicesFromManifests(_tempPluginsDir);
 
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void RegisterPluginServicesFromManifests_ConfigurationsAndDataDirs_AreSkipped()
+    {
+        // Real reserved directories the plugin manager itself creates alongside
+        // installed plugins — the scanner must recognise and skip both by name
+        // rather than trying (and failing) to read a plugin.json from them.
+        Directory.CreateDirectory(Path.Combine(_tempPluginsDir, "configurations"));
+        Directory.CreateDirectory(Path.Combine(_tempPluginsDir, "data"));
+
+        IServiceCollection services = new ServiceCollection();
+
+        Action act = () => services.RegisterPluginServicesFromManifests(_tempPluginsDir);
+
+        act.Should().NotThrow();
+        services.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RegisterPluginServicesFromManifests_ManifestReferencesMissingAssembly_SkipsPlugin()
+    {
+        string pluginDir = Path.Combine(_tempPluginsDir, "MissingAssembly");
+        Directory.CreateDirectory(pluginDir);
+        File.WriteAllText(
+            Path.Combine(pluginDir, "plugin.json"),
+            """
+            {
+              "id": "44444444-4444-4444-4444-444444444444",
+              "name": "MissingAssembly",
+              "description": "manifest with no matching dll on disk",
+              "version": "1.0.0",
+              "assembly": "DoesNotExist.dll"
+            }
+            """
+        );
+
+        IServiceCollection services = new ServiceCollection();
+
+        Action act = () => services.RegisterPluginServicesFromManifests(_tempPluginsDir);
+
+        act.Should().NotThrow();
+        services.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RegisterPluginServicesFromManifests_FailuresPlugin_DiscoversAndRegistersServiceRegistrator()
+    {
+        // The Failures fixture assembly contains a healthy IPluginServiceRegistrator
+        // (ServiceRegistratorPlugin), a non-instantiable abstract one
+        // (AbstractServiceRegistratorBase, which must be found but never
+        // constructed), and two IPlugin-only types that must not match the
+        // IPluginServiceRegistrator filter at all.
+        string pluginDir = Path.Combine(_tempPluginsDir, "Failures");
+        StageFailuresPlugin(pluginDir);
+
+        IServiceCollection services = new ServiceCollection();
+
+        services.RegisterPluginServicesFromManifests(_tempPluginsDir);
+
+        // The registered service's Type was loaded through a transient,
+        // already-unloaded PluginLoadContext — comparing by CLR type identity
+        // (or resolving it back out of a ServiceProvider) is unsafe across that
+        // ALC boundary. Comparing the descriptor's type NAME is the correct,
+        // ALC-agnostic way to prove RegisterServices actually ran.
+        services.Should().ContainSingle();
+        services[0]
+            .ServiceType.FullName.Should()
+            .Be("NoMercy.Plugin.Samples.Failures.FailuresPluginMarker");
     }
 }

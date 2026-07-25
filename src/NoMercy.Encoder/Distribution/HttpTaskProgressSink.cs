@@ -83,9 +83,7 @@ public class HttpTaskProgressSink(
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogDebug(
-                    "Coordinator returned {Status} for progress push (task {TaskId})",
-                    (int)response.StatusCode,
-                    taskId
+                    "Coordinator returned {Status} for progress push (task {TaskId})", [(int)response.StatusCode, taskId]
                 );
             }
         }

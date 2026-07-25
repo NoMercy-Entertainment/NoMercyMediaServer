@@ -81,7 +81,7 @@ public sealed class S3DriverBuilder : IStorageDriverBuilder
         if (driverType == "r2" && string.IsNullOrWhiteSpace(config.Endpoint))
             throw new ArgumentException(
                 $"driver_config.endpoint is required for 'r2' (folder {folderId}). "
-                    + "Set it to your account's R2 endpoint URL.",
+                         + "Set it to your account's R2 endpoint URL.",
                 nameof(driverConfigJson)
             );
 
@@ -109,10 +109,7 @@ public sealed class S3DriverBuilder : IStorageDriverBuilder
                 if (creds is null)
                 {
                     _logger.LogWarning(
-                        "credentials_ref '{CredentialsRef}' not found in secrets store for folder {FolderId}; trying driver:{FallbackKey} fallback",
-                        config.CredentialsRef,
-                        folderId,
-                        $"driver:{folderId}"
+                        "credentials_ref '{CredentialsRef}' not found in secrets store for folder {FolderId}; trying driver:{FallbackKey} fallback", [config.CredentialsRef, folderId, $"driver:{folderId}"]
                     );
                 }
             }
@@ -124,19 +121,13 @@ public sealed class S3DriverBuilder : IStorageDriverBuilder
                 accessKey = creds.Value.AccessKey;
                 secretKey = creds.Value.SecretKey;
                 _logger.LogInformation(
-                    "S3/R2 cred resolved for folder {FolderId}: accessKey starts with '{AkPrefix}' len={AkLen}, secret len={SkLen}",
-                    folderId,
-                    accessKey.Length >= 4 ? accessKey.Substring(0, 4) : accessKey,
-                    accessKey.Length,
-                    secretKey.Length
+                    "S3/R2 cred resolved for folder {FolderId}: accessKey starts with '{AkPrefix}' len={AkLen}, secret len={SkLen}", [folderId, accessKey.Length >= 4 ? accessKey.Substring(0, 4) : accessKey, accessKey.Length, secretKey.Length]
                 );
             }
             else
             {
                 _logger.LogWarning(
-                    "No credentials found in store for {DriverType} driver (folder {FolderId}); falling back to default credential chain",
-                    driverType,
-                    folderId
+                    "No credentials found in store for {DriverType} driver (folder {FolderId}); falling back to default credential chain", [driverType, folderId]
                 );
             }
         }
@@ -152,7 +143,7 @@ public sealed class S3DriverBuilder : IStorageDriverBuilder
         if (emptyOrNullAccess || emptyOrNullSecret)
             throw new ArgumentException(
                 $"{driverType} driver (folder {folderId}) has no credentials configured. "
-                    + "Open the driver in the dashboard and set access key + secret key.",
+                         + "Open the driver in the dashboard and set access key + secret key.",
                 nameof(driverConfigJson)
             );
 

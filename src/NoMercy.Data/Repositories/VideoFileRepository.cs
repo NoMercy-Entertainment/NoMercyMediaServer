@@ -44,6 +44,7 @@ public class VideoFileRepository(IDbContextFactory<MediaContext> contextFactory)
             .Include(episode => episode.VideoFiles)
             .Where(episode => episode.SeasonId == seasonId && episode.VideoFiles.Count > 0)
             .OrderBy(episode => episode.EpisodeNumber)
+            .ThenBy(episode => episode.Id)
             .ToListAsync(ct);
     }
 }

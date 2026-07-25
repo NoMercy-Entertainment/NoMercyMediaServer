@@ -410,7 +410,7 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
             TmdbTvClient client = new(showId);
             TmdbTvShowDetails? details = await client.Details();
             int? firstRuntime = details?.EpisodeRunTime?.FirstOrDefault();
-            return firstRuntime is { } runtime && runtime > 0 ? runtime : null;
+            return firstRuntime is { } runtime and > 0 ? runtime : null;
         }
         catch
         {

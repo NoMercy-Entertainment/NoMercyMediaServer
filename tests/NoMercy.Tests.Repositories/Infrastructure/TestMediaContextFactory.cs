@@ -94,7 +94,7 @@ public static class TestMediaContextFactory
                 connection,
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors([interceptor, new SqliteNormalizeSearchInterceptor()])
             .Options;
 
         TestMediaContext context = new(options);
@@ -182,7 +182,7 @@ public static class TestMediaContextFactory
                 connectionString,
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors([interceptor, new SqliteNormalizeSearchInterceptor()])
             .Options;
 
         using (TestMediaContext initContext = new(options))
@@ -237,7 +237,7 @@ public static class TestMediaContextFactory
                 connectionString,
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors([interceptor, new SqliteNormalizeSearchInterceptor()])
             .Options;
 
         using (TestMediaContext initContext = new(options))
@@ -333,7 +333,7 @@ public static class TestMediaContextFactory
 
         Genre actionGenre = new() { Id = 28, Name = "Action" };
         Genre dramaGenre = new() { Id = 18, Name = "Drama" };
-        context.Genres.AddRange(actionGenre, dramaGenre);
+        context.Genres.AddRange([actionGenre, dramaGenre]);
 
         Movie movie1 = new()
         {
@@ -362,11 +362,9 @@ public static class TestMediaContextFactory
             LibraryId = SeedConstants.MovieLibraryId,
             VoteAverage = 8.5,
         };
-        context.Movies.AddRange(movie1, movie2);
+        context.Movies.AddRange([movie1, movie2]);
 
-        context.LibraryMovie.AddRange(
-            new LibraryMovie(SeedConstants.MovieLibraryId, 129),
-            new LibraryMovie(SeedConstants.MovieLibraryId, 680)
+        context.LibraryMovie.AddRange([new LibraryMovie(SeedConstants.MovieLibraryId, 129), new LibraryMovie(SeedConstants.MovieLibraryId, 680)]
         );
 
         VideoFile movieVideoFile1 = new()
@@ -391,12 +389,9 @@ public static class TestMediaContextFactory
             Share = "movies",
             MovieId = 680,
         };
-        context.VideoFiles.AddRange(movieVideoFile1, movieVideoFile2);
+        context.VideoFiles.AddRange([movieVideoFile1, movieVideoFile2]);
 
-        context.GenreMovie.AddRange(
-            new GenreMovie { GenreId = 28, MovieId = 129 },
-            new GenreMovie { GenreId = 18, MovieId = 129 },
-            new GenreMovie { GenreId = 18, MovieId = 680 }
+        context.GenreMovie.AddRange([new GenreMovie { GenreId = 28, MovieId = 129 }, new GenreMovie { GenreId = 18, MovieId = 129 }, new GenreMovie { GenreId = 18, MovieId = 680 }]
         );
 
         Tv show1 = new()
@@ -450,7 +445,7 @@ public static class TestMediaContextFactory
             Overview =
                 "After their decaying RV breaks down, Walt and Jesse are forced to deal with a corpse and a prisoner.",
         };
-        context.Episodes.AddRange(episode1, episode2);
+        context.Episodes.AddRange([episode1, episode2]);
 
         VideoFile tvVideoFile1 = new()
         {
@@ -474,43 +469,44 @@ public static class TestMediaContextFactory
             Share = "tv",
             EpisodeId = 62086,
         };
-        context.VideoFiles.AddRange(tvVideoFile1, tvVideoFile2);
+        context.VideoFiles.AddRange([tvVideoFile1, tvVideoFile2]);
 
         context.GenreTv.AddRange(new GenreTv { GenreId = 18, TvId = 1399 });
 
         // UserData for continue watching tests
-        context.UserData.AddRange(
-            new UserData
-            {
-                Id = Ulid.Parse("01JABC0000000000000000MOVI"),
-                UserId = SeedConstants.UserId,
-                MovieId = 129,
-                VideoFileId = SeedConstants.MovieVideoFile1Id,
-                Type = "movie",
-                Time = 3600,
-                LastPlayedDate = "2026-02-01T10:00:00Z",
-            },
-            // Duplicate entry for same movie (different video file)
-            new UserData
-            {
-                Id = Ulid.Parse("01JDBC0000000000000000MDUP"),
-                UserId = SeedConstants.UserId,
-                MovieId = 129,
-                VideoFileId = SeedConstants.MovieVideoFile2Id,
-                Type = "movie",
-                Time = 1800,
-                LastPlayedDate = "2026-01-15T08:00:00Z",
-            },
-            new UserData
-            {
-                Id = Ulid.Parse("01JBBC0000000000000000TVSH"),
-                UserId = SeedConstants.UserId,
-                TvId = 1399,
-                VideoFileId = SeedConstants.TvVideoFile1Id,
-                Type = "tv",
-                Time = 2400,
-                LastPlayedDate = "2026-02-02T14:00:00Z",
-            }
+        context.UserData.AddRange([
+                new UserData
+                {
+                    Id = Ulid.Parse("01JABC0000000000000000MOVI"),
+                    UserId = SeedConstants.UserId,
+                    MovieId = 129,
+                    VideoFileId = SeedConstants.MovieVideoFile1Id,
+                    Type = "movie",
+                    Time = 3600,
+                    LastPlayedDate = "2026-02-01T10:00:00Z",
+                },
+                // Duplicate entry for same movie (different video file)
+                new UserData
+                {
+                    Id = Ulid.Parse("01JDBC0000000000000000MDUP"),
+                    UserId = SeedConstants.UserId,
+                    MovieId = 129,
+                    VideoFileId = SeedConstants.MovieVideoFile2Id,
+                    Type = "movie",
+                    Time = 1800,
+                    LastPlayedDate = "2026-01-15T08:00:00Z",
+                },
+                new UserData
+                {
+                    Id = Ulid.Parse("01JBBC0000000000000000TVSH"),
+                    UserId = SeedConstants.UserId,
+                    TvId = 1399,
+                    VideoFileId = SeedConstants.TvVideoFile1Id,
+                    Type = "tv",
+                    Time = 2400,
+                    LastPlayedDate = "2026-02-02T14:00:00Z",
+                }
+            ]
         );
 
         context.SaveChanges();

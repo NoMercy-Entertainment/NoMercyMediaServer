@@ -333,10 +333,7 @@ public class MusicPlaybackService
         string? staleDeviceId = state.DeviceId;
 
         _logger?.LogWarning(
-            "Music session for user {UserId}: active device {DeviceId} stopped reporting position for over {TimeoutMs}ms — ending the session",
-            user.Id,
-            staleDeviceId,
-            ActiveDeviceStaleTimeoutMs
+            "Music session for user {UserId}: active device {DeviceId} stopped reporting position for over {TimeoutMs}ms — ending the session", [user.Id, staleDeviceId, ActiveDeviceStaleTimeoutMs]
         );
 
         RemoveTimer(user.Id);
@@ -460,16 +457,7 @@ public class MusicPlaybackService
                 long sentMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
                 _logger?.LogInformation(
-                    "{UserId}: [MusicPlaybackService.DebouncedUpdatePlaybackState] scheduledMs={ScheduledMs} firedMs={FiredMs} (+{FireDelayMs}ms) sentMs={SentMs} (+{SendMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount} backlog={BacklogCount}",
-                    user.Id,
-                    scheduledMs,
-                    firedMs,
-                    firedMs - scheduledMs,
-                    sentMs,
-                    sentMs - firedMs,
-                    sentMs - scheduledMs,
-                    state.Playlist.Count,
-                    state.Backlog.Count
+                    "{UserId}: [MusicPlaybackService.DebouncedUpdatePlaybackState] scheduledMs={ScheduledMs} firedMs={FiredMs} (+{FireDelayMs}ms) sentMs={SentMs} (+{SendMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount} backlog={BacklogCount}", [user.Id, scheduledMs, firedMs, firedMs - scheduledMs, sentMs, sentMs - firedMs, sentMs - scheduledMs, state.Playlist.Count, state.Backlog.Count]
                 );
             },
             null,
@@ -681,7 +669,7 @@ public class MusicPlaybackService
         if (state.Playlist.Count > 0)
             return state.Playlist.First();
 
-        if (state.Repeat == "all" && state.Backlog.Count > 0)
+        if (state is { Repeat: "all", Backlog.Count: > 0 })
             return state.Backlog.First(); // Will loop around
 
         return null; // No next track (playback will stop)

@@ -53,10 +53,7 @@ public class SignalRPlaybackEventHandler : IDisposable
         );
 
         _logger.LogInformation(
-            "Playback started: User={UserId}, Media={MediaId}, Type={MediaType}",
-            @event.UserId,
-            @event.MediaId,
-            @event.MediaType
+            "Playback started: User={UserId}, Media={MediaId}, Type={MediaType}", [@event.UserId, @event.MediaId, @event.MediaType]
         );
     }
 
@@ -96,10 +93,7 @@ public class SignalRPlaybackEventHandler : IDisposable
         );
 
         _logger.LogInformation(
-            "Playback completed: User={UserId}, Media={MediaId}, Type={MediaType}",
-            @event.UserId,
-            @event.MediaId,
-            @event.MediaType
+            "Playback completed: User={UserId}, Media={MediaId}, Type={MediaType}", [@event.UserId, @event.MediaId, @event.MediaType]
         );
     }
 

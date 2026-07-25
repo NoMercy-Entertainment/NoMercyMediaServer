@@ -11,7 +11,6 @@
 
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Database.Models.People;
-using NoMercy.Database.Models.TvShows;
 using Xunit;
 
 namespace NoMercy.Tests.Api.Media;

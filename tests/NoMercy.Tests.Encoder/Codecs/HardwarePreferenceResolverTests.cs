@@ -52,9 +52,7 @@ public class HardwarePreferenceResolverTests
     [Fact]
     public void ForceSoftware_picks_libx264_for_H264_even_when_NVENC_available()
     {
-        SpeedIndex index = MakeSpeedIndex(
-            (VideoCodecType.H264, "libx264", 120),
-            (VideoCodecType.H264, "h264_nvenc", 600)
+        SpeedIndex index = MakeSpeedIndex([(VideoCodecType.H264, "libx264", 120), (VideoCodecType.H264, "h264_nvenc", 600)]
         );
 
         ScopedDecisionLog log = NewLog();
@@ -111,9 +109,7 @@ public class HardwarePreferenceResolverTests
     [Fact]
     public void PreferQuality_behaves_like_ForceSoftware()
     {
-        SpeedIndex index = MakeSpeedIndex(
-            (VideoCodecType.H264, "libx264", 120),
-            (VideoCodecType.H264, "h264_nvenc", 600)
+        SpeedIndex index = MakeSpeedIndex([(VideoCodecType.H264, "libx264", 120), (VideoCodecType.H264, "h264_nvenc", 600)]
         );
 
         ScopedDecisionLog log = NewLog();
@@ -141,9 +137,7 @@ public class HardwarePreferenceResolverTests
     [Fact]
     public void PreferHardware_picks_NVENC_when_speed_index_higher()
     {
-        SpeedIndex index = MakeSpeedIndex(
-            (VideoCodecType.H264, "libx264", 120),
-            (VideoCodecType.H264, "h264_nvenc", 600)
+        SpeedIndex index = MakeSpeedIndex([(VideoCodecType.H264, "libx264", 120), (VideoCodecType.H264, "h264_nvenc", 600)]
         );
 
         ScopedDecisionLog log = NewLog();
@@ -237,11 +231,7 @@ public class HardwarePreferenceResolverTests
     [Fact]
     public void ForceHardware_picks_highest_HW_entry_when_multiple()
     {
-        SpeedIndex index = MakeSpeedIndex(
-            (VideoCodecType.H264, "libx264", 120),
-            (VideoCodecType.H264, "h264_nvenc", 600),
-            (VideoCodecType.H264, "h264_qsv", 300),
-            (VideoCodecType.H264, "h264_amf", 450)
+        SpeedIndex index = MakeSpeedIndex([(VideoCodecType.H264, "libx264", 120), (VideoCodecType.H264, "h264_nvenc", 600), (VideoCodecType.H264, "h264_qsv", 300), (VideoCodecType.H264, "h264_amf", 450)]
         );
 
         HardwareResolutionResult result = _resolver.Resolve(
@@ -261,9 +251,7 @@ public class HardwarePreferenceResolverTests
     [Fact]
     public void Decision_log_includes_reason_for_each_branch()
     {
-        SpeedIndex index = MakeSpeedIndex(
-            (VideoCodecType.H264, "libx264", 120),
-            (VideoCodecType.H264, "h264_nvenc", 600)
+        SpeedIndex index = MakeSpeedIndex([(VideoCodecType.H264, "libx264", 120), (VideoCodecType.H264, "h264_nvenc", 600)]
         );
 
         // ForceSoftware

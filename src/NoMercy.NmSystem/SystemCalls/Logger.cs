@@ -279,7 +279,6 @@ public static class Logger
             category,
             entry.Message,
             null,
-            null,
             NoMercyConsoleTheme.Dark,
             color,
             ConsoleFallbackWidth()

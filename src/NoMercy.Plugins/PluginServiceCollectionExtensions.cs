@@ -15,6 +15,9 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Capabilities;
+using NoMercy.Plugins.Hooks;
+using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
@@ -31,21 +34,51 @@ public static class PluginServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginsPath);
 
+        services.AddSingleton<IPluginVerifier, PluginVerifier>();
+
+        services.AddSingleton<IPluginConsentStore>(sp =>
+        {
+            IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
+            IStorage storage = new LocalStorage(driver, new([pluginsPath], driver));
+            string platformDataFolder = Path.Combine(pluginsPath, "data", "platform");
+            IPluginConfiguration configuration = new PluginConfiguration(
+                platformDataFolder,
+                storage
+            );
+            return new ConfigPluginConsentStore(configuration);
+        });
+
+        services.AddSingleton<IPluginConsentService, PluginConsentService>();
+
         services.AddSingleton<IPluginManager>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             ILogger<PluginManager> logger = sp.GetRequiredService<ILogger<PluginManager>>();
             IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
-            IStorage storage = new LocalStorage(
+            IPluginVerifier verifier = sp.GetRequiredService<IPluginVerifier>();
+            IPluginConsentService consentService = sp.GetRequiredService<IPluginConsentService>();
+            IStorage storage = new LocalStorage(driver, new([pluginsPath], driver));
+            return new PluginManager(
+                eventBus,
+                sp,
+                logger,
+                pluginsPath,
+                storage,
                 driver,
-                new([pluginsPath], driver)
+                verifier,
+                consentService
             );
-            return new PluginManager(eventBus, sp, logger, pluginsPath, storage, driver);
         });
 
         // Wire encoder plugins' GetProfile into the encoder's profile-override seam.
         // First plugin returning a non-null profile for the source wins.
         services.AddSingleton<IProfileOverride, PluginProfileOverride>();
+
+        services.AddSingleton<IPluginCronRegistrar, PluginCronRegistrar>();
+
+        // Additive auth claims: OnTokenValidated (ServiceConfiguration.Auth.cs) resolves
+        // this per authenticated request to enrich the principal. It never decides auth.
+        services.AddSingleton<IPluginClaimsAugmentor, PluginClaimsAugmentor>();
 
         return services;
     }

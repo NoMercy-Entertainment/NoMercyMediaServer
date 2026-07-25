@@ -148,15 +148,7 @@ public class Track : ColorPaletteTimeStamps
 
         // Track may be orphaned during ingest (no AlbumTrack row yet) — fall
         // back to an empty album prefix instead of throwing.
-        return string.Concat(
-            AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty,
-            ": ",
-            DiscNumber.ToString(),
-            "-",
-            TrackNumber.ToString().PadLeft(padding, '0'),
-            " - ",
-            Name,
-            " NoMercy"
+        return string.Concat([AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty, ": ", DiscNumber.ToString(), "-", TrackNumber.ToString().PadLeft(padding, '0'), " - ", Name, " NoMercy"]
         );
     }
 

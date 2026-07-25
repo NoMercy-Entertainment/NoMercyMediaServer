@@ -82,11 +82,7 @@ public class BudgetGateTests : IDisposable
         Assert.NotNull(reserved);
 
         // Simulate the gate check: try to acquire with the requirement from the job payload
-        ResourceRequirement? requirement = new(
-            "test-gpu",
-            GpuSlots: 1,
-            CpuThreads: 2
-        );
+        ResourceRequirement? requirement = new("test-gpu", GpuSlots: 1, CpuThreads: 2);
         ResourceLease? lease = budget.Object.TryAcquire(requirement, TimeSpan.Zero);
 
         Assert.Null(lease);
@@ -179,11 +175,7 @@ public class BudgetGateTests : IDisposable
         ResourceRequirementJob gpuJob = new()
         {
             QueueName = "encoder-gpu",
-            ResourceRequirement = new(
-                "NVIDIA GeForce RTX 4090",
-                GpuSlots: 1,
-                CpuThreads: 2
-            ),
+            ResourceRequirement = new("NVIDIA GeForce RTX 4090", GpuSlots: 1, CpuThreads: 2),
         };
 
         Assert.Equal("encoder-gpu", gpuJob.QueueName);

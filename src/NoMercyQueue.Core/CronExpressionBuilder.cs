@@ -238,7 +238,7 @@ public class CronExpressionBuilder
 
     public CronExpressionBuilder OnDaysOfWeek(params DayOfWeek[] daysOfWeek)
     {
-        int[] days = daysOfWeek.Select(d => (int)d).ToArray();
+        int[] days = daysOfWeek.Select(dayOfWeek => (int)dayOfWeek).ToArray();
         _dayOfWeek = string.Join(",", days);
         return this;
     }

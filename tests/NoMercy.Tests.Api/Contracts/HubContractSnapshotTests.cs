@@ -232,7 +232,7 @@ public class HubContractSnapshotTests
 
         string[] actualHubTypeNames = apiAssembly
             .GetTypes()
-            .Where(t => t.IsClass && t.IsPublic && !t.IsAbstract)
+            .Where(t => t is { IsClass: true, IsPublic: true, IsAbstract: false })
             .Where(t => typeof(ConnectionHub).IsAssignableFrom(t))
             .Select(t => t.Name)
             .OrderBy(n => n, StringComparer.Ordinal)

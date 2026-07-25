@@ -15,7 +15,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Bundle;
 
 namespace NoMercy.Tests.Encoder.Bundle;
@@ -25,7 +24,7 @@ namespace NoMercy.Tests.Encoder.Bundle;
 /// per-media-item <c>.nomercy.json</c> blueprint (replaces the old
 /// per-preset <c>encodes/{slug}/manifest.json</c> sweep).
 ///
-/// DB context: EF Core in-memory provider (UseInMemoryDatabase).
+/// DB EF Core in-memory provider (UseInMemoryDatabase).
 /// Storage: TestStorage (shared fake, see TestStorage.cs).
 /// </summary>
 public class BundleGarbageCollectorTests
@@ -195,9 +194,7 @@ public class BundleGarbageCollectorTests
         TestStorage storage = new();
         SeedBlueprint(
             storage,
-            mediaFolder,
-            MakeEncode(aliveId, "web-1080p", $"{LibraryRoot}/{mediaFolder}"),
-            MakeEncode(deadId, "web-720p-legacy", $"{LibraryRoot}/{mediaFolder}")
+            mediaFolder, [MakeEncode(aliveId, "web-1080p", $"{LibraryRoot}/{mediaFolder}"), MakeEncode(deadId, "web-720p-legacy", $"{LibraryRoot}/{mediaFolder}")]
         );
 
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(aliveId);

@@ -30,9 +30,7 @@ public class StorageServiceCollectionTests
         ServiceCollection services = new();
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         services.AddNoMercyStorage();
-        return services.BuildServiceProvider(
-            new ServiceProviderOptions { ValidateOnBuild = true }
-        );
+        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true });
     }
 
     [Fact]

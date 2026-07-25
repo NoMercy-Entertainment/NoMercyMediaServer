@@ -189,7 +189,7 @@ public class TwoPassStatsFileTests
         await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.One
+            r.Options is { Pass: EncodingPass.One }
         );
         pass1.Options!.StatsFilePath.Should().NotBeNullOrEmpty();
     }
@@ -203,10 +203,10 @@ public class TwoPassStatsFileTests
         await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.One
+            r.Options is { Pass: EncodingPass.One }
         );
         EncodingRequest pass2 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.Two
+            r.Options is { Pass: EncodingPass.Two }
         );
 
         pass2.Options!.StatsFilePath.Should().NotBeNullOrEmpty();
@@ -228,7 +228,7 @@ public class TwoPassStatsFileTests
         );
 
         EncodingRequest pass1 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.One
+            r.Options is { Pass: EncodingPass.One }
         );
         string statsPath = pass1.Options!.StatsFilePath!;
 
@@ -251,7 +251,7 @@ public class TwoPassStatsFileTests
         await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.One
+            r.Options is { Pass: EncodingPass.One }
         );
         pass1.Options!.StatsFilePath.Should().NotBeNullOrEmpty();
     }
@@ -265,10 +265,10 @@ public class TwoPassStatsFileTests
         await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.One
+            r.Options is { Pass: EncodingPass.One }
         );
         EncodingRequest pass2 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.Two
+            r.Options is { Pass: EncodingPass.Two }
         );
 
         pass2.Options!.StatsFilePath.Should().Be(pass1.Options!.StatsFilePath);
@@ -288,7 +288,7 @@ public class TwoPassStatsFileTests
         );
 
         EncodingRequest pass1 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.One
+            r.Options is { Pass: EncodingPass.One }
         );
         string statsPath = pass1.Options!.StatsFilePath!;
 
@@ -309,7 +309,7 @@ public class TwoPassStatsFileTests
         await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.One
+            r.Options is { Pass: EncodingPass.One }
         );
         pass1.Options!.StatsFilePath.Should().NotBeNullOrEmpty();
     }
@@ -323,10 +323,10 @@ public class TwoPassStatsFileTests
         await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
 
         EncodingRequest pass1 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.One
+            r.Options is { Pass: EncodingPass.One }
         );
         EncodingRequest pass2 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.Two
+            r.Options is { Pass: EncodingPass.Two }
         );
 
         pass2.Options!.StatsFilePath.Should().Be(pass1.Options!.StatsFilePath);
@@ -346,7 +346,7 @@ public class TwoPassStatsFileTests
         );
 
         EncodingRequest pass1 = captured.First(r =>
-            r.Options != null && r.Options.Pass == EncodingPass.One
+            r.Options is { Pass: EncodingPass.One }
         );
         string statsPath = pass1.Options!.StatsFilePath!;
 

@@ -158,14 +158,14 @@ public class NetworkJsonPropertyTests
     }
 
     [Theory]
-    [InlineData("Id", "id")]
-    [InlineData("Name", "name")]
-    [InlineData("Logo", "logo")]
-    [InlineData("OriginCountry", "origin_country")]
-    [InlineData("Description", "description")]
-    [InlineData("Headquarters", "headquarters")]
-    [InlineData("Homepage", "homepage")]
-    [InlineData("NetworkTv", "network_tv")]
+    [InlineData(["Id", "id"])]
+    [InlineData(["Name", "name"])]
+    [InlineData(["Logo", "logo"])]
+    [InlineData(["OriginCountry", "origin_country"])]
+    [InlineData(["Description", "description"])]
+    [InlineData(["Headquarters", "headquarters"])]
+    [InlineData(["Homepage", "homepage"])]
+    [InlineData(["NetworkTv", "network_tv"])]
     public void AllProperties_HaveCorrectJsonPropertyNames(
         string propertyName,
         string expectedJsonName

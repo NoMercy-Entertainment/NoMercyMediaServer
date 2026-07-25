@@ -39,9 +39,9 @@ public class AdultContentFilterTests : IDisposable
     }
 
     [Theory]
-    [InlineData(null, false)]
-    [InlineData(false, false)]
-    [InlineData(true, true)]
+    [InlineData([null, false])]
+    [InlineData([false, false])]
+    [InlineData([true, true])]
     public void ShowAdultContent_TreatsNullAndFalseAsHidden(bool? configured, bool expected)
     {
         RuntimeServerSettings.Current.AllowAdultContent = configured;

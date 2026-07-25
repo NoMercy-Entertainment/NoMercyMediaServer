@@ -31,11 +31,11 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(1, "*/1")]
-    [InlineData(5, "*/5")]
-    [InlineData(15, "*/15")]
-    [InlineData(30, "*/30")]
-    [InlineData(59, "*/59")]
+    [InlineData([1, "*/1"])]
+    [InlineData([5, "*/5"])]
+    [InlineData([15, "*/15"])]
+    [InlineData([30, "*/30"])]
+    [InlineData([59, "*/59"])]
     public void EveryMinutes_ValidValues_SetsCorrectExpression(int minutes, string expected)
     {
         // Arrange & Act
@@ -60,10 +60,10 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(0, "0")]
-    [InlineData(15, "15")]
-    [InlineData(30, "30")]
-    [InlineData(59, "59")]
+    [InlineData([0, "0"])]
+    [InlineData([15, "15"])]
+    [InlineData([30, "30"])]
+    [InlineData([59, "59"])]
     public void AtMinute_ValidValues_SetsCorrectMinute(int minute, string expected)
     {
         // Arrange & Act
@@ -90,7 +90,7 @@ public class CronExpressionBuilderTests
     public void AtMinutes_ValidValues_SetsCommaSeparatedMinutes()
     {
         // Arrange & Act
-        CronExpressionBuilder builder = new CronExpressionBuilder().AtMinutes(0, 15, 30, 45);
+        CronExpressionBuilder builder = new CronExpressionBuilder().AtMinutes([0, 15, 30, 45]);
         string result = builder.Build();
 
         // Assert
@@ -104,12 +104,12 @@ public class CronExpressionBuilderTests
         CronExpressionBuilder builder = new();
 
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() => builder.AtMinutes(0, 60, 30));
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.AtMinutes([0, 60, 30]));
     }
 
     [Theory]
-    [InlineData(0, 30, "0-30")]
-    [InlineData(15, 45, "15-45")]
+    [InlineData([0, 30, "0-30"])]
+    [InlineData([15, 45, "15-45"])]
     public void MinuteRange_ValidRange_SetsCorrectRange(int start, int end, string expected)
     {
         // Arrange & Act
@@ -121,10 +121,10 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(-1, 30)]
-    [InlineData(0, 60)]
-    [InlineData(30, 15)]
-    [InlineData(30, 30)]
+    [InlineData([-1, 30])]
+    [InlineData([0, 60])]
+    [InlineData([30, 15])]
+    [InlineData([30, 30])]
     public void MinuteRange_InvalidRange_ThrowsArgumentException(int start, int end)
     {
         // Arrange
@@ -150,10 +150,10 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(1, "0 */1 * * *")]
-    [InlineData(6, "0 */6 * * *")]
-    [InlineData(12, "0 */12 * * *")]
-    [InlineData(23, "0 */23 * * *")]
+    [InlineData([1, "0 */1 * * *"])]
+    [InlineData([6, "0 */6 * * *"])]
+    [InlineData([12, "0 */12 * * *"])]
+    [InlineData([23, "0 */23 * * *"])]
     public void EveryHours_ValidValues_SetsCorrectExpression(int hours, string expected)
     {
         // Arrange & Act
@@ -178,9 +178,9 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(0, "0 0 * * *")]
-    [InlineData(12, "0 12 * * *")]
-    [InlineData(23, "0 23 * * *")]
+    [InlineData([0, "0 0 * * *"])]
+    [InlineData([12, "0 12 * * *"])]
+    [InlineData([23, "0 23 * * *"])]
     public void AtHour_ValidValues_SetsCorrectHour(int hour, string expected)
     {
         // Arrange & Act
@@ -207,7 +207,7 @@ public class CronExpressionBuilderTests
     public void AtHours_ValidValues_SetsCommaSeparatedHours()
     {
         // Arrange & Act
-        CronExpressionBuilder builder = new CronExpressionBuilder().AtHours(9, 12, 18);
+        CronExpressionBuilder builder = new CronExpressionBuilder().AtHours([9, 12, 18]);
         string result = builder.Build();
 
         // Assert
@@ -221,12 +221,12 @@ public class CronExpressionBuilderTests
         CronExpressionBuilder builder = new();
 
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() => builder.AtHours(9, 24, 18));
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.AtHours([9, 24, 18]));
     }
 
     [Theory]
-    [InlineData(9, 17, "0 9-17 * * *")]
-    [InlineData(0, 12, "0 0-12 * * *")]
+    [InlineData([9, 17, "0 9-17 * * *"])]
+    [InlineData([0, 12, "0 0-12 * * *"])]
     public void HourRange_ValidRange_SetsCorrectRange(int start, int end, string expected)
     {
         // Arrange & Act
@@ -238,10 +238,10 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(-1, 12)]
-    [InlineData(0, 24)]
-    [InlineData(12, 9)]
-    [InlineData(12, 12)]
+    [InlineData([-1, 12])]
+    [InlineData([0, 24])]
+    [InlineData([12, 9])]
+    [InlineData([12, 12])]
     public void HourRange_InvalidRange_ThrowsArgumentException(int start, int end)
     {
         // Arrange
@@ -297,7 +297,7 @@ public class CronExpressionBuilderTests
     public void OnDays_ValidValues_SetsCommaSeparatedDays()
     {
         // Arrange & Act
-        CronExpressionBuilder builder = new CronExpressionBuilder().OnDays(1, 15, 31);
+        CronExpressionBuilder builder = new CronExpressionBuilder().OnDays([1, 15, 31]);
         string result = builder.Build();
 
         // Assert
@@ -311,12 +311,12 @@ public class CronExpressionBuilderTests
         CronExpressionBuilder builder = new();
 
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() => builder.OnDays(1, 32, 15));
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.OnDays([1, 32, 15]));
     }
 
     [Theory]
-    [InlineData(1, 15, "1-15")]
-    [InlineData(5, 25, "5-25")]
+    [InlineData([1, 15, "1-15"])]
+    [InlineData([5, 25, "5-25"])]
     public void DayRange_ValidRange_SetsCorrectRange(int start, int end, string expected)
     {
         // Arrange & Act
@@ -328,10 +328,10 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(0, 15)]
-    [InlineData(1, 32)]
-    [InlineData(15, 10)]
-    [InlineData(15, 15)]
+    [InlineData([0, 15])]
+    [InlineData([1, 32])]
+    [InlineData([15, 10])]
+    [InlineData([15, 15])]
     public void DayRange_InvalidRange_ThrowsArgumentException(int start, int end)
     {
         // Arrange
@@ -342,9 +342,9 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(1, "0 0 */1 * *")]
-    [InlineData(7, "0 0 */7 * *")]
-    [InlineData(31, "0 0 */31 * *")]
+    [InlineData([1, "0 0 */1 * *"])]
+    [InlineData([7, "0 0 */7 * *"])]
+    [InlineData([31, "0 0 */31 * *"])]
     public void EveryNthDay_ValidValues_SetsCorrectExpression(int n, string expected)
     {
         // Arrange & Act
@@ -425,7 +425,7 @@ public class CronExpressionBuilderTests
     public void InMonths_ValidValues_SetsCommaSeparatedMonths()
     {
         // Arrange & Act
-        CronExpressionBuilder builder = new CronExpressionBuilder().InMonths(1, 6, 12);
+        CronExpressionBuilder builder = new CronExpressionBuilder().InMonths([1, 6, 12]);
         string result = builder.Build();
 
         // Assert
@@ -439,12 +439,12 @@ public class CronExpressionBuilderTests
         CronExpressionBuilder builder = new();
 
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() => builder.InMonths(1, 13, 6));
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.InMonths([1, 13, 6]));
     }
 
     [Theory]
-    [InlineData(1, 6, "1-6")]
-    [InlineData(3, 9, "3-9")]
+    [InlineData([1, 6, "1-6"])]
+    [InlineData([3, 9, "3-9"])]
     public void MonthRange_ValidRange_SetsCorrectRange(int start, int end, string expected)
     {
         // Arrange & Act
@@ -456,10 +456,10 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(0, 6)]
-    [InlineData(1, 13)]
-    [InlineData(6, 3)]
-    [InlineData(6, 6)]
+    [InlineData([0, 6])]
+    [InlineData([1, 13])]
+    [InlineData([6, 3])]
+    [InlineData([6, 6])]
     public void MonthRange_InvalidRange_ThrowsArgumentException(int start, int end)
     {
         // Arrange
@@ -470,9 +470,9 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(1, "0 0 1 */1 *")]
-    [InlineData(3, "0 0 1 */3 *")]
-    [InlineData(12, "0 0 1 */12 *")]
+    [InlineData([1, "0 0 1 */1 *"])]
+    [InlineData([3, "0 0 1 */3 *"])]
+    [InlineData([12, "0 0 1 */12 *"])]
     public void EveryNthMonth_ValidValues_SetsCorrectExpression(int n, string expected)
     {
         // Arrange & Act
@@ -512,13 +512,13 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(DayOfWeek.Sunday, "0")]
-    [InlineData(DayOfWeek.Monday, "1")]
-    [InlineData(DayOfWeek.Tuesday, "2")]
-    [InlineData(DayOfWeek.Wednesday, "3")]
-    [InlineData(DayOfWeek.Thursday, "4")]
-    [InlineData(DayOfWeek.Friday, "5")]
-    [InlineData(DayOfWeek.Saturday, "6")]
+    [InlineData([DayOfWeek.Sunday, "0"])]
+    [InlineData([DayOfWeek.Monday, "1"])]
+    [InlineData([DayOfWeek.Tuesday, "2"])]
+    [InlineData([DayOfWeek.Wednesday, "3"])]
+    [InlineData([DayOfWeek.Thursday, "4"])]
+    [InlineData([DayOfWeek.Friday, "5"])]
+    [InlineData([DayOfWeek.Saturday, "6"])]
     public void OnDayOfWeek_ValidValues_SetsCorrectDayOfWeek(DayOfWeek dayOfWeek, string expected)
     {
         // Arrange & Act
@@ -533,10 +533,7 @@ public class CronExpressionBuilderTests
     public void OnDaysOfWeek_ValidValues_SetsCommaSeparatedDays()
     {
         // Arrange & Act
-        CronExpressionBuilder builder = new CronExpressionBuilder().OnDaysOfWeek(
-            DayOfWeek.Monday,
-            DayOfWeek.Wednesday,
-            DayOfWeek.Friday
+        CronExpressionBuilder builder = new CronExpressionBuilder().OnDaysOfWeek([DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday]
         );
         string result = builder.Build();
 
@@ -567,9 +564,9 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(1, DayOfWeek.Monday, "0 0 * * 1#1")]
-    [InlineData(2, DayOfWeek.Friday, "0 0 * * 5#2")]
-    [InlineData(5, DayOfWeek.Sunday, "0 0 * * 0#5")]
+    [InlineData([1, DayOfWeek.Monday, "0 0 * * 1#1"])]
+    [InlineData([2, DayOfWeek.Friday, "0 0 * * 5#2"])]
+    [InlineData([5, DayOfWeek.Sunday, "0 0 * * 0#5"])]
     public void OnNthDayOfWeek_ValidValues_SetsCorrectExpression(
         int nth,
         DayOfWeek dayOfWeek,
@@ -585,9 +582,9 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(0, DayOfWeek.Monday)]
-    [InlineData(6, DayOfWeek.Friday)]
-    [InlineData(-1, DayOfWeek.Sunday)]
+    [InlineData([0, DayOfWeek.Monday])]
+    [InlineData([6, DayOfWeek.Friday])]
+    [InlineData([-1, DayOfWeek.Sunday])]
     public void OnNthDayOfWeek_InvalidValues_ThrowsArgumentOutOfRangeException(
         int nth,
         DayOfWeek dayOfWeek
@@ -601,9 +598,9 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(DayOfWeek.Monday, "0 0 * * 1L")]
-    [InlineData(DayOfWeek.Friday, "0 0 * * 5L")]
-    [InlineData(DayOfWeek.Sunday, "0 0 * * 0L")]
+    [InlineData([DayOfWeek.Monday, "0 0 * * 1L"])]
+    [InlineData([DayOfWeek.Friday, "0 0 * * 5L"])]
+    [InlineData([DayOfWeek.Sunday, "0 0 * * 0L"])]
     public void LastDayOfWeek_ValidValues_SetsCorrectExpression(
         DayOfWeek dayOfWeek,
         string expected
@@ -622,9 +619,9 @@ public class CronExpressionBuilderTests
     #region Common Patterns Tests
 
     [Theory]
-    [InlineData(0, 0, "0 0 * * *")]
-    [InlineData(12, 30, "30 12 * * *")]
-    [InlineData(23, 59, "59 23 * * *")]
+    [InlineData([0, 0, "0 0 * * *"])]
+    [InlineData([12, 30, "30 12 * * *"])]
+    [InlineData([23, 59, "59 23 * * *"])]
     public void Daily_ValidValues_SetsCorrectExpression(int hour, int minute, string expected)
     {
         // Arrange & Act
@@ -636,9 +633,9 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(DayOfWeek.Monday, 0, 0, "0 0 * * 1")]
-    [InlineData(DayOfWeek.Friday, 18, 30, "30 18 * * 5")]
-    [InlineData(DayOfWeek.Sunday, 9, 15, "15 9 * * 0")]
+    [InlineData([DayOfWeek.Monday, 0, 0, "0 0 * * 1"])]
+    [InlineData([DayOfWeek.Friday, 18, 30, "30 18 * * 5"])]
+    [InlineData([DayOfWeek.Sunday, 9, 15, "15 9 * * 0"])]
     public void Weekly_ValidValues_SetsCorrectExpression(
         DayOfWeek dayOfWeek,
         int hour,
@@ -655,9 +652,9 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(1, 0, 0, "0 0 1 * *")]
-    [InlineData(15, 12, 30, "30 12 15 * *")]
-    [InlineData(31, 23, 59, "59 23 31 * *")]
+    [InlineData([1, 0, 0, "0 0 1 * *"])]
+    [InlineData([15, 12, 30, "30 12 15 * *"])]
+    [InlineData([31, 23, 59, "59 23 31 * *"])]
     public void Monthly_ValidValues_SetsCorrectExpression(
         int day,
         int hour,
@@ -674,9 +671,9 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(1, 1, 0, 0, "0 0 1 1 *")]
-    [InlineData(12, 25, 18, 30, "30 18 25 12 *")]
-    [InlineData(6, 15, 9, 45, "45 9 15 6 *")]
+    [InlineData([1, 1, 0, 0, "0 0 1 1 *"])]
+    [InlineData([12, 25, 18, 30, "30 18 25 12 *"])]
+    [InlineData([6, 15, 9, 45, "45 9 15 6 *"])]
     public void Yearly_ValidValues_SetsCorrectExpression(
         int month,
         int day,
@@ -699,9 +696,9 @@ public class CronExpressionBuilderTests
     }
 
     [Theory]
-    [InlineData(0, "0 * * * *")]
-    [InlineData(30, "30 * * * *")]
-    [InlineData(59, "59 * * * *")]
+    [InlineData([0, "0 * * * *"])]
+    [InlineData([30, "30 * * * *"])]
+    [InlineData([59, "59 * * * *"])]
     public void Hourly_ValidValues_SetsCorrectExpression(int minute, string expected)
     {
         // Arrange & Act
@@ -710,6 +707,134 @@ public class CronExpressionBuilderTests
 
         // Assert
         Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(60)]
+    public void Hourly_InvalidMinute_ThrowsArgumentOutOfRangeException(int minute)
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Hourly(minute));
+    }
+
+    [Theory]
+    [InlineData([-1, 0])]
+    [InlineData([24, 0])]
+    public void Weekly_InvalidHour_ThrowsArgumentOutOfRangeException(int hour, int minute)
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            builder.Weekly(DayOfWeek.Monday, hour, minute)
+        );
+    }
+
+    [Theory]
+    [InlineData([0, -1])]
+    [InlineData([0, 60])]
+    public void Weekly_InvalidMinute_ThrowsArgumentOutOfRangeException(int hour, int minute)
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            builder.Weekly(DayOfWeek.Monday, hour, minute)
+        );
+    }
+
+    [Theory]
+    [InlineData([0, 0, 0])]
+    [InlineData([32, 0, 0])]
+    public void Monthly_InvalidDay_ThrowsArgumentOutOfRangeException(int day, int hour, int minute)
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Monthly(day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData([1, -1, 0])]
+    [InlineData([1, 24, 0])]
+    public void Monthly_InvalidHour_ThrowsArgumentOutOfRangeException(int day, int hour, int minute)
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Monthly(day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData([1, 0, -1])]
+    [InlineData([1, 0, 60])]
+    public void Monthly_InvalidMinute_ThrowsArgumentOutOfRangeException(
+        int day,
+        int hour,
+        int minute
+    )
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Monthly(day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData([0, 1, 0, 0])]
+    [InlineData([13, 1, 0, 0])]
+    public void Yearly_InvalidMonth_ThrowsArgumentOutOfRangeException(
+        int month,
+        int day,
+        int hour,
+        int minute
+    )
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Yearly(month, day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData([1, 0, 0, 0])]
+    [InlineData([1, 32, 0, 0])]
+    public void Yearly_InvalidDay_ThrowsArgumentOutOfRangeException(
+        int month,
+        int day,
+        int hour,
+        int minute
+    )
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Yearly(month, day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData([1, 1, -1, 0])]
+    [InlineData([1, 1, 24, 0])]
+    public void Yearly_InvalidHour_ThrowsArgumentOutOfRangeException(
+        int month,
+        int day,
+        int hour,
+        int minute
+    )
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Yearly(month, day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData([1, 1, 0, -1])]
+    [InlineData([1, 1, 0, 60])]
+    public void Yearly_InvalidMinute_ThrowsArgumentOutOfRangeException(
+        int month,
+        int day,
+        int hour,
+        int minute
+    )
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Yearly(month, day, hour, minute));
     }
 
     #endregion
@@ -814,11 +939,11 @@ public class CronExpressionBuilderTests
     {
         // Arrange & Act
         CronExpressionBuilder builder = new CronExpressionBuilder()
-            .AtMinutes(0, 30)
-            .AtHours(9, 12, 18)
-            .OnDays(1, 15)
-            .InMonths(1, 6, 12)
-            .OnDaysOfWeek(DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday);
+            .AtMinutes([0, 30])
+            .AtHours([9, 12, 18])
+            .OnDays([1, 15])
+            .InMonths([1, 6, 12])
+            .OnDaysOfWeek([DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday]);
 
         string result = builder.Build();
 
@@ -1022,7 +1147,7 @@ public class CronExpressionBuilderTests
         {
             Assert.True(
                 occurrence.DayOfWeek != DayOfWeek.Saturday
-                    && occurrence.DayOfWeek != DayOfWeek.Sunday
+                           && occurrence.DayOfWeek != DayOfWeek.Sunday
             );
             Assert.Equal(0, occurrence.Hour);
             Assert.Equal(0, occurrence.Minute);
@@ -1054,7 +1179,7 @@ public class CronExpressionBuilderTests
         {
             Assert.True(
                 occurrence.DayOfWeek == DayOfWeek.Saturday
-                    || occurrence.DayOfWeek == DayOfWeek.Sunday
+                           || occurrence.DayOfWeek == DayOfWeek.Sunday
             );
             Assert.Equal(0, occurrence.Hour);
             Assert.Equal(0, occurrence.Minute);
@@ -1076,7 +1201,7 @@ public class CronExpressionBuilderTests
     public void AtMinutes_MultipleValues_MatchesExpectedTimes()
     {
         // Arrange - At minutes 0, 15, 30, 45 of every hour
-        CronExpressionBuilder cronExpression = new CronExpressionBuilder().AtMinutes(0, 15, 30, 45);
+        CronExpressionBuilder cronExpression = new CronExpressionBuilder().AtMinutes([0, 15, 30, 45]);
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
 
         DateTime baseTime = new(2025, 9, 3, 14, 7, 0); // Sep 3, 2025 2:07 PM
@@ -1100,7 +1225,7 @@ public class CronExpressionBuilderTests
     public void AtHours_MultipleValues_MatchesExpectedTimes()
     {
         // Arrange - At hours 9, 12, 18 (9 AM, 12 PM, 6 PM) at minute 0
-        CronExpressionBuilder cronExpression = new CronExpressionBuilder().AtHours(9, 12, 18);
+        CronExpressionBuilder cronExpression = new CronExpressionBuilder().AtHours([9, 12, 18]);
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
 
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0); // Sep 3, 2025 10:00 AM
@@ -1129,10 +1254,7 @@ public class CronExpressionBuilderTests
     public void OnDaysOfWeek_MultipleValues_MatchesExpectedTimes()
     {
         // Arrange - Monday, Wednesday, Friday (any time - uses current minute/hour settings)
-        CronExpressionBuilder cronExpression = new CronExpressionBuilder().OnDaysOfWeek(
-            DayOfWeek.Monday,
-            DayOfWeek.Wednesday,
-            DayOfWeek.Friday
+        CronExpressionBuilder cronExpression = new CronExpressionBuilder().OnDaysOfWeek([DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday]
         );
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
 
@@ -1166,7 +1288,7 @@ public class CronExpressionBuilderTests
         // HourRange sets minute to "0", Weekdays sets minute to "0", hour to "0", dayOfWeek to "1-5"
         // So the final result will be: "0 9-17 * * 1-5" (every hour from 9-17 on weekdays at minute 0)
         CronExpressionBuilder cronExpression = new CronExpressionBuilder()
-            .AtMinutes(0, 30) // This will be overridden
+            .AtMinutes([0, 30]) // This will be overridden
             .HourRange(9, 17) // This sets minute to "0" and hour to "9-17"
             .Weekdays(); // This sets minute to "0", hour to "0", dayOfWeek to "1-5" - overriding hour!
 
@@ -1187,7 +1309,7 @@ public class CronExpressionBuilderTests
         {
             Assert.True(
                 occurrence.DayOfWeek != DayOfWeek.Saturday
-                    && occurrence.DayOfWeek != DayOfWeek.Sunday
+                           && occurrence.DayOfWeek != DayOfWeek.Sunday
             );
             Assert.Equal(0, occurrence.Hour); // Midnight
             Assert.Equal(0, occurrence.Minute);
@@ -1203,14 +1325,9 @@ public class CronExpressionBuilderTests
         // Arrange - Expression: "0 9,10,11,12,13,14,15,16,17 * * 1,2,3,4,5"
         // AtHours overrides AtMinutes, so final minute is "0"
         CronExpressionBuilder cronExpression = new CronExpressionBuilder()
-            .AtMinutes(0, 30) // This gets overridden by AtHours
-            .AtHours(9, 10, 11, 12, 13, 14, 15, 16, 17) // Sets minute to "0"
-            .OnDaysOfWeek(
-                DayOfWeek.Monday,
-                DayOfWeek.Tuesday,
-                DayOfWeek.Wednesday,
-                DayOfWeek.Thursday,
-                DayOfWeek.Friday
+            .AtMinutes([0, 30]) // This gets overridden by AtHours
+            .AtHours([9, 10, 11, 12, 13, 14, 15, 16, 17]) // Sets minute to "0"
+            .OnDaysOfWeek([DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday]
             );
 
         // The expression should be "0 9,10,11,12,13,14,15,16,17 * * 1,2,3,4,5"
@@ -1231,7 +1348,7 @@ public class CronExpressionBuilderTests
         {
             Assert.True(
                 occurrence.DayOfWeek != DayOfWeek.Saturday
-                    && occurrence.DayOfWeek != DayOfWeek.Sunday
+                           && occurrence.DayOfWeek != DayOfWeek.Sunday
             );
             Assert.True(occurrence.Hour is >= 9 and <= 17);
             Assert.Equal(0, occurrence.Minute); // Always minute 0 due to AtHours override

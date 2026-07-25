@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Api.EventHandlers;
@@ -201,11 +200,7 @@ public class SignalRLibraryScanEventHandlerJourneyTests
         calls
             .Select(c => c.Method)
             .Should()
-            .ContainInOrder(
-                "LibraryScanStarted",
-                "LibraryScanCompleted",
-                "MediaAdded",
-                "MediaRemoved"
+            .ContainInOrder(["LibraryScanStarted", "LibraryScanCompleted", "MediaAdded", "MediaRemoved"]
             );
     }
 

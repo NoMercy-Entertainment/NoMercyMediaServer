@@ -24,11 +24,11 @@ public class StoragePathHelpersTests
     // ── GetName ────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("a/b/c.mkv", "c.mkv")]
-    [InlineData("just-a-name.mkv", "just-a-name.mkv")]
-    [InlineData("a/b/", "b")]
-    [InlineData("a/", "a")]
-    [InlineData("/leading/file", "file")]
+    [InlineData(["a/b/c.mkv", "c.mkv"])]
+    [InlineData(["just-a-name.mkv", "just-a-name.mkv"])]
+    [InlineData(["a/b/", "b"])]
+    [InlineData(["a/", "a"])]
+    [InlineData(["/leading/file", "file"])]
     public void GetName_ReturnsLastSegment(string input, string expected)
     {
         StoragePathHelpers.GetName(input).Should().Be(expected);
@@ -42,12 +42,27 @@ public class StoragePathHelpersTests
         StoragePathHelpers.GetName(input!).Should().Be(string.Empty);
     }
 
+    [Fact]
+    public void GetName_BackslashOnlyPath_RequiresCallerToNormalizeFirst()
+    {
+        // Rule 2: GetName splits on '/' only, by design. A raw UNC/Windows
+        // path handed in without normalizing separators first returns the
+        // whole string unchanged instead of the trailing segment — this is
+        // exactly what let Track.Filename get stored as
+        // "/\\192.168.2.120\mnt\vault\Media\...\track.mp3" instead of
+        // "/track.mp3" (RecordingManager.Store, MusicLogic.StoreTrack) before
+        // those call sites normalized backslashes to '/' first.
+        string uncPath = "\\\\192.168.2.120\\mnt\\vault\\Media\\track.mp3";
+        StoragePathHelpers.GetName(uncPath).Should().Be(uncPath);
+        StoragePathHelpers.GetName(uncPath.Replace('\\', '/')).Should().Be("track.mp3");
+    }
+
     // ── GetParent ──────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("a/b/c.mkv", "a/b")]
-    [InlineData("a/b", "a")]
-    [InlineData("a/b/c/", "a/b")]
+    [InlineData(["a/b/c.mkv", "a/b"])]
+    [InlineData(["a/b", "a"])]
+    [InlineData(["a/b/c/", "a/b"])]
     public void GetParent_ReturnsParentSegment(string input, string expected)
     {
         StoragePathHelpers.GetParent(input).Should().Be(expected);
@@ -72,11 +87,11 @@ public class StoragePathHelpersTests
     // ── GetNameWithoutExtension ────────────────────────────────────────────
 
     [Theory]
-    [InlineData("a/b/c.mkv", "c")]
-    [InlineData("c.mkv", "c")]
-    [InlineData("multi.dot.name.mkv", "multi.dot.name")]
-    [InlineData("noext", "noext")]
-    [InlineData("a/b/noext", "noext")]
+    [InlineData(["a/b/c.mkv", "c"])]
+    [InlineData(["c.mkv", "c"])]
+    [InlineData(["multi.dot.name.mkv", "multi.dot.name"])]
+    [InlineData(["noext", "noext"])]
+    [InlineData(["a/b/noext", "noext"])]
     public void GetNameWithoutExtension_StripsLastDotSegment(string input, string expected)
     {
         StoragePathHelpers.GetNameWithoutExtension(input).Should().Be(expected);
@@ -96,20 +111,20 @@ public class StoragePathHelpersTests
     // ── Combine ────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("a", "b", "a/b")]
-    [InlineData("a/", "b", "a/b")]
-    [InlineData("a", "/b", "a/b")]
-    [InlineData("a/", "/b", "a/b")]
-    [InlineData("a/b", "c/d", "a/b/c/d")]
+    [InlineData(["a", "b", "a/b"])]
+    [InlineData(["a/", "b", "a/b"])]
+    [InlineData(["a", "/b", "a/b"])]
+    [InlineData(["a/", "/b", "a/b"])]
+    [InlineData(["a/b", "c/d", "a/b/c/d"])]
     public void Combine_JoinsWithSingleSlash(string parent, string child, string expected)
     {
         StoragePathHelpers.Combine(parent, child).Should().Be(expected);
     }
 
     [Theory]
-    [InlineData("", "child", "child")]
-    [InlineData("parent", "", "parent")]
-    [InlineData("", "", "")]
+    [InlineData(["", "child", "child"])]
+    [InlineData(["parent", "", "parent"])]
+    [InlineData(["", "", ""])]
     public void Combine_EmptyOperand_ReturnsOtherUnchanged(
         string parent,
         string child,

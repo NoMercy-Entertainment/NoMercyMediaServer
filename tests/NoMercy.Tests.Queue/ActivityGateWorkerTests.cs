@@ -69,7 +69,7 @@ public class ActivityGateWorkerTests : IDisposable
         _context.QueueJobs.Add(queueJob);
         await _context.SaveChangesAsync();
 
-        QueueWorker worker = new(_jobQueue, "library", activityGate: gate);
+        QueueWorker worker = new(_jobQueue, name: "library", activityGate: gate);
 
         using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(300));
         try
@@ -106,7 +106,7 @@ public class ActivityGateWorkerTests : IDisposable
         _context.QueueJobs.Add(queueJob);
         await _context.SaveChangesAsync();
 
-        QueueWorker worker = new(_jobQueue, "library", activityGate: gate);
+        QueueWorker worker = new(_jobQueue, name: "library", activityGate: gate);
 
         // Signal completion off the worker's own event rather than a fixed
         // sleep: under coverage instrumentation the defer poll + reserve +

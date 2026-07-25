@@ -278,9 +278,7 @@ public class HardwarePreferenceResolverBranchTests
     {
         // A future preference value not yet in the switch — must NOT throw,
         // must NOT silently force software. Defaults to PreferHardware behavior.
-        SpeedIndex index = MakeSpeedIndex(
-            (VideoCodecType.H264, "libx264", 100),
-            (VideoCodecType.H264, "h264_nvenc", 500)
+        SpeedIndex index = MakeSpeedIndex([(VideoCodecType.H264, "libx264", 100), (VideoCodecType.H264, "h264_nvenc", 500)]
         );
         ScopedDecisionLog log = new();
 

@@ -178,7 +178,7 @@ public partial class MusicLogic : IAsyncDisposable
         MediaFile mediaFile
     )
     {
-        _logger.LogTrace("Processing release: {Title} with id: {Id}", release.Title, release.Id);
+        _logger.LogTrace("Processing release: {Title} with id: {Id}", [release.Title, release.Id]);
 
         using MusicBrainzReleaseClient musicBrainzReleaseClient = new(release.Id);
 
@@ -200,9 +200,7 @@ public partial class MusicLogic : IAsyncDisposable
         // return;
         else
             _logger.LogDebug(
-                "Processing release: {Title} with id: {Id}",
-                release.Title,
-                release.Id
+                "Processing release: {Title} with id: {Id}", [release.Title, release.Id]
             );
 
         if (await StoreRelease(mediaContext, releaseAppends, mediaFile) is null)
@@ -401,8 +399,7 @@ public partial class MusicLogic : IAsyncDisposable
             await mediaContext
                 .ReleaseGroups.Upsert(insert)
                 .On(e => new { e.Id })
-                .WhenMatched(
-                    (s, i) =>
+                .WhenMatched((s, i) =>
                         new()
                         {
                             Id = i.Id,
@@ -490,8 +487,7 @@ public partial class MusicLogic : IAsyncDisposable
             await mediaContext
                 .Albums.Upsert(insert)
                 .On(e => new { e.Id })
-                .WhenMatched(
-                    (s, i) =>
+                .WhenMatched((s, i) =>
                         new()
                         {
                             Id = i.Id,
@@ -576,8 +572,7 @@ public partial class MusicLogic : IAsyncDisposable
             await mediaContext
                 .Artists.Upsert(insert)
                 .On(e => new { e.Id })
-                .WhenMatched(
-                    (s, i) =>
+                .WhenMatched((s, i) =>
                         new()
                         {
                             Id = i.Id,
@@ -665,7 +660,7 @@ public partial class MusicLogic : IAsyncDisposable
                     .Replace("\\" + mediaFile.Name, "")
                 ?? string.Empty;
 
-            insert.Filename = "/" + StoragePathHelpers.GetName(file);
+            insert.Filename = "/" + StoragePathHelpers.GetName(file.Replace('\\', '/'));
             insert.Quality = (int)Math.Floor(ffProbeData.Format.BitRate / 1000.0);
             insert.Duration = HmsRegex().Replace(ffProbeData.Duration.ToString(@"hh\:mm\:ss"), "");
 
@@ -679,8 +674,7 @@ public partial class MusicLogic : IAsyncDisposable
             await mediaContext
                 .Tracks.Upsert(insert)
                 .On(e => new { e.Id })
-                .WhenMatched(
-                    (ts, ti) =>
+                .WhenMatched((ts, ti) =>
                         new()
                         {
                             Id = ti.Id,

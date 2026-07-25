@@ -261,4 +261,48 @@ public sealed class DatabaseBackupServiceTests : IDisposable
         // Must not throw — failure is non-fatal
         Assert.False(result);
     }
+
+    // ── BackupNow (unconditional — used by the daily backup cron job) ────────
+
+    [Fact]
+    public void BackupNow_DbExists_CreatesBackupFileRegardlessOfMigrations()
+    {
+        string dbPath = CreateFakeDb("media.db");
+
+        bool result = DatabaseBackupService.BackupNow(dbPath, "daily scheduled backup");
+
+        Assert.True(result);
+        string[] backups = Directory.GetFiles(_backupDir, "media.*.db");
+        Assert.Single(backups);
+    }
+
+    [Fact]
+    public void BackupNow_DbDoesNotExist_ReturnsFalseWithoutThrowing()
+    {
+        string nonExistentPath = Path.Combine(_tempDir, "nonexistent.db");
+
+        bool result = DatabaseBackupService.BackupNow(nonExistentPath, "daily scheduled backup");
+
+        Assert.False(result);
+        Assert.False(Directory.Exists(_backupDir));
+    }
+
+    [Fact]
+    public void BackupNow_RespectsRetainCountAcrossRepeatedCalls()
+    {
+        DatabaseBackupService.RetainCount = 2;
+        string dbPath = CreateFakeDb("media.db");
+
+        Directory.CreateDirectory(_backupDir);
+        for (int index = 1; index <= 3; index++)
+            File.WriteAllText(
+                Path.Combine(_backupDir, $"media.2026010100000{index}.db"),
+                "old backup"
+            );
+
+        DatabaseBackupService.BackupNow(dbPath, "daily scheduled backup");
+
+        string[] remaining = Directory.GetFiles(_backupDir, "media.*.db");
+        Assert.Equal(2, remaining.Length);
+    }
 }

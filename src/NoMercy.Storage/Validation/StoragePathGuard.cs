@@ -105,7 +105,7 @@ public sealed partial class StoragePathGuard
                 "absolute paths are not allowed as scope-relative keys"
             );
 
-        if (path.Length >= 2 && path[1] == ':' && char.IsLetter(path[0]))
+        if (path is [_, ':', ..] && char.IsLetter(path[0]))
             throw new StoragePathNotAllowedException(
                 path,
                 "absolute paths are not allowed as scope-relative keys"
@@ -200,7 +200,17 @@ public sealed partial class StoragePathGuard
     {
         if (string.Equals(fullPath, root, cmp))
             return true;
-        string withSep = root + Path.DirectorySeparatorChar;
+        // A drive/volume root (e.g. "G:\", "/") already ends in a separator;
+        // appending another would produce "G:\\" which no real child path starts
+        // with, wrongly rejecting everything under it. Only add the separator
+        // when the root does not already carry one.
+        bool rootEndsWithSeparator =
+            root.Length > 0
+            && (
+                root[^1] == Path.DirectorySeparatorChar
+                || root[^1] == Path.AltDirectorySeparatorChar
+            );
+        string withSep = rootEndsWithSeparator ? root : root + Path.DirectorySeparatorChar;
         return fullPath.StartsWith(withSep, cmp);
     }
 }

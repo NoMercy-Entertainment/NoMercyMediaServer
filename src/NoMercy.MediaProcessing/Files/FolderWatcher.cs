@@ -18,7 +18,10 @@ namespace NoMercy.MediaProcessing.Files;
 
 public class FolderWatcher : IDisposable
 {
-    private static readonly List<IDisposable> Watchers = [];
+    private static readonly Dictionary<string, IDisposable> Watchers = new(
+        StringComparer.OrdinalIgnoreCase
+    );
+    private static readonly object WatchersLock = new();
     private static volatile FolderWatcher? _instance;
     private readonly IStorageDriver _storageDriver;
 
@@ -110,13 +113,13 @@ public class FolderWatcher : IDisposable
         };
         stowageWatcher.Watch(TimeSpan.FromMinutes(1));
 
-        Watchers.Add(stowageWatcher);
+        RegisterWatcher(folder, stowageWatcher);
 
         Logger.System($"Watching folder: {folder}");
 
         return () =>
         {
-            stowageWatcher.Dispose();
+            RemoveWatcher(folder, stowageWatcher);
         };
     }
 
@@ -154,13 +157,13 @@ public class FolderWatcher : IDisposable
 
         fileSystemWatcher.EnableRaisingEvents = true;
 
-        Watchers.Add(fileSystemWatcher);
+        RegisterWatcher(folder, fileSystemWatcher);
 
         Logger.System($"Watching folder: {folder}");
 
         return () =>
         {
-            fileSystemWatcher.Dispose();
+            RemoveWatcher(folder, fileSystemWatcher);
         };
     }
 
@@ -278,9 +281,50 @@ public class FolderWatcher : IDisposable
         }
     }
 
+    // Re-watching a folder (a library add / refresh / rescan calls Watch again) must
+    // REPLACE that folder's watcher, not stack a second one: duplicates leak OS watch
+    // handles + threads and make every file event fire twice → duplicate scan/encode
+    // jobs. Keyed by folder so the set stays bounded to one watcher per folder.
+    private static void RegisterWatcher(string folder, IDisposable watcher)
+    {
+        lock (WatchersLock)
+        {
+            if (Watchers.Remove(folder, out IDisposable? existing))
+                existing.Dispose();
+            Watchers[folder] = watcher;
+        }
+    }
+
+    private static void RemoveWatcher(string folder, IDisposable watcher)
+    {
+        lock (WatchersLock)
+        {
+            if (
+                Watchers.TryGetValue(folder, out IDisposable? current)
+                && ReferenceEquals(current, watcher)
+            )
+                Watchers.Remove(folder);
+        }
+
+        watcher.Dispose();
+    }
+
+    internal static int WatcherCount
+    {
+        get
+        {
+            lock (WatchersLock)
+                return Watchers.Count;
+        }
+    }
+
     public void Dispose()
     {
-        foreach (IDisposable watcher in Watchers)
-            watcher.Dispose();
+        lock (WatchersLock)
+        {
+            foreach (IDisposable watcher in Watchers.Values)
+                watcher.Dispose();
+            Watchers.Clear();
+        }
     }
 }

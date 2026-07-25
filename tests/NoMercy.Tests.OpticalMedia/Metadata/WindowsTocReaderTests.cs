@@ -132,12 +132,12 @@ public class WindowsTocReaderTests
     }
 
     [Theory]
-    [InlineData(0, 150)]
-    [InlineData(1, 15363)]
-    [InlineData(2, 32314)]
-    [InlineData(3, 46592)]
-    [InlineData(4, 63414)]
-    [InlineData(5, 80489)]
+    [InlineData([0, 150])]
+    [InlineData([1, 15363])]
+    [InlineData([2, 32314])]
+    [InlineData([3, 46592])]
+    [InlineData([4, 63414])]
+    [InlineData([5, 80489])]
     public void ParseCdromToc_CanonicalFixture_IndividualTrackOffset(
         int trackIndex,
         int expectedOffset
@@ -221,12 +221,66 @@ public class WindowsTocReaderTests
         result.Should().BeNull("unresolvable drive path must return null, not throw");
     }
 
+    [Fact]
+    public async Task ReadTocAsync_ValidNonOpticalDriveLetter_ReturnsNullWithoutThrowing()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        // hardware-validate: exercises the real CreateFileW / DeviceIoControl
+        // P/Invoke path against a genuine, always-present drive letter (C:) —
+        // itemized rather than faked (no seam over kernel32 P/Invokes). C: is
+        // never a CD-ROM, so this always resolves to a real failure inside the
+        // Windows I/O path (either CreateFileW returning an invalid handle
+        // because raw volume access needs elevation, or a valid handle whose
+        // IOCTL_CDROM_READ_TOC subsequently fails because the device isn't an
+        // optical drive) — either way it proves the non-throwing null-return
+        // contract end to end without needing a physical CD-ROM.
+        WindowsTocReader reader = new();
+        DiscToc? result = await reader.ReadTocAsync("C:\\", CancellationToken.None);
+
+        result.Should().BeNull("C: is never a CD-ROM device");
+    }
+
+    [Fact]
+    public async Task ReadTocAsync_RealOpticalDriveLetter_DoesNotThrow_ProbeExactBehavior()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        // Probe test: this dev machine currently has a real disc in D:.
+        // Whatever CreateFileW/DeviceIoControl actually do against a genuine
+        // optical drive (succeed with a real TOC, fail on a non-audio
+        // disc/handle permissions, or throw) is accepted here — the only
+        // hard requirement is the documented never-throw contract. This
+        // exercises the CreateFileW/DeviceIoControl P/Invoke path against a
+        // real optical device rather than a non-CD-ROM drive letter.
+        WindowsTocReader reader = new();
+
+        Func<Task<DiscToc?>> act = () => reader.ReadTocAsync("D:\\", CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task ReadTocAsync_BareDriveLetterWithoutColon_ResolvesAndReturnsNull()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        // ResolveDriveLetter's single-character branch (drivePath.Length == 1).
+        WindowsTocReader reader = new();
+        DiscToc? result = await reader.ReadTocAsync("C", CancellationToken.None);
+
+        result.Should().BeNull();
+    }
+
     // ── MSF round-trip — spot checks ─────────────────────────────────────────
 
     [Theory]
-    [InlineData(150, 0, 2, 0)] // track 1 canonical: 00:02:00
-    [InlineData(15363, 3, 24, 63)] // track 2 canonical: 03:24:63
-    [InlineData(95462, 21, 12, 62)] // lead-out canonical: 21:12:62
+    [InlineData([150, 0, 2, 0])] // track 1 canonical: 00:02:00
+    [InlineData([15363, 3, 24, 63])] // track 2 canonical: 03:24:63
+    [InlineData([95462, 21, 12, 62])] // lead-out canonical: 21:12:62
     public void AbsoluteToMsf_SpotChecks(
         int absolute,
         int expectedMinute,

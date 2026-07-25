@@ -97,7 +97,9 @@ public partial class FileManager
                 continue;
 
             string language = match.Groups["lang"].Value;
-            string codec = match.Groups["codec"].Value;
+            // Old-naming dirs (`audio_jpn`) carry no codec token — default to aac,
+            // the group the master's video stream references (AUDIO="audio_aac").
+            string codec = match.Groups["codec"].Success ? match.Groups["codec"].Value : "aac";
 
             // Single listing for playlist lookup and size sum — see GetVideoHashList.
             IReadOnlyList<StorageEntry> dirEntries = storage.List(dir.Path, null, recursive: false);
@@ -164,7 +166,14 @@ public partial class FileManager
                 {
                     Language = match.Groups["lang"].Value,
                     Type = match.Groups["type"].Value,
-                    FileName = "/" + storage.CombinePath("subtitles", storage.GetName(path)),
+                    // A client-facing sidecar URL, not a local disk path — must
+                    // always join with '/' regardless of host OS. storage.CombinePath
+                    // deliberately returns the driver-NATIVE separator (backslash for
+                    // LocalStorageDriver on Windows, per IStorageDriver.DirectorySeparator),
+                    // which is correct for on-disk I/O but produced a mixed "/subtitles\file"
+                    // FileName on a Windows-hosted install — a malformed URL the player
+                    // would fail to resolve.
+                    FileName = $"/subtitles/{storage.GetName(path)}",
                     FileHash = ComputeFileHash(storage, path),
                     FileSize = subtitleEntry.SizeBytes,
                     Codec = ext,
@@ -255,7 +264,10 @@ public partial class FileManager
             fonts.Add(
                 new()
                 {
-                    FileName = "/" + storage.CombinePath("fonts", storage.GetName(path)),
+                    // See the matching comment in GetSubtitleHashList: a client-facing
+                    // sidecar URL must join with '/' regardless of host OS, never the
+                    // driver-native separator storage.CombinePath deliberately returns.
+                    FileName = $"/fonts/{storage.GetName(path)}",
                     FileHash = ComputeFileHash(storage, path),
                     FileSize = fontEntry.SizeBytes,
                 }
@@ -551,30 +563,6 @@ public partial class FileManager
         @"^((?:\d{1,3}:)?\d{2}:\d{2}(?:\.\d{1,3})?)\s+-->\s+((?:\d{1,3}:)?\d{2}:\d{2}(?:\.\d{1,3})?)"
     )]
     private static partial Regex ChapterTimingRegex();
-
-    private static T? GetMetaDataItem<T>(
-        IStorage storage,
-        string hostFolder,
-        string key,
-        IEnumerable<VideoTrack> extraFiles
-    )
-        where T : class
-    {
-        VideoTrack? item = extraFiles.FirstOrDefault(file => file.Kind == key);
-        if (item == null)
-            return null;
-
-        string path = storage.CombinePath(
-            hostFolder,
-            Path.GetFileName(item.File).OrEmpty().Replace("/", "")
-        );
-        return new IHash
-            {
-                FileName = "/" + Path.GetFileName(item.File),
-                FileSize = storage.SizeOrZero(path),
-                FileHash = ComputeFileHash(storage, path),
-            } as T;
-    }
 
     private static List<VideoTrack> GetExtraFiles(IStorage storage, string hostFolder)
     {

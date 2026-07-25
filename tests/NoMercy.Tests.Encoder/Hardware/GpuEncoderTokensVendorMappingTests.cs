@@ -23,19 +23,19 @@ namespace NoMercy.Tests.Encoder.Hardware;
 public class GpuEncoderTokensVendorMappingTests
 {
     [Theory]
-    [InlineData("h264_nvenc", GpuVendor.Nvidia)]
-    [InlineData("hevc_nvenc", GpuVendor.Nvidia)]
-    [InlineData("av1_nvenc", GpuVendor.Nvidia)]
-    [InlineData("h264_amf", GpuVendor.Amd)]
-    [InlineData("hevc_amf", GpuVendor.Amd)]
-    [InlineData("av1_amf", GpuVendor.Amd)]
-    [InlineData("h264_qsv", GpuVendor.Intel)]
-    [InlineData("hevc_qsv", GpuVendor.Intel)]
-    [InlineData("vp9_qsv", GpuVendor.Intel)]
-    [InlineData("h264_vaapi", GpuVendor.Intel)]
-    [InlineData("vp9_vaapi", GpuVendor.Intel)]
-    [InlineData("h264_videotoolbox", GpuVendor.Apple)]
-    [InlineData("hevc_videotoolbox", GpuVendor.Apple)]
+    [InlineData(["h264_nvenc", GpuVendor.Nvidia])]
+    [InlineData(["hevc_nvenc", GpuVendor.Nvidia])]
+    [InlineData(["av1_nvenc", GpuVendor.Nvidia])]
+    [InlineData(["h264_amf", GpuVendor.Amd])]
+    [InlineData(["hevc_amf", GpuVendor.Amd])]
+    [InlineData(["av1_amf", GpuVendor.Amd])]
+    [InlineData(["h264_qsv", GpuVendor.Intel])]
+    [InlineData(["hevc_qsv", GpuVendor.Intel])]
+    [InlineData(["vp9_qsv", GpuVendor.Intel])]
+    [InlineData(["h264_vaapi", GpuVendor.Intel])]
+    [InlineData(["vp9_vaapi", GpuVendor.Intel])]
+    [InlineData(["h264_videotoolbox", GpuVendor.Apple])]
+    [InlineData(["hevc_videotoolbox", GpuVendor.Apple])]
     public void VendorForEncoderName_MapsKnownHardwareEncoders(
         string encoderName,
         GpuVendor expectedVendor

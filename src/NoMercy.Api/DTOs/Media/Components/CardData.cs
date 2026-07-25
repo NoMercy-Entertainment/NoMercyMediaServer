@@ -262,10 +262,10 @@ public record CardData
             CreatedAt = item.Special.CreatedAt;
 
             int availableMovies = item.Special.Items.Count(specialItem =>
-                specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Count > 0
+                specialItem is { MovieId: not null, Movie.VideoFiles.Count: > 0 }
             );
             int availableEpisodes = item.Special.Items.Count(specialItem =>
-                specialItem.Episode != null && specialItem.Episode?.VideoFiles.Count > 0
+                specialItem.Episode is { VideoFiles.Count: > 0 }
             );
             HaveItems = availableMovies + availableEpisodes;
 

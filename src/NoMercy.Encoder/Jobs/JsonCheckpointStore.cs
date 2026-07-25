@@ -40,7 +40,7 @@ public class JsonCheckpointStore(IStorage storage, ILogger<JsonCheckpointStore> 
         string json = JsonSerializer.Serialize(toWrite, SerializerOptions);
         await storage.WriteAsync(path, Encoding.UTF8.GetBytes(json), ct);
 
-        logger.LogDebug("Checkpoint saved: {JobId} → {Path}", checkpoint.JobId, path);
+        logger.LogDebug("Checkpoint saved: {JobId} → {Path}", [checkpoint.JobId, path]);
     }
 
     public async Task<JobCheckpoint?> LoadAsync(

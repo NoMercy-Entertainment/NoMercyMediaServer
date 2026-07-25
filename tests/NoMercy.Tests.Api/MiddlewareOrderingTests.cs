@@ -70,8 +70,8 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         Assert.True(
             isCompressed || contentLength < 100,
             $"Expected compressed response or small body. "
-                + $"Content-Encoding: [{string.Join(", ", response.Content.Headers.ContentEncoding)}], "
-                + $"Content-Length: {contentLength}"
+                         + $"Content-Encoding: [{string.Join(", ", response.Content.Headers.ContentEncoding)}], "
+                         + $"Content-Length: {contentLength}"
         );
     }
 

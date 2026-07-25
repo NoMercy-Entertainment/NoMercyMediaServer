@@ -62,9 +62,9 @@ public class TmdbSearchClientTests : TmdbTestBase
     }
 
     [Theory]
-    [InlineData("Inception", "2010")]
-    [InlineData("The Matrix", "1999")]
-    [InlineData("Pulp Fiction", "1994")]
+    [InlineData(["Inception", "2010"])]
+    [InlineData(["The Matrix", "1999"])]
+    [InlineData(["Pulp Fiction", "1994"])]
     public async Task Movie_WithQueryAndYear_ReturnsFilteredResults(string query, string year)
     {
         // Arrange
@@ -130,9 +130,9 @@ public class TmdbSearchClientTests : TmdbTestBase
     }
 
     [Theory]
-    [InlineData("Game of Thrones", "2011")]
-    [InlineData("Friends", "1994")]
-    [InlineData("The Office", "2005")]
+    [InlineData(["Game of Thrones", "2011"])]
+    [InlineData(["Friends", "1994"])]
+    [InlineData(["The Office", "2005"])]
     public async Task TvShow_WithQueryAndYear_ReturnsFilteredResults(string query, string year)
     {
         // Arrange
@@ -370,7 +370,7 @@ public class TmdbSearchClientTests : TmdbTestBase
         Task<TmdbPaginatedResponse<TmdbTvShow>?> tvTask = client.TvShow("Breaking Bad");
         Task<TmdbPaginatedResponse<TmdbPerson>?> personTask = client.Person("Leonardo DiCaprio");
 
-        await Task.WhenAll(movieTask, tvTask, personTask);
+        await Task.WhenAll([movieTask, tvTask, personTask]);
 
         // Assert
         (await movieTask)
@@ -397,7 +397,7 @@ public class TmdbSearchClientTests : TmdbTestBase
         Task<TmdbPaginatedResponse<TmdbMovie>?> movieTask = client.Movie("Avatar");
         Task<TmdbPaginatedResponse<TmdbTvShow>?> tvTask = client.TvShow("Game of Thrones");
 
-        await Task.WhenAll(movieTask, tvTask).WaitAsync(cts.Token);
+        await Task.WhenAll([movieTask, tvTask]).WaitAsync(cts.Token);
 
         (await movieTask).Should().NotBeNull();
         (await tvTask).Should().NotBeNull();

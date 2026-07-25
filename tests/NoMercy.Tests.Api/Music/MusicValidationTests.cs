@@ -12,7 +12,6 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -96,10 +95,7 @@ public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty("detail")
-            .GetString()
-            .Should()
-            .Contain("data:image/");
+        doc.RootElement.GetProperty("detail").GetString().Should().Contain("data:image/");
     }
 
     [Fact]
@@ -113,10 +109,7 @@ public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty("detail")
-            .GetString()
-            .Should()
-            .Contain("base64");
+        doc.RootElement.GetProperty("detail").GetString().Should().Contain("base64");
     }
 
     // =========================================================================
@@ -135,10 +128,7 @@ public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty("detail")
-            .GetString()
-            .Should()
-            .Contain("data:image/");
+        doc.RootElement.GetProperty("detail").GetString().Should().Contain("data:image/");
     }
 
     [Fact]
@@ -152,10 +142,7 @@ public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty("detail")
-            .GetString()
-            .Should()
-            .Contain("base64");
+        doc.RootElement.GetProperty("detail").GetString().Should().Contain("base64");
     }
 
     // =========================================================================
@@ -174,9 +161,6 @@ public class MusicValidationTests : IClassFixture<NoMercyApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty("detail")
-            .GetString()
-            .Should()
-            .Contain("data:image/");
+        doc.RootElement.GetProperty("detail").GetString().Should().Contain("data:image/");
     }
 }

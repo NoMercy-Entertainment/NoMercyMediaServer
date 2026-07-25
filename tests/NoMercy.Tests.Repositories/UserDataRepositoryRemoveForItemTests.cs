@@ -16,7 +16,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Domain;
 using NoMercy.Tests.Repositories.Infrastructure;
-using Xunit;
 
 namespace NoMercy.Tests.Repositories;
 

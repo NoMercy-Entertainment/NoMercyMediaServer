@@ -95,6 +95,55 @@ public class CronWorkerRegistrationTests
         await cronWorker.StopAsync(cts.Token);
     }
 
+    [Fact]
+    public async Task StartAsync_WhenACronExecutorCannotBeResolved_StillRegistersTheRemainingJobs()
+    {
+        // A registration whose executor type is NOT in DI makes RegisterDescriptor's
+        // GetRequiredService throw. Unguarded, that throw aborts the registration
+        // foreach in ExecuteAsync, so EVERY later job is silently skipped and the
+        // faulted BackgroundService trips the .NET StopHost default (server won't
+        // boot). Contained, the bad registration is logged+skipped and the rest
+        // register. The bad registration is listed FIRST so a regression is only
+        // caught by observing that the GOOD executor is still resolved after it.
+        ObservableCronJob.WasResolved = false;
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddSingleton<ObservableCronJob>();
+        await using ServiceProvider provider = services.BuildServiceProvider();
+
+        List<CronJobRegistration> registrations =
+        [
+            new(typeof(UnresolvableCronJob), "unresolvable-job", "0 0 * * *"),
+            new(typeof(ObservableCronJob), "good-job", "0 0 * * *"),
+        ];
+
+        CronWorker cronWorker = new(
+            provider,
+            provider.GetRequiredService<ILogger<CronWorker>>(),
+            new StubQueueContext(),
+            registrations
+        );
+
+        await cronWorker.StartAsync(CancellationToken.None);
+
+        // ExecuteAsync (and its registration loop) is scheduled by StartAsync rather
+        // than run inline, so wait — bounded — for the loop to process both
+        // registrations. Old (unguarded) code aborts at the unresolvable
+        // registration and never reaches the good one, so WasResolved stays false
+        // until this times out; the fix skips the bad one and resolves the good one.
+        using CancellationTokenSource waitCts = new(TimeSpan.FromSeconds(5));
+        while (!ObservableCronJob.WasResolved && !waitCts.IsCancellationRequested)
+            await Task.Delay(25);
+
+        Assert.True(
+            ObservableCronJob.WasResolved,
+            "The good cron job after an unresolvable one must still be registered."
+        );
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
+    }
+
     private static ServiceProvider BuildProvider()
     {
         ServiceCollection services = new();
@@ -128,6 +177,49 @@ public class CronWorkerRegistrationTests
     {
         public string CronExpression => "0 12 * * *";
         public string JobName => "Test Job B";
+
+        public Task ExecuteAsync(
+            string parameters,
+            CancellationToken cancellationToken = default
+        ) => Task.CompletedTask;
+    }
+
+    // Deliberately NOT registered in the test ServiceProvider so that resolving
+    // it via GetRequiredService throws, simulating a misconfigured/plugin cron
+    // executor at boot.
+    private sealed class UnresolvableCronJob : ICronJobExecutor
+    {
+        public string CronExpression => "0 0 * * *";
+        public string JobName => "Unresolvable";
+
+        public Task ExecuteAsync(
+            string parameters,
+            CancellationToken cancellationToken = default
+        ) => Task.CompletedTask;
+    }
+
+    // Registered in DI; RegisterDescriptor reads CronExpression while wiring the
+    // job, so WasResolved flips only once the registration loop actually reaches
+    // this executor (i.e. it was not aborted by an earlier bad registration).
+    private sealed class ObservableCronJob : ICronJobExecutor
+    {
+        // Static so the assertion is independent of which instance DI hands the
+        // worker: the flag flips when ANY ObservableCronJob is wired.
+        public static bool WasResolved;
+
+        public string CronExpression => "0 0 * * *";
+
+        // RegisterDescriptor unconditionally reads JobName (line ~331) when wiring
+        // the CronJobModel, so this flips only once the registration loop actually
+        // reaches this executor — i.e. it was not aborted by an earlier bad one.
+        public string JobName
+        {
+            get
+            {
+                WasResolved = true;
+                return "Observable";
+            }
+        }
 
         public Task ExecuteAsync(
             string parameters,

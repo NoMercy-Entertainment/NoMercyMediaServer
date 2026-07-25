@@ -16,14 +16,14 @@ namespace NoMercy.Tests.Encoder.DiscRipping;
 public class TmdbDiscMatcherTests
 {
     [Theory]
-    [InlineData("Avatar_Book_1_Disc_1", "Avatar Book 1")]
-    [InlineData("Avatar_Book_1_Disc_2", "Avatar Book 1")]
-    [InlineData("Avatar.Book.1.Disc.1", "Avatar Book 1")]
-    [InlineData("Avatar-Book-1-Disc-1", "Avatar Book 1")]
-    [InlineData("LORD_OF_THE_RINGS", "LORD OF THE RINGS")]
-    [InlineData("Wall-E", "Wall E")]
-    [InlineData("THE_MATRIX_DISC_1", "THE MATRIX")]
-    [InlineData("Frozen", "Frozen")]
+    [InlineData(["Avatar_Book_1_Disc_1", "Avatar Book 1"])]
+    [InlineData(["Avatar_Book_1_Disc_2", "Avatar Book 1"])]
+    [InlineData(["Avatar.Book.1.Disc.1", "Avatar Book 1"])]
+    [InlineData(["Avatar-Book-1-Disc-1", "Avatar Book 1"])]
+    [InlineData(["LORD_OF_THE_RINGS", "LORD OF THE RINGS"])]
+    [InlineData(["Wall-E", "Wall E"])]
+    [InlineData(["THE_MATRIX_DISC_1", "THE MATRIX"])]
+    [InlineData(["Frozen", "Frozen"])]
     public void NormalizeLabel_StripsSeparatorsAndDiscSuffix(string input, string expected)
     {
         VideoDiscIdentifier.NormalizeLabel(input).Should().Be(expected);

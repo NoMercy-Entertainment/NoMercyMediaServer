@@ -543,11 +543,11 @@ public class PlaylistGeneratorSubtitleVariantTests
     private static string Generate(OutputPlan plan)
     {
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
-            v => v.MapLabel,
+            PlaylistGenerator.VideoVariantKey,
             _ => new VariantMetrics(5_000_000, 4_500_000)
         );
         Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
-            a => a.MapLabel,
+            PlaylistGenerator.AudioVariantKey,
             _ => new VariantMetrics(192_000, 180_000)
         );
 

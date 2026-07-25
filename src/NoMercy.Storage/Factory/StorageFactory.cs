@@ -100,9 +100,7 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
         if (_driverConfigResolver is null)
         {
             _logger.LogWarning(
-                "Folder {FolderId} has DriverId {DriverId} but no IDriverConfigResolver is registered; falling back to built-in local",
-                folderId,
-                driverId
+                "Folder {FolderId} has DriverId {DriverId} but no IDriverConfigResolver is registered; falling back to built-in local", [folderId, driverId]
             );
         }
         else
@@ -111,9 +109,7 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
             if (resolved is null)
             {
                 _logger.LogWarning(
-                    "Driver {DriverId} not found for folder {FolderId}; falling back to built-in local",
-                    driverId,
-                    folderId
+                    "Driver {DriverId} not found for folder {FolderId}; falling back to built-in local", [driverId, folderId]
                 );
             }
             else

@@ -21,4 +21,5 @@ public interface IPluginContext
     ILogger Logger { get; }
     string DataFolderPath { get; }
     IPluginConfiguration Configuration { get; }
+    HttpClient HttpClient { get; }
 }

@@ -89,7 +89,7 @@ public class LanguageRepositoryTests : IDisposable
     {
         Country country1 = new() { Id = 1, Iso31661 = "US" };
         Country country2 = new() { Id = 2, Iso31661 = "CA" };
-        _context.Countries.AddRange(country1, country2);
+        _context.Countries.AddRange([country1, country2]);
         await _context.SaveChangesAsync();
 
         List<Country> result = await _repository.GetCountriesAsync();
@@ -133,7 +133,7 @@ public class LanguageRepositoryTests : IDisposable
             EnglishName = "German",
             Name = "Deutsch",
         };
-        _context.Languages.AddRange(french, spanish, german);
+        _context.Languages.AddRange([french, spanish, german]);
 
         Ulid libraryId = SeedConstants.MovieLibraryId;
         _context.LanguageLibrary.Add(new(french.Id, libraryId));

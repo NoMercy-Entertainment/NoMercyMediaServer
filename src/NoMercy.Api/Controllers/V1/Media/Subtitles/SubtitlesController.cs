@@ -29,6 +29,7 @@ using NoMercy.Encoder.Subtitles;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Networking;
 using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Media.Subtitles;
@@ -229,6 +230,15 @@ public class SubtitlesController(
 
         if (string.IsNullOrWhiteSpace(request.DownloadUrl))
             return BadRequestResponse("downloadUrl is required");
+
+        // download_url is the opaque token from subtitles/search, but nothing forces
+        // that: it is fetched server-side, so an authenticated user could point it at
+        // loopback/LAN/cloud-metadata (SSRF). Reject any URL that is not an http(s)
+        // link to a publicly routable host before doing anything else.
+        if (!await ServerSideRequestGuard.IsSafePublicHttpUrlAsync(request.DownloadUrl, ct))
+            return BadRequestResponse(
+                "download_url must be an absolute http(s) URL that resolves to a public host."
+            );
 
         if (string.IsNullOrWhiteSpace(request.Language))
             return BadRequestResponse("language is required");

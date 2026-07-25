@@ -33,23 +33,6 @@ public static class WebHostFactory
         //     localAddresses.Add(IPAddress.IPv6Any);
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
-
-        builder.Services.AddSingleton<IPortManager, PortManager>();
-        builder.Services.AddSingleton<IShutdownCoordinator, ShutdownCoordinator>();
-        builder.Services.AddSingleton<IServerRunner, ServerRunner>();
-        builder.Services.AddSingleton<IPluginLoader, PluginLoader>();
-        builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
-        builder.Services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
-
-        builder.Services.Configure<ServerConfiguration>(builder.Configuration.GetSection("Server"));
-        builder.Services.AddSingleton<IServerConfiguration, ServerConfigurationWrapper>();
-
-        builder.Services.AddSingleton(options);
-        builder.Services.AddSingleton<
-            IApiVersionDescriptionProvider,
-            DefaultApiVersionDescriptionProvider
-        >();
-        builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
         builder.Services.AddSingleton<NmSystem.Logging.NoMercyLoggerOptions>(_ =>
             new()
             {
@@ -80,13 +63,30 @@ public static class WebHostFactory
                     return
                         int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols)
                         && cols > 0
-                        ? cols
-                        : 120;
+                            ? cols
+                            : 120;
                 },
             }
         );
         builder.Services.AddSingleton<NmSystem.Logging.NoMercyLoggerProvider>();
         builder.Services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
+
+        builder.Services.AddSingleton<IPortManager, PortManager>();
+        builder.Services.AddSingleton<IShutdownCoordinator, ShutdownCoordinator>();
+        builder.Services.AddSingleton<IServerRunner, ServerRunner>();
+        builder.Services.AddSingleton<IPluginLoader, PluginLoader>();
+        builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+        builder.Services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
+
+        builder.Services.Configure<ServerConfiguration>(builder.Configuration.GetSection("Server"));
+        builder.Services.AddSingleton<IServerConfiguration, ServerConfigurationWrapper>();
+
+        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton<
+            IApiVersionDescriptionProvider,
+            DefaultApiVersionDescriptionProvider
+        >();
+        builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
 
         // Configure host options with reduced shutdown timeout
         builder.Services.Configure<HostOptions>(hostOptions =>
@@ -163,7 +163,9 @@ public static class WebHostFactory
                 );
             }
 
-            // Health check endpoint — HTTP only, localhost only (for Docker HEALTHCHECK)
+            // Health check endpoint — HTTP only, localhost only (for Docker HEALTHCHECK).
+            // No TLS is configured here, so Http3 can never negotiate — requesting it
+            // just makes Kestrel log a "HTTP/3 is not enabled" warning every startup.
             kestrelOptions.Listen(
                 IPAddress.Loopback,
                 RuntimeServerSettings.Current.InternalServerPort + 1,
@@ -173,7 +175,8 @@ public static class WebHostFactory
                 }
             );
 
-            // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS)
+            // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS).
+            // Neither transport supports QUIC, so Http3 is unreachable here too.
             if (Software.IsWindows)
             {
                 kestrelOptions.ListenNamedPipe(

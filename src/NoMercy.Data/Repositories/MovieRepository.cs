@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -19,10 +20,13 @@ using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
-using Microsoft.Extensions.Logging;
+
 namespace NoMercy.Data.Repositories;
 
-public class MovieRepository(IDbContextFactory<MediaContext> contextFactory, ILogger<MovieRepository> logger) : IMovieRepository
+public class MovieRepository(
+    IDbContextFactory<MediaContext> contextFactory,
+    ILogger<MovieRepository> logger
+) : IMovieRepository
 {
     public async Task<Movie?> GetMovieAsync(
         Guid userId,
@@ -39,12 +43,19 @@ public class MovieRepository(IDbContextFactory<MediaContext> contextFactory, ILo
             .ForUser(userId)
             .Include(movie => movie.MovieUser.Where(mu => mu.UserId == userId))
             .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
-            .Include(movie => movie.Images.Where(i => i.Type == "logo").Take(1))
+            .Include(movie =>
+                movie
+                    .Images.Where(i => i.Type == "logo")
+                    .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
+                    .Take(1)
+            )
             .Include(movie =>
                 movie
                     .CertificationMovies.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                     )
+                    .OrderBy(c => c.CertificationId)
                     .Take(1)
             )
                 .ThenInclude(c => c.Certification)
@@ -96,6 +107,7 @@ public class MovieRepository(IDbContextFactory<MediaContext> contextFactory, ILo
                             )
                         )
                         .OrderByDescending(image => image.VoteAverage)
+                        .ThenBy(image => image.Id)
                 )
                 .Include(movie =>
                     movie.CertificationMovies.Where(certification =>
@@ -133,7 +145,11 @@ public class MovieRepository(IDbContextFactory<MediaContext> contextFactory, ILo
         return await GetMovieDetailAsyncQuery(context, userId, id, language, country);
     }
 
-    public async Task<bool> GetMovieAvailableAsync(Guid userId, int id, CancellationToken ct = default)
+    public async Task<bool> GetMovieAvailableAsync(
+        Guid userId,
+        int id,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context

@@ -272,6 +272,59 @@ public class StuckReservationReaperHostedServiceTests
         Assert.Empty(context.FailedJobs);
     }
 
+    // ── ExecuteAsync: the periodic timer actually fires the reap pass ──────
+
+    /// <summary>
+    /// <see cref="ReapOnceAsync"/> alone proves the triage decision; this
+    /// proves the OTHER half of "periodic" — that <see cref="ExecuteAsync"/>'s
+    /// <see cref="PeriodicTimer"/> loop really calls it repeatedly once the
+    /// interval elapses, not just once at startup. Uses the internal
+    /// short-interval constructor so this doesn't wait out the real 3-minute
+    /// production default.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsync_PeriodicTimerTick_ReapsStuckReservation()
+    {
+        TestQueueContextAdapter context = new();
+        ServiceCollection services = new();
+        services.AddSingleton<IQueueContext>(context);
+        ServiceProvider provider = services.BuildServiceProvider();
+        StuckReservationReaperHostedService service = new(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<StuckReservationReaperHostedService>.Instance,
+            interval: TimeSpan.FromMilliseconds(30),
+            cutoff: TestCutoff
+        );
+
+        QueueJobModel stuck = new()
+        {
+            Queue = ExtrasQueue,
+            Payload = "{\"Id\":\"periodic-tick\"}",
+            Priority = 1,
+            Attempts = 1,
+            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(5),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
+        };
+        context.AddJob(stuck);
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        Task executeTask = service.StartAsync(cts.Token);
+
+        using CancellationTokenSource waitCts = new(TimeSpan.FromSeconds(5));
+        while (!waitCts.IsCancellationRequested)
+        {
+            if (context.Jobs.Any(j => j.Payload == stuck.Payload && j.ReservedAt == null))
+                break;
+            await Task.Delay(10);
+        }
+
+        QueueJobModel survivor = Assert.Single(context.Jobs);
+        Assert.Null(survivor.ReservedAt);
+
+        await service.StopAsync(cts.Token);
+        cts.Cancel();
+    }
+
     [Fact]
     public async Task ReapOnceAsync_NoStuckJobs_DoesNothing()
     {

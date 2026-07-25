@@ -78,6 +78,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
         IOrderedQueryable<Genre> query = context
             .Genres.AsNoTracking()
             .OrderBy(genre => genre.Name)
+            .ThenBy(genre => genre.Id)
             .Where(genre =>
                 genre.GenreMovies.Any(g =>
                     g.Movie.Library.LibraryUsers.FirstOrDefault(u => u.UserId.Equals(userId))
@@ -102,7 +103,8 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             .Include(movie =>
                 movie.Translations.Where(translation => translation.Iso6391 == language)
             )
-            .OrderBy(genre => genre.Name);
+            .OrderBy(genre => genre.Name)
+            .ThenBy(genre => genre.Id);
 
         List<Genre> genres = await query.Skip(page * take).Take(take).ToListAsync();
 
@@ -247,6 +249,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                 || ud.SpecialId != null
             )
             .OrderByDescending(ud => ud.LastPlayedDate)
+            .ThenByDescending(ud => ud.Id)
             .Select(ud => new
             {
                 ud.Id,
@@ -282,7 +285,11 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             // Movie includes - only what CardData needs
             .Include(ud => ud.Movie)
                 .ThenInclude(m =>
-                    m!.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1)
+                    m!
+                        .Images.Where(image => image.Type == "logo" && image.Iso6391 == "en")
+                        .OrderByDescending(image => image.VoteAverage)
+                        .ThenBy(image => image.Id)
+                        .Take(1)
                 )
             .Include(ud => ud.Movie)
                 .ThenInclude(m => m!.VideoFiles)
@@ -292,13 +299,18 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                         .CertificationMovies.Where(c =>
                             c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                         )
+                        .OrderBy(c => c.CertificationId)
                         .Take(1)
                 )
                     .ThenInclude(c => c.Certification)
             // Tv includes - only what CardData needs
             .Include(ud => ud.Tv)
                 .ThenInclude(tv =>
-                    tv!.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1)
+                    tv!
+                        .Images.Where(image => image.Type == "logo" && image.Iso6391 == "en")
+                        .OrderByDescending(image => image.VoteAverage)
+                        .ThenBy(image => image.Id)
+                        .Take(1)
                 )
             .Include(ud => ud.Tv)
                 .ThenInclude(tv => tv!.Episodes.Where(e => e.SeasonNumber > 0))
@@ -309,13 +321,18 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                         .CertificationTvs.Where(c =>
                             c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                         )
+                        .OrderBy(c => c.CertificationId)
                         .Take(1)
                 )
                     .ThenInclude(c => c.Certification)
             // Collection includes - only what CardData needs
             .Include(ud => ud.Collection)
                 .ThenInclude(c =>
-                    c!.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1)
+                    c!
+                        .Images.Where(image => image.Type == "logo" && image.Iso6391 == "en")
+                        .OrderByDescending(image => image.VoteAverage)
+                        .ThenBy(image => image.Id)
+                        .Take(1)
                 )
             .Include(ud => ud.Collection)
                 .ThenInclude(c => c!.CollectionMovies)
@@ -329,6 +346,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                                     cert.Certification.Iso31661 == "US"
                                     || cert.Certification.Iso31661 == country
                                 )
+                                .OrderBy(cert => cert.CertificationId)
                                 .Take(1)
                         )
                             .ThenInclude(c => c.Certification)
@@ -346,6 +364,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                                     c.Certification.Iso31661 == "US"
                                     || c.Certification.Iso31661 == country
                                 )
+                                .OrderBy(c => c.CertificationId)
                                 .Take(1)
                         )
                             .ThenInclude(c => c.Certification)
@@ -362,10 +381,12 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                                         c.Certification.Iso31661 == "US"
                                         || c.Certification.Iso31661 == country
                                     )
+                                    .OrderBy(c => c.CertificationId)
                                     .Take(1)
                             )
                                 .ThenInclude(c => c.Certification)
             .OrderByDescending(ud => ud.LastPlayedDate)
+            .ThenByDescending(ud => ud.Id)
             .ToListAsync(ct);
 
         return userData.ToHashSet();
@@ -392,7 +413,11 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             .Where(movie => movie.MovieUser.Any(mu => mu.UserId == userId))
             .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
             .Include(movie =>
-                movie.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1)
+                movie
+                    .Images.Where(image => image.Type == "logo" && image.Iso6391 == "en")
+                    .OrderByDescending(image => image.VoteAverage)
+                    .ThenBy(image => image.Id)
+                    .Take(1)
             )
             .Include(movie => movie.VideoFiles)
             .Include(movie =>
@@ -400,6 +425,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                     .CertificationMovies.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                     )
+                    .OrderBy(c => c.CertificationId)
                     .Take(1)
             )
                 .ThenInclude(c => c.Certification)
@@ -410,7 +436,10 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             .Where(tv => tv.TvUser.Any(tu => tu.UserId == userId))
             .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
             .Include(tv =>
-                tv.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1)
+                tv.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en")
+                    .OrderByDescending(image => image.VoteAverage)
+                    .ThenBy(image => image.Id)
+                    .Take(1)
             )
             .Include(tv => tv.Episodes.Where(episode => episode.SeasonNumber > 0))
                 .ThenInclude(episode => episode.VideoFiles)
@@ -418,6 +447,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                 tv.CertificationTvs.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                     )
+                    .OrderBy(c => c.CertificationId)
                     .Take(1)
             )
                 .ThenInclude(c => c.Certification)
@@ -430,6 +460,8 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             .Include(collection =>
                 collection
                     .Images.Where(image => image.Type == "logo" && image.Iso6391 == "en")
+                    .OrderByDescending(image => image.VoteAverage)
+                    .ThenBy(image => image.Id)
                     .Take(1)
             )
             .Include(collection => collection.CollectionMovies)
@@ -443,6 +475,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
                             )
+                            .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(c => c.Certification)
@@ -463,6 +496,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
                             )
+                            .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(c => c.Certification)
@@ -497,6 +531,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                 ) || (image.Type == "logo" && image.Iso6391 == "en")
             )
             .OrderByDescending(image => image.Width)
+            .ThenBy(image => image.Id)
             .ToHashSetAsync(ct);
     }
 
@@ -567,6 +602,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                 )
             )
             .OrderBy(genre => genre.Name)
+            .ThenBy(genre => genre.Id)
             .Skip(page * take)
             .Take(take)
             .ToListAsync(ct);
@@ -658,13 +694,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             ct
         );
 
-        await Task.WhenAll(
-            continueWatchingTask,
-            genreItemsTask,
-            librariesTask,
-            animeCountTask,
-            movieCountTask,
-            tvCountTask
+        await Task.WhenAll([continueWatchingTask, genreItemsTask, librariesTask, animeCountTask, movieCountTask, tvCountTask]
         );
 
         return new(
@@ -706,7 +736,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             ct
         );
 
-        await Task.WhenAll(tvDataTask, movieDataTask);
+        await Task.WhenAll([tvDataTask, movieDataTask]);
 
         return new(tvDataTask.Result, movieDataTask.Result);
     }

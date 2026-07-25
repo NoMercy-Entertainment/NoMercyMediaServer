@@ -11,17 +11,16 @@
 
 using NoMercy.Launcher.Services;
 using NoMercy.Launcher.ViewModels;
-using Xunit;
 
 namespace NoMercy.Tests.Service;
 
 public class ServerControlViewModelTests
 {
     [Theory]
-    [InlineData("running", "Running")]
-    [InlineData("starting", "Starting")]
-    [InlineData("Disconnected", "Disconnected")]
-    [InlineData("unknown", "unknown")]
+    [InlineData(["running", "Running"])]
+    [InlineData(["starting", "Starting"])]
+    [InlineData(["Disconnected", "Disconnected"])]
+    [InlineData(["unknown", "unknown"])]
     public void FormatStatusDisplay_ReturnsExpectedLabel(string input, string expected)
     {
         string result = ServerControlViewModel.FormatStatusDisplay(input);
@@ -29,12 +28,12 @@ public class ServerControlViewModelTests
     }
 
     [Theory]
-    [InlineData("running", "#22C55E")]
-    [InlineData("Running", "#22C55E")]
-    [InlineData("starting", "#EAB308")]
-    [InlineData("Starting", "#EAB308")]
-    [InlineData("Disconnected", "#EF4444")]
-    [InlineData("unknown", "#EF4444")]
+    [InlineData(["running", "#22C55E"])]
+    [InlineData(["Running", "#22C55E"])]
+    [InlineData(["starting", "#EAB308"])]
+    [InlineData(["Starting", "#EAB308"])]
+    [InlineData(["Disconnected", "#EF4444"])]
+    [InlineData(["unknown", "#EF4444"])]
     public void GetStatusColor_ReturnsExpectedColor(string input, string expected)
     {
         string result = ServerControlViewModel.GetStatusColor(input);

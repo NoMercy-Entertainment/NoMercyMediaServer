@@ -11,7 +11,6 @@
 
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -56,13 +55,13 @@ public class RecommendationsControllerTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/dashboard/recommendations/{segment}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Theory]
-    [InlineData("movies", "recommendations-movies", "Recommended Movies")]
-    [InlineData("tv", "recommendations-tv", "Recommended TV Shows")]
-    [InlineData("anime", "recommendations-anime", "Recommended Anime")]
+    [InlineData(["movies", "recommendations-movies", "Recommended Movies"])]
+    [InlineData(["tv", "recommendations-tv", "Recommended TV Shows"])]
+    [InlineData(["anime", "recommendations-anime", "Recommended Anime"])]
     public async Task GetRecommendations_ReturnsGridComponentEnvelope_WhenAuthenticated(
         string segment,
         string expectedComponentId,
@@ -99,7 +98,7 @@ public class RecommendationsControllerTests : IClassFixture<NoMercyApiFactory>
             "/api/v1/dashboard/recommendations/diagnostics"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -145,7 +144,7 @@ public class RecommendationsControllerTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/dashboard/recommendations/movie/{SeededMovieId}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -159,9 +158,9 @@ public class RecommendationsControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Theory]
-    [InlineData("movie", SeededMovieId)]
-    [InlineData("tv", SeededTvId)]
-    [InlineData("anime", SeededTvId)]
+    [InlineData(["movie", SeededMovieId])]
+    [InlineData(["tv", SeededTvId])]
+    [InlineData(["anime", SeededTvId])]
     public async Task GetRecommendationDetail_ValidTypeProviderReturnsNull_Returns404(
         string type,
         int id

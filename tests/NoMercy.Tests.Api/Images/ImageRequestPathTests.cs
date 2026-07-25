@@ -22,16 +22,16 @@ namespace NoMercy.Tests.Api.Images;
 public class ImageRequestPathTests
 {
     [Theory]
-    [InlineData("poster.jpg", "poster.jpg")]
-    [InlineData("abc123.png", "abc123.png")]
-    [InlineData("../../etc/passwd", "passwd")]
-    [InlineData("..\\..\\windows\\win.ini", "win.ini")]
-    [InlineData("a/b/c.png", "c.png")]
-    [InlineData("a\\b\\c.png", "c.png")]
-    [InlineData("..", "")]
-    [InlineData("foo/..", "")]
-    [InlineData(null, "")]
-    [InlineData("", "")]
+    [InlineData(["poster.jpg", "poster.jpg"])]
+    [InlineData(["abc123.png", "abc123.png"])]
+    [InlineData(["../../etc/passwd", "passwd"])]
+    [InlineData(["..\\..\\windows\\win.ini", "win.ini"])]
+    [InlineData(["a/b/c.png", "c.png"])]
+    [InlineData(["a\\b\\c.png", "c.png"])]
+    [InlineData(["..", ""])]
+    [InlineData(["foo/..", ""])]
+    [InlineData([null, ""])]
+    [InlineData(["", ""])]
     public void SanitizeSegment_ReducesToFinalComponent(string? input, string expected)
     {
         Assert.Equal(expected, ImageRequestPath.SanitizeSegment(input));

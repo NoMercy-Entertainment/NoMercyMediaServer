@@ -51,7 +51,11 @@ public class OutputPlanMergerTests
             IsHdrOutput: isHdrOutput
         );
 
-    private static AudioOutputPlan MakeAudio(string language, string encoderName = "aac") =>
+    private static AudioOutputPlan MakeAudio(
+        string language,
+        string encoderName = "aac",
+        int sourceStreamIndex = 0
+    ) =>
         new(
             EncoderName: encoderName,
             BitrateKbps: 128,
@@ -59,7 +63,8 @@ public class OutputPlanMergerTests
             SampleRate: 48000,
             Action: StreamAction.Transcode,
             Language: language,
-            MapLabel: "[a0]"
+            MapLabel: "[a0]",
+            SourceStreamIndex: sourceStreamIndex
         );
 
     private static SubtitleOutputPlan MakeSubtitle(string language) =>
@@ -127,6 +132,48 @@ public class OutputPlanMergerTests
 
         merged.AudioOutputs.Should().HaveCount(1);
         merged.AudioOutputs[0].Language.Should().Be("eng");
+    }
+
+    [Fact]
+    public void Merge_KeepsTwoDistinctSourceTracksWithSameLanguageAndCodec()
+    {
+        // Regression for the missing-audio defect: a movie with two English
+        // E-AC-3 tracks (e.g. a 768k and a 960k mix) produces two audio plans
+        // that share language + codec but come from DIFFERENT source streams.
+        // Merging must keep BOTH — keying the dedup on (language, codec) alone
+        // silently dropped the second.
+        OutputPlan preset1 = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [MakeVideo(3840, 2160, isHdrOutput: true)],
+            AudioOutputs:
+            [
+                MakeAudio("eng", "eac3", sourceStreamIndex: 1),
+                MakeAudio("eng", "eac3", sourceStreamIndex: 2),
+            ],
+            SubtitleOutputs: [],
+            Thumbnails: null
+        );
+        OutputPlan preset2 = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [MakeVideo(1920, 1080, isHdrOutput: false)],
+            AudioOutputs:
+            [
+                MakeAudio("eng", "eac3", sourceStreamIndex: 1),
+                MakeAudio("eng", "eac3", sourceStreamIndex: 2),
+            ],
+            SubtitleOutputs: [],
+            Thumbnails: null
+        );
+
+        OutputPlan merged = OutputPlanMerger.Merge([preset1, preset2]);
+
+        // Two distinct source tracks survive (the cross-preset duplicates of each
+        // still dedup to one).
+        merged.AudioOutputs.Should().HaveCount(2);
+        merged
+            .AudioOutputs.Select(a => a.SourceStreamIndex)
+            .Should()
+            .BeEquivalentTo([1, 2], "both distinct source audio tracks must survive the merge");
     }
 
     [Fact]

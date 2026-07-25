@@ -48,8 +48,8 @@ public class TmdbTvClientTests : TmdbTestBase
     #region Changes Tests
 
     [Theory]
-    [InlineData("2023-01-01", "2023-12-31")]
-    [InlineData("2024-01-01", "2024-06-30")]
+    [InlineData(["2023-01-01", "2023-12-31"])]
+    [InlineData(["2024-01-01", "2024-06-30"])]
     public async Task Changes_WithValidDateRange_ReturnsChanges(string startDate, string endDate)
     {
         // Arrange
@@ -399,7 +399,7 @@ public class TmdbTvClientTests : TmdbTestBase
         Task<TmdbImages?> imagesTask = client.Images();
         Task<TmdbTvVideos?> videosTask = client.Videos();
 
-        await Task.WhenAll(detailsTask, creditsTask, imagesTask, videosTask);
+        await Task.WhenAll([detailsTask, creditsTask, imagesTask, videosTask]);
 
         // Assert
         (await detailsTask)

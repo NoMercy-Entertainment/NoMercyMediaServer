@@ -85,7 +85,9 @@ public class EventBusProgressObserverTests
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Callback<EncodingProgressBroadcastedEvent, CancellationToken>((e, _) => captured = e)
+                .Callback<EncodingProgressBroadcastedEvent, CancellationToken>(
+                    (e, _) => captured = e
+                )
                 .Returns(Task.CompletedTask);
 
             EventBusProvider.Configure(mockBus.Object);
@@ -129,7 +131,9 @@ public class EventBusProgressObserverTests
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Callback<EncodingProgressBroadcastedEvent, CancellationToken>((e, _) => captured = e)
+                .Callback<EncodingProgressBroadcastedEvent, CancellationToken>(
+                    (e, _) => captured = e
+                )
                 .Returns(Task.CompletedTask);
 
             EventBusProvider.Configure(mockBus.Object);

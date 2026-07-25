@@ -142,11 +142,12 @@ public static partial class ServiceConfiguration
             message => Logger.App(message, LogEventLevel.Verbose),
             // High-frequency progress events would otherwise spam the verbose
             // log every ~500ms during an encode without adding signal.
-            excludedEventTypes:
             [
                 "EncodingProgressBroadcastedEvent",
                 "EncodingProgressUpdatedEvent",
                 "PlaybackProgressUpdatedEvent",
+                "CastDeviceStatusChangedEvent",
+                "LibraryRefreshedEvent",
             ]
         );
         EventAuditLog auditLog = new(

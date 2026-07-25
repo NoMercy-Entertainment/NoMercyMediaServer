@@ -36,6 +36,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
     private readonly INetworkDiscovery? _networkDiscovery;
 
     private readonly IAuthTokenStore _authTokenStore;
+    private readonly Func<TimeSpan, Task> _delay;
 
     public DegradedModeRecovery(
         IAuthTokenStore authTokenStore,
@@ -44,12 +45,37 @@ public class DegradedModeRecovery : IDegradedModeRecovery
         IServerRegistrationService serverRegistrationService,
         INetworkDiscovery? networkDiscovery = null
     )
+        : this(
+            authTokenStore,
+            apiKeyLoader,
+            apiKeyStore,
+            serverRegistrationService,
+            networkDiscovery,
+            delay: null
+        ) { }
+
+    /// <summary>
+    /// Internal (not exposed on the public constructor): lets NoMercy.Tests.Setup drive
+    /// <see cref="StartRecoveryLoop"/> through multiple backoff ticks without the real
+    /// wall-clock <see cref="BackoffSchedule"/> (30s-30m) — the only DI-visible constructor
+    /// remains the public one above, so production callers and the built-in
+    /// ServiceProvider are unaffected.
+    /// </summary>
+    internal DegradedModeRecovery(
+        IAuthTokenStore authTokenStore,
+        IApiKeyLoader apiKeyLoader,
+        IApiKeyStore apiKeyStore,
+        IServerRegistrationService serverRegistrationService,
+        INetworkDiscovery? networkDiscovery,
+        Func<TimeSpan, Task>? delay
+    )
     {
         _authTokenStore = authTokenStore;
         _apiKeyLoader = apiKeyLoader;
         _apiKeyStore = apiKeyStore;
         _serverRegistrationService = serverRegistrationService;
         _networkDiscovery = networkDiscovery;
+        _delay = delay ?? Task.Delay;
     }
 
     private static readonly TimeSpan[] BackoffSchedule =
@@ -68,7 +94,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
         while (!tasks.AllCompleted)
         {
             TimeSpan delay = BackoffSchedule[Math.Min(attempt, BackoffSchedule.Length - 1)];
-            await Task.Delay(delay);
+            await _delay(delay);
 
             bool hasNetwork = await NetworkProbe.CheckConnectivity();
             if (!hasNetwork)
@@ -100,7 +126,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                 }
             }
 
-            if (!tasks.Authenticated && tasks.ApiKeysLoaded)
+            if (tasks is { Authenticated: false, ApiKeysLoaded: true })
             {
                 string? token = _authTokenStore.AccessToken;
                 if (string.IsNullOrEmpty(token))
@@ -135,7 +161,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                 }
             }
 
-            if (!tasks.Registered && tasks.Authenticated && tasks.NetworkDiscovered)
+            if (tasks is { Registered: false, Authenticated: true, NetworkDiscovered: true })
             {
                 try
                 {
@@ -188,12 +214,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
             }
 
             if (
-                tasks.ApiKeysLoaded
-                && tasks.Authenticated
-                && tasks.NetworkDiscovered
-                && tasks.SeedsRun
-                && tasks.Registered
-                && tasks.BinariesReady
+                tasks is { ApiKeysLoaded: true, Authenticated: true, NetworkDiscovered: true, SeedsRun: true, Registered: true, BinariesReady: true }
             )
             {
                 tasks.AllCompleted = true;

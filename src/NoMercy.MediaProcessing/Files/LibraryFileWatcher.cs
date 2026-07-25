@@ -183,7 +183,7 @@ public class LibraryFileWatcher
             fileChangeGroup.FullPath = e.FullPath;
             fileChangeGroup.ChangeType = e.ChangeType;
 
-            if (e.ChangeType == WatcherChangeTypes.Renamed && e.OldFullPath is not null)
+            if (e is { ChangeType: WatcherChangeTypes.Renamed, OldFullPath: not null })
                 fileChangeGroup.OldFullPath = e.OldFullPath;
 
             fileChangeGroup.Timer?.Dispose();
@@ -255,6 +255,9 @@ public class LibraryFileWatcher
                 OldFullPath = group.OldFullPath,
             };
             FileChangeGroups.Remove(group.FolderPath);
+            // The one-shot debounce timer has fired; dispose it so its handle is
+            // released now instead of leaking until GC on a busy library.
+            group.Timer?.Dispose();
         }
 
         Task.Run(async () =>

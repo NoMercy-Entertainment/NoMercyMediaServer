@@ -148,7 +148,7 @@ public class NetworkingExternalIpTests
             if (File.Exists(candidate))
                 return candidate;
 
-            string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
+            string repoCandidate = Path.Combine([dir, "..", "..", "..", "..", "..", relativePath]);
             string resolved = Path.GetFullPath(repoCandidate);
             if (File.Exists(resolved))
                 return resolved;

@@ -29,13 +29,13 @@ public class RuntimeErrorCatalogTests
 {
     private static readonly string[] RuntimeErrorIds = typeof(EncoderRuntimeErrorId)
         .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-        .Where(f => f.IsLiteral && !f.IsInitOnly)
+        .Where(f => f is { IsLiteral: true, IsInitOnly: false })
         .Select(f => (string)f.GetValue(null)!)
         .ToArray();
 
     private static readonly string[] AllRuleIds = typeof(EncoderRuleId)
         .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-        .Where(f => f.IsLiteral && !f.IsInitOnly)
+        .Where(f => f is { IsLiteral: true, IsInitOnly: false })
         .Select(f => (string)f.GetValue(null)!)
         .ToArray();
 
@@ -58,7 +58,7 @@ public class RuntimeErrorCatalogTests
 
         throw new FileNotFoundException(
             "Could not locate docs/encoder-errors.md. "
-                + "Expected it at the repository root next to apps/, docs/, infra/ etc."
+                     + "Expected it at the repository root next to apps/, docs/, infra/ etc."
         );
     }
 
@@ -126,7 +126,7 @@ public class RuntimeErrorCatalogTests
             .Should()
             .BeEmpty(
                 "The following EncoderRuleId constants are missing from docs/encoder-errors.md: "
-                    + string.Join(", ", missing)
+                         + string.Join(", ", missing)
             );
     }
 
@@ -146,7 +146,7 @@ public class RuntimeErrorCatalogTests
             .Should()
             .BeEmpty(
                 "The following EncoderRuntimeErrorId constants are missing from docs/encoder-errors.md: "
-                    + string.Join(", ", missing)
+                         + string.Join(", ", missing)
             );
     }
 

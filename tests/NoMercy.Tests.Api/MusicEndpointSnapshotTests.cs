@@ -36,7 +36,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         Assert.True(
             element.TryGetProperty(propertyName, out _),
             $"Expected JSON property '{propertyName}' not found. "
-                + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
+                         + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
         );
 
     private static IEnumerable<string> EnumerateProperties(JsonElement element)
@@ -56,7 +56,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         Assert.True(
             hasCustomStatus || hasProblemDetails,
             $"Expected status response shape. "
-                + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
+                         + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
         );
     }
 

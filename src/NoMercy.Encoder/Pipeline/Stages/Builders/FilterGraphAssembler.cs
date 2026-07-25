@@ -416,7 +416,7 @@ public static class FilterGraphAssembler
     {
         bool needsCrop = !string.IsNullOrWhiteSpace(video.CropFilter);
         bool needsTonemap =
-            !tonemapAlreadyApplied && video.ConvertHdrToSdr && video.TonemapFilterChain is not null;
+            !tonemapAlreadyApplied && video is { ConvertHdrToSdr: true, TonemapFilterChain: not null };
         bool needsScale = video.Width != sourceWidth || video.Height != sourceHeight;
         bool needs8BitConversion = !tonemapAlreadyApplied && sourceIs10Bit && !video.TenBit;
         bool needsBurnIn = burnInExpr is not null;

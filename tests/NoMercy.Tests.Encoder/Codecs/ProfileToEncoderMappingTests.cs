@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Hardware;
 
 namespace NoMercy.Tests.Encoder.Codecs;
@@ -52,17 +51,7 @@ public class ProfileToEncoderMappingTests
 
         sw.Presets.Should().HaveCount(10);
         sw.Presets.Should()
-            .Equal(
-                "ultrafast",
-                "superfast",
-                "veryfast",
-                "faster",
-                "fast",
-                "medium",
-                "slow",
-                "slower",
-                "veryslow",
-                "placebo"
+            .Equal(["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo"]
             );
     }
 
@@ -99,7 +88,7 @@ public class ProfileToEncoderMappingTests
 
         nvenc.Should().NotBeNull();
         nvenc!.Presets.Should().HaveCount(7);
-        nvenc.Presets.Should().Equal("p1", "p2", "p3", "p4", "p5", "p6", "p7");
+        nvenc.Presets.Should().Equal(["p1", "p2", "p3", "p4", "p5", "p6", "p7"]);
     }
 
     [Fact]
@@ -109,7 +98,7 @@ public class ProfileToEncoderMappingTests
         EncoderInfo nvenc = def.Encoders.First(e => e.FfmpegName == "h264_nvenc");
 
         nvenc!.Profiles.Should().NotContain("high10");
-        nvenc.Profiles.Should().Equal("baseline", "main", "high");
+        nvenc.Profiles.Should().Equal(["baseline", "main", "high"]);
     }
 
     [Fact]
@@ -132,7 +121,7 @@ public class ProfileToEncoderMappingTests
         EncoderInfo amf = def.Encoders.First(e => e.FfmpegName == "h264_amf");
 
         amf!.Presets.Should().HaveCount(3);
-        amf.Presets.Should().Equal("speed", "balanced", "quality");
+        amf.Presets.Should().Equal(["speed", "balanced", "quality"]);
     }
 
     [Fact]
@@ -212,7 +201,7 @@ public class ProfileToEncoderMappingTests
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
         EncoderInfo vt = def.Encoders.First(e => e.FfmpegName == "h264_videotoolbox");
 
-        vt!.Profiles.Should().Equal("66", "77", "100");
+        vt!.Profiles.Should().Equal(["66", "77", "100"]);
     }
 
     [Fact]

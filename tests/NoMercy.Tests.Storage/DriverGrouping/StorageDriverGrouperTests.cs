@@ -21,10 +21,10 @@ public class StorageDriverGrouperTests
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData(@"\\192.168.1.1\Media\Anime", @"\\192.168.1.1\Media", StorageEndpointKind.Smb)]
-    [InlineData(@"\\192.168.1.1\Media\Movies", @"\\192.168.1.1\Media", StorageEndpointKind.Smb)]
-    [InlineData(@"\\NAS\Share\Sub\Folder", @"\\NAS\Share", StorageEndpointKind.Smb)]
-    [InlineData(@"\\server\share", @"\\server\share", StorageEndpointKind.Smb)]
+    [InlineData([@"\\192.168.1.1\Media\Anime", @"\\192.168.1.1\Media", StorageEndpointKind.Smb])]
+    [InlineData([@"\\192.168.1.1\Media\Movies", @"\\192.168.1.1\Media", StorageEndpointKind.Smb])]
+    [InlineData([@"\\NAS\Share\Sub\Folder", @"\\NAS\Share", StorageEndpointKind.Smb])]
+    [InlineData([@"\\server\share", @"\\server\share", StorageEndpointKind.Smb])]
     public void DetectEndpoint_UncPath_ReturnsSmbEndpoint(
         string path,
         string expectedKey,
@@ -38,9 +38,9 @@ public class StorageDriverGrouperTests
     }
 
     [Theory]
-    [InlineData(@"C:\Media\Movies", "C:", StorageEndpointKind.Local)]
-    [InlineData(@"D:\NAS\Anime", "D:", StorageEndpointKind.Local)]
-    [InlineData(@"E:\", "E:", StorageEndpointKind.Local)]
+    [InlineData([@"C:\Media\Movies", "C:", StorageEndpointKind.Local])]
+    [InlineData([@"D:\NAS\Anime", "D:", StorageEndpointKind.Local])]
+    [InlineData([@"E:\", "E:", StorageEndpointKind.Local])]
     public void DetectEndpoint_WindowsDrivePath_ReturnsLocalEndpoint(
         string path,
         string expectedKey,
@@ -224,11 +224,7 @@ public class StorageDriverGrouperTests
         Ulid movieId = Ulid.NewUlid();
         Ulid tvId = Ulid.NewUlid();
 
-        FolderRootInput[] inputs =
-        [
-            new(movieId, @"C:\Media\Movies"),
-            new(tvId, @"D:\Media\TV"),
-        ];
+        FolderRootInput[] inputs = [new(movieId, @"C:\Media\Movies"), new(tvId, @"D:\Media\TV")];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
@@ -289,11 +285,7 @@ public class StorageDriverGrouperTests
         Ulid aId = Ulid.NewUlid();
         Ulid bId = Ulid.NewUlid();
 
-        FolderRootInput[] inputs =
-        [
-            new(aId, @"C:\Alpha\Movies"),
-            new(bId, @"C:\Beta\TV"),
-        ];
+        FolderRootInput[] inputs = [new(aId, @"C:\Alpha\Movies"), new(bId, @"C:\Beta\TV")];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 

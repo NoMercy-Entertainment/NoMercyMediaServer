@@ -264,21 +264,7 @@ public class PlatformHardwareDetectorTests
             return;
 
         string profilerOutput = string.Join(
-            "\n",
-            "Graphics/Displays:",
-            "",
-            "    Apple M2 Pro:",
-            "",
-            "      Chipset Model: Apple M2 Pro",
-            "      Type: GPU",
-            "      Bus: Built-In",
-            "      Total Number of Cores: 19",
-            "      Vendor: Apple (0x106b)",
-            "      Metal Support: Metal 3",
-            "      Displays:",
-            "        Color LCD:",
-            "          VRAM (Dynamic, Max): 21845 MB",
-            ""
+            "\n", ["Graphics/Displays:", "", "    Apple M2 Pro:", "", "      Chipset Model: Apple M2 Pro", "      Type: GPU", "      Bus: Built-In", "      Total Number of Cores: 19", "      Vendor: Apple (0x106b)", "      Metal Support: Metal 3", "      Displays:", "        Color LCD:", "          VRAM (Dynamic, Max): 21845 MB", ""]
         );
 
         _processRunner
@@ -313,15 +299,7 @@ public class PlatformHardwareDetectorTests
             return;
 
         string profilerOutput = string.Join(
-            "\n",
-            "Graphics/Displays:",
-            "",
-            "    AMD Radeon Pro 5500M:",
-            "",
-            "      Chipset Model: AMD Radeon Pro 5500M",
-            "      Type: GPU",
-            "      VRAM (Total): 8 GB",
-            ""
+            "\n", ["Graphics/Displays:", "", "    AMD Radeon Pro 5500M:", "", "      Chipset Model: AMD Radeon Pro 5500M", "      Type: GPU", "      VRAM (Total): 8 GB", ""]
         );
 
         _processRunner

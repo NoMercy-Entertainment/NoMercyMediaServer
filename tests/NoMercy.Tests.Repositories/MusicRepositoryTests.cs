@@ -123,7 +123,7 @@ public class MusicRepositoryTests : IDisposable
             FolderId = SeedConstants.MusicFolderId,
             LibraryFolder = musicFolder,
         };
-        context.Tracks.AddRange(track1, track2, track3);
+        context.Tracks.AddRange([track1, track2, track3]);
 
         Artist artist1 = new()
         {
@@ -147,7 +147,7 @@ public class MusicRepositoryTests : IDisposable
             Library = musicLibrary,
             LibraryFolder = musicFolder,
         };
-        context.Artists.AddRange(artist1, artist2);
+        context.Artists.AddRange([artist1, artist2]);
 
         Album album1 = new()
         {
@@ -173,43 +173,28 @@ public class MusicRepositoryTests : IDisposable
             Library = musicLibrary,
             LibraryFolder = musicFolder,
         };
-        context.Albums.AddRange(album1, album2);
+        context.Albums.AddRange([album1, album2]);
 
         context.SaveChanges();
 
         // Phase 3: Join tables and play history
-        context.AlbumTrack.AddRange(
-            new AlbumTrack(AlbumId1, TrackId1),
-            new AlbumTrack(AlbumId1, TrackId2),
-            new AlbumTrack(AlbumId2, TrackId3)
+        context.AlbumTrack.AddRange([new AlbumTrack(AlbumId1, TrackId1), new AlbumTrack(AlbumId1, TrackId2), new AlbumTrack(AlbumId2, TrackId3)]
         );
 
-        context.ArtistTrack.AddRange(
-            new ArtistTrack(ArtistId1, TrackId1),
-            new ArtistTrack(ArtistId1, TrackId2),
-            new ArtistTrack(ArtistId2, TrackId3)
+        context.ArtistTrack.AddRange([new ArtistTrack(ArtistId1, TrackId1), new ArtistTrack(ArtistId1, TrackId2), new ArtistTrack(ArtistId2, TrackId3)]
         );
 
-        context.AlbumArtist.AddRange(
-            new AlbumArtist(AlbumId1, ArtistId1),
-            new AlbumArtist(AlbumId2, ArtistId2)
+        context.AlbumArtist.AddRange([new AlbumArtist(AlbumId1, ArtistId1), new AlbumArtist(AlbumId2, ArtistId2)]
         );
 
         context.ArtistUser.Add(new(ArtistId1, SeedConstants.UserId));
         context.AlbumUser.Add(new(AlbumId1, SeedConstants.UserId));
         context.TrackUser.Add(new(TrackId1, SeedConstants.UserId));
 
-        context.MusicPlays.AddRange(
-            new MusicPlay(SeedConstants.UserId, TrackId1),
-            new MusicPlay(SeedConstants.UserId, TrackId1),
-            new MusicPlay(SeedConstants.UserId, TrackId1),
-            new MusicPlay(SeedConstants.UserId, TrackId3)
+        context.MusicPlays.AddRange([new MusicPlay(SeedConstants.UserId, TrackId1), new MusicPlay(SeedConstants.UserId, TrackId1), new MusicPlay(SeedConstants.UserId, TrackId1), new MusicPlay(SeedConstants.UserId, TrackId3)]
         );
 
-        context.MusicGenreTrack.AddRange(
-            new MusicGenreTrack(genre.Id, TrackId1),
-            new MusicGenreTrack(genre.Id, TrackId2),
-            new MusicGenreTrack(genre.Id, TrackId3)
+        context.MusicGenreTrack.AddRange([new MusicGenreTrack(genre.Id, TrackId1), new MusicGenreTrack(genre.Id, TrackId2), new MusicGenreTrack(genre.Id, TrackId3)]
         );
 
         context.SaveChanges();

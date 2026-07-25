@@ -120,4 +120,152 @@ public class TitleSortBackfillTests : IDisposable
             artist.TitleSort.Should().Be(current);
         }
     }
+
+    // --- Albums: same requirement as Artists above, exercised separately since
+    // ReconcileAlbumsAsync is its own method with its own batch/no-op logic. ---
+
+    [Fact]
+    public async Task RunAsync_Album_RecomputesDriftedValue_AndFillsNull()
+    {
+        Guid staleId = Guid.NewGuid();
+        Guid nullId = Guid.NewGuid();
+        (Ulid libraryId, Ulid folderId) = await SeedLibraryAndFolder();
+
+        await using (MediaContext ctx = CreateContext())
+        {
+            ctx.Albums.Add(
+                new Album
+                {
+                    Id = staleId,
+                    Name = "The White Album",
+                    TitleSort = "value-from-an-older-algorithm",
+                    LibraryId = libraryId,
+                    FolderId = folderId,
+                    Library = null!,
+                    LibraryFolder = null!,
+                }
+            );
+            ctx.Albums.Add(
+                new Album
+                {
+                    Id = nullId,
+                    Name = "A Moon Shaped Pool",
+                    TitleSort = null,
+                    LibraryId = libraryId,
+                    FolderId = folderId,
+                    Library = null!,
+                    LibraryFolder = null!,
+                }
+            );
+            await ctx.SaveChangesAsync();
+        }
+
+        await TitleSortBackfill.RunAsync(CreateContext, CancellationToken.None);
+
+        await using (MediaContext ctx = CreateContext())
+        {
+            Album drifted = await ctx.Albums.SingleAsync(a => a.Id == staleId);
+            Album wasNull = await ctx.Albums.SingleAsync(a => a.Id == nullId);
+
+            drifted.TitleSort.Should().Be("The White Album".TitleSort());
+            drifted.TitleSort.Should().NotBe("value-from-an-older-algorithm");
+            wasNull.TitleSort.Should().Be("A Moon Shaped Pool".TitleSort());
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_Album_LeavesUpToDateRowsUnchanged()
+    {
+        Guid id = Guid.NewGuid();
+        string current = "The White Album".TitleSort();
+        (Ulid libraryId, Ulid folderId) = await SeedLibraryAndFolder();
+
+        await using (MediaContext ctx = CreateContext())
+        {
+            ctx.Albums.Add(
+                new Album
+                {
+                    Id = id,
+                    Name = "The White Album",
+                    TitleSort = current,
+                    LibraryId = libraryId,
+                    FolderId = folderId,
+                    Library = null!,
+                    LibraryFolder = null!,
+                }
+            );
+            await ctx.SaveChangesAsync();
+        }
+
+        await TitleSortBackfill.RunAsync(CreateContext, CancellationToken.None);
+
+        await using (MediaContext ctx = CreateContext())
+        {
+            Album album = await ctx.Albums.SingleAsync(a => a.Id == id);
+            album.TitleSort.Should().Be(current);
+        }
+    }
+
+    /// <summary>
+    /// Album requires a real Library + Folder (via Driver) row for its non-nullable
+    /// FKs — mirrors the seeding pattern in MusicRepositoryTests rather than relying
+    /// on Album's own default-constructed navigation properties, which EF would try
+    /// to insert as brand-new rows and collide across multiple Albums in one SaveChanges.
+    /// </summary>
+    private async Task<(Ulid LibraryId, Ulid FolderId)> SeedLibraryAndFolder()
+    {
+        Ulid libraryId = Ulid.NewUlid();
+        Ulid folderId = Ulid.NewUlid();
+        Ulid driverId = Ulid.NewUlid();
+
+        await using MediaContext ctx = CreateContext();
+        ctx.Libraries.Add(
+            new()
+            {
+                Id = libraryId,
+                Title = "Music",
+                Type = "music",
+            }
+        );
+        ctx.Drivers.Add(
+            new()
+            {
+                Id = driverId,
+                Name = "Local Filesystem",
+                Type = "local",
+                Config = """{"rootPath":"/"}""",
+            }
+        );
+        ctx.Folders.Add(
+            new()
+            {
+                Id = folderId,
+                Path = "/media/music",
+                DriverId = driverId,
+            }
+        );
+        await ctx.SaveChangesAsync();
+
+        return (libraryId, folderId);
+    }
+
+    [Fact]
+    public async Task RunAsync_NoRowsAtAll_CompletesWithoutError()
+    {
+        // Both Reconcile* methods must exit cleanly on their very first page check
+        // (batch.Count == 0) when the library is empty — the common first-boot case.
+        await TitleSortBackfill.RunAsync(CreateContext, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task RunAsync_ContextFactoryThrows_LogsAndDoesNotThrow()
+    {
+        // RunAsync's outer try/catch must absorb a failure from the context factory
+        // itself (e.g. a locked/corrupt DB file) rather than crashing the deferred
+        // background job that calls it.
+        await TitleSortBackfill.RunAsync(
+            () => throw new InvalidOperationException("simulated context factory failure"),
+            CancellationToken.None
+        );
+    }
 }

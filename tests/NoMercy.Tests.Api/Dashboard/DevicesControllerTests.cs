@@ -69,57 +69,58 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
             );
         }
 
-        ctx.Devices.AddRange(
-            new Device
-            {
-                Id = _ownedDeviceId,
-                DeviceId = _ownedDeviceId.ToString(),
-                Name = "Owned Device",
-                Type = "phone",
-                Browser = "xunit",
-                Os = "TestOS",
-                Version = "1.0",
-                Ip = "127.0.0.1",
-                OwnerUserId = TestUserId,
-            },
-            new Device
-            {
-                Id = _otherDeviceId,
-                DeviceId = _otherDeviceId.ToString(),
-                Name = "Other User Device",
-                Type = "phone",
-                Browser = "xunit",
-                Os = "TestOS",
-                Version = "1.0",
-                Ip = "127.0.0.2",
-                OwnerUserId = otherUserId,
-            },
-            new Device
-            {
-                Id = _onlineDeviceId,
-                DeviceId = _onlineDeviceId.ToString(),
-                Name = "Online Device",
-                Type = "tv",
-                Browser = "xunit",
-                Os = "TestOS",
-                Version = "1.0",
-                Ip = "127.0.0.3",
-                Fingerprint = "online-fp",
-                OwnerUserId = TestUserId,
-            },
-            new Device
-            {
-                Id = _offlineDeviceId,
-                DeviceId = _offlineDeviceId.ToString(),
-                Name = "Offline Device",
-                Type = "tv",
-                Browser = "xunit",
-                Os = "TestOS",
-                Version = "1.0",
-                Ip = "127.0.0.4",
-                Fingerprint = "offline-fp",
-                OwnerUserId = TestUserId,
-            }
+        ctx.Devices.AddRange([
+                new Device
+                {
+                    Id = _ownedDeviceId,
+                    DeviceId = _ownedDeviceId.ToString(),
+                    Name = "Owned Device",
+                    Type = "phone",
+                    Browser = "xunit",
+                    Os = "TestOS",
+                    Version = "1.0",
+                    Ip = "127.0.0.1",
+                    OwnerUserId = TestUserId,
+                },
+                new Device
+                {
+                    Id = _otherDeviceId,
+                    DeviceId = _otherDeviceId.ToString(),
+                    Name = "Other User Device",
+                    Type = "phone",
+                    Browser = "xunit",
+                    Os = "TestOS",
+                    Version = "1.0",
+                    Ip = "127.0.0.2",
+                    OwnerUserId = otherUserId,
+                },
+                new Device
+                {
+                    Id = _onlineDeviceId,
+                    DeviceId = _onlineDeviceId.ToString(),
+                    Name = "Online Device",
+                    Type = "tv",
+                    Browser = "xunit",
+                    Os = "TestOS",
+                    Version = "1.0",
+                    Ip = "127.0.0.3",
+                    Fingerprint = "online-fp",
+                    OwnerUserId = TestUserId,
+                },
+                new Device
+                {
+                    Id = _offlineDeviceId,
+                    DeviceId = _offlineDeviceId.ToString(),
+                    Name = "Offline Device",
+                    Type = "tv",
+                    Browser = "xunit",
+                    Os = "TestOS",
+                    Version = "1.0",
+                    Ip = "127.0.0.4",
+                    Fingerprint = "offline-fp",
+                    OwnerUserId = TestUserId,
+                }
+            ]
         );
 
         ctx.ActivityLogs.Add(

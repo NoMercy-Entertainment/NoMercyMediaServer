@@ -57,9 +57,7 @@ public sealed class FilenameParserPipeline : IFilenameParserPipeline
             if (result is not null)
             {
                 _logger?.LogDebug(
-                    "Filename '{File}' parsed by adapter {Adapter}",
-                    context.FileNameWithExtension,
-                    adapter.Name
+                    "Filename '{File}' parsed by adapter {Adapter}", [context.FileNameWithExtension, adapter.Name]
                 );
                 return result;
             }

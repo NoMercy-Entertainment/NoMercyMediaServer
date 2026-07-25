@@ -31,9 +31,7 @@ public class ValidateStage(ILogger<ValidateStage> logger)
     )
     {
         logger.LogInformation(
-            "[{CorrelationId}] Validating profile '{ProfileName}'",
-            context.CorrelationId,
-            input.Profile.Name
+            "[{CorrelationId}] Validating profile '{ProfileName}'", [context.CorrelationId, input.Profile.Name]
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(input.Profile);
@@ -57,9 +55,7 @@ public class ValidateStage(ILogger<ValidateStage> logger)
 
         foreach (string warning in result.Warnings)
             logger.LogWarning(
-                "[{CorrelationId}] Validation warning: {Message}",
-                context.CorrelationId,
-                warning
+                "[{CorrelationId}] Validation warning: {Message}", [context.CorrelationId, warning]
             );
 
         return Task.FromResult<StageResult>(new StageSuccess<ValidateInput>(input));

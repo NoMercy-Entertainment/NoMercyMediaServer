@@ -139,6 +139,7 @@ public partial class MusicRepository
             )
             .Where(album => album.AlbumTrack.Any(at => at.Track.Duration != null))
             .OrderBy(album => album.TitleSort ?? album.Name)
+            .ThenBy(album => album.Id)
             .Select(album => new AlbumCardDto
             {
                 Id = album.Id,
@@ -183,6 +184,7 @@ public partial class MusicRepository
             .ForUser(userId)
             .Where(album => album.AlbumTrack.Any(at => at.Track.Duration != null))
             .OrderBy(album => album.TitleSort ?? album.Name)
+            .ThenBy(album => album.Id)
             .Select(album => new AlbumCardDto
             {
                 Id = album.Id,
@@ -221,6 +223,7 @@ public partial class MusicRepository
             .Albums.AsNoTracking()
             .Where(album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Any())
             .OrderByDescending(album => album.CreatedAt)
+            .ThenBy(album => album.Id)
             .Select(album => new AlbumCardDto
             {
                 Id = album.Id,
@@ -248,6 +251,8 @@ public partial class MusicRepository
         return await mediaContext
             .AlbumUser.AsNoTracking()
             .Where(albumUser => albumUser.UserId == userId)
+            .OrderBy(albumUser => albumUser.Album.Name)
+            .ThenBy(albumUser => albumUser.Album.Id)
             .Select(albumUser => new AlbumCardDto
             {
                 Id = albumUser.Album.Id,

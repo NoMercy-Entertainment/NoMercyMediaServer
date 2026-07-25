@@ -105,7 +105,9 @@ public sealed class MdnsDeviceScanner : IDisposable
         }
     }
 
-    private static string? ExtractFingerprint(Message msg)
+    // Internal so the pure TXT/SRV/A record parsing is directly unit-testable
+    // against real Makaretu.Dns message objects — no multicast socket needed.
+    internal static string? ExtractFingerprint(Message msg)
     {
         foreach (TXTRecord rec in msg.AdditionalRecords.OfType<TXTRecord>())
         {
@@ -119,7 +121,7 @@ public sealed class MdnsDeviceScanner : IDisposable
         return null;
     }
 
-    private static (string?, int?) ExtractEndpoint(Message msg)
+    internal static (string?, int?) ExtractEndpoint(Message msg)
     {
         SRVRecord? srv = msg.AdditionalRecords.OfType<SRVRecord>().FirstOrDefault();
         if (srv is null)

@@ -73,12 +73,12 @@ public class WallpaperInterfaceTests
 public class WallpaperStyleTests
 {
     [Theory]
-    [InlineData(WallpaperStyle.Fill, 0)]
-    [InlineData(WallpaperStyle.Fit, 1)]
-    [InlineData(WallpaperStyle.Stretch, 2)]
-    [InlineData(WallpaperStyle.Tile, 3)]
-    [InlineData(WallpaperStyle.Center, 4)]
-    [InlineData(WallpaperStyle.Span, 5)]
+    [InlineData([WallpaperStyle.Fill, 0])]
+    [InlineData([WallpaperStyle.Fit, 1])]
+    [InlineData([WallpaperStyle.Stretch, 2])]
+    [InlineData([WallpaperStyle.Tile, 3])]
+    [InlineData([WallpaperStyle.Center, 4])]
+    [InlineData([WallpaperStyle.Span, 5])]
     public void WallpaperStyle_HasExpectedValues(WallpaperStyle style, int expectedValue)
     {
         Assert.Equal(expectedValue, (int)style);
@@ -96,12 +96,12 @@ public class WallpaperStyleTests
 public class LinuxWallpaperStyleMappingTests
 {
     [Theory]
-    [InlineData(WallpaperStyle.Fill, "zoom")]
-    [InlineData(WallpaperStyle.Fit, "scaled")]
-    [InlineData(WallpaperStyle.Stretch, "stretched")]
-    [InlineData(WallpaperStyle.Tile, "wallpaper")]
-    [InlineData(WallpaperStyle.Center, "centered")]
-    [InlineData(WallpaperStyle.Span, "spanned")]
+    [InlineData([WallpaperStyle.Fill, "zoom"])]
+    [InlineData([WallpaperStyle.Fit, "scaled"])]
+    [InlineData([WallpaperStyle.Stretch, "stretched"])]
+    [InlineData([WallpaperStyle.Tile, "wallpaper"])]
+    [InlineData([WallpaperStyle.Center, "centered"])]
+    [InlineData([WallpaperStyle.Span, "spanned"])]
     public void MapStyleToGnome_ReturnsCorrectMapping(WallpaperStyle input, string expected)
     {
         string result = LinuxWallpaperService.MapStyleToGnome(input);
@@ -130,12 +130,12 @@ public class LinuxDesktopDetectionTests
     }
 
     [Theory]
-    [InlineData("GNOME", LinuxWallpaperService.DesktopEnvironment.Gnome)]
-    [InlineData("ubuntu:GNOME", LinuxWallpaperService.DesktopEnvironment.Gnome)]
-    [InlineData("UNITY", LinuxWallpaperService.DesktopEnvironment.Gnome)]
-    [InlineData("KDE", LinuxWallpaperService.DesktopEnvironment.Kde)]
-    [InlineData("XFCE", LinuxWallpaperService.DesktopEnvironment.Xfce)]
-    [InlineData("MATE", LinuxWallpaperService.DesktopEnvironment.Fallback)]
+    [InlineData(["GNOME", LinuxWallpaperService.DesktopEnvironment.Gnome])]
+    [InlineData(["ubuntu:GNOME", LinuxWallpaperService.DesktopEnvironment.Gnome])]
+    [InlineData(["UNITY", LinuxWallpaperService.DesktopEnvironment.Gnome])]
+    [InlineData(["KDE", LinuxWallpaperService.DesktopEnvironment.Kde])]
+    [InlineData(["XFCE", LinuxWallpaperService.DesktopEnvironment.Xfce])]
+    [InlineData(["MATE", LinuxWallpaperService.DesktopEnvironment.Fallback])]
     public void DetectDesktopEnvironment_ReturnsExpected(
         string envValue,
         LinuxWallpaperService.DesktopEnvironment expected
@@ -160,12 +160,12 @@ public class LinuxDesktopDetectionTests
 public class WindowsHexToColorTests
 {
     [Theory]
-    [InlineData("#FF0000", 0x000000FF)] // Red: R=255, G=0, B=0 → 0x00_00_00_FF
-    [InlineData("#00FF00", 0x0000FF00)] // Green: R=0, G=255, B=0 → 0x00_00_FF_00
-    [InlineData("#0000FF", 0x00FF0000)] // Blue: R=0, G=0, B=255 → 0x00_FF_00_00
-    [InlineData("#FFFFFF", 0x00FFFFFF)] // White
-    [InlineData("#000000", 0x00000000)] // Black
-    [InlineData("FF8040", 0x004080FF)] // Without #
+    [InlineData(["#FF0000", 0x000000FF])] // Red: R=255, G=0, B=0 → 0x00_00_00_FF
+    [InlineData(["#00FF00", 0x0000FF00])] // Green: R=0, G=255, B=0 → 0x00_00_FF_00
+    [InlineData(["#0000FF", 0x00FF0000])] // Blue: R=0, G=0, B=255 → 0x00_FF_00_00
+    [InlineData(["#FFFFFF", 0x00FFFFFF])] // White
+    [InlineData(["#000000", 0x00000000])] // Black
+    [InlineData(["FF8040", 0x004080FF])] // Without #
     public void HexToWin32Color_ConvertsCorrectly(string hex, int expected)
     {
         int result = WindowsWallpaperService.HexToWin32Color(hex);

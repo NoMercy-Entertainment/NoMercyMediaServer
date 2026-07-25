@@ -197,7 +197,7 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         };
 
         _assetCache.TryAdd(filePath, asset);
-        _logger.LogDebug("Cached embedded asset: {Path} ({Size} bytes)", filePath, content.Length);
+        _logger.LogDebug("Cached embedded asset: {Path} ({Size} bytes)", [filePath, content.Length]);
 
         return asset;
     }

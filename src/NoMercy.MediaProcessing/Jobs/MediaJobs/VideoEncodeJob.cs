@@ -153,7 +153,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         await using MediaContext context = new();
         await using LibraryRepository libraryRepository = new(context, StorageDriver);
         FileRepository fileRepository = new(context, StorageDriver);
-        FileManager fileManager = new(fileRepository, StorageFactory, StorageDriver);
+        FileManager fileManager = new(
+            fileRepository,
+            StorageFactory,
+            StorageDriver,
+            _mediaAnalyzer!
+        );
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)
@@ -276,8 +281,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // of the bug this coordinated-encode work fixes.
         List<PlannedPreset> ocrOnly = planned
             .Where(entry =>
-                entry.Decision.Action == ReconciliationAction.Partial
-                && entry.Decision.MissingKinds.Count == 0
+                entry.Decision is { Action: ReconciliationAction.Partial, MissingKinds.Count: 0 }
             )
             .ToList();
 
@@ -451,8 +455,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // since a top-up must not rewrite the master and a Full run must.
         bool isPartialTopUp = false;
         if (
-            needsWork.Count == 1
-            && needsWork[0].Decision.Action == ReconciliationAction.Partial
+            needsWork is [{ Decision.Action: ReconciliationAction.Partial }]
             && needsWork[0].Decision.MissingKinds.Count > 0
         )
         {
@@ -472,7 +475,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             }
         }
 
-        bool isWhole = tasks.Length == 1 && tasks[0].Kind == EncodeTaskKind.Whole;
+        bool isWhole = tasks is [{ Kind: EncodeTaskKind.Whole }];
 
         if (isWhole)
         {
@@ -595,8 +598,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // filtering down to the missing kinds here never starves a
         // Whole-task (MKV/MP4) run of its only task.
         if (
-            reconciliation.Action == ReconciliationAction.Partial
-            && reconciliation.MissingKinds.Count > 0
+            reconciliation is { Action: ReconciliationAction.Partial, MissingKinds.Count: > 0 }
         )
         {
             tasks = tasks.Where(task => reconciliation.MissingKinds.Contains(task.Kind)).ToArray();
@@ -614,7 +616,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             }
         }
 
-        bool isWhole = tasks.Length == 1 && tasks[0].Kind == EncodeTaskKind.Whole;
+        bool isWhole = tasks is [{ Kind: EncodeTaskKind.Whole }];
 
         if (isWhole)
         {
@@ -981,7 +983,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         await using MediaContext context = new();
 
         FileRepository fileRepository = new(context, StorageDriver);
-        FileManager fileManager = new(fileRepository, StorageFactory, StorageDriver);
+        FileManager fileManager = new(
+            fileRepository,
+            StorageFactory,
+            StorageDriver,
+            _mediaAnalyzer!
+        );
 
         await using LibraryRepository libraryRepository = new(context, StorageDriver);
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
@@ -1201,7 +1208,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // The bundles already finalized and published themselves. Running the
         // pipeline again over the tempDir they emptied would only rediscover that
         // there is nothing there. Fall through to post-encode, which is the part
-        // that still has work to do.
+        // that still has work to do. The post-encode scan (FileManager.MakeMetadata)
+        // is what rebuilds the master playlist from disk now — see
+        // RebuildHlsMasterFromDiskAsync — because it reliably reads the fully-
+        // published media root, unlike this coordinator's own scope which can
+        // resolve against only the last bundle's own rendition.
         if (bundlesSelfFinalized)
         {
             Log.LogInformation(
@@ -1214,7 +1225,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             await PublishStageAsync(fileMetadata, "Publishing artifacts");
             try
             {
-                EncodingResult publishResult = await orchestrator.EncodeAsync(finalizeRequest);
+                EncodingResult publishResult = await orchestrator.EncodeAsync(
+                    finalizeRequest,
+                    ct: _shutdownToken
+                );
                 if (!publishResult.Success)
                 {
                     string err =
@@ -1817,7 +1831,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             registry: processRegistry
         );
 
-        EncodingResult result = await orchestrator.EncodeAsync(request, progressObserver);
+        EncodingResult result = await orchestrator.EncodeAsync(
+            request,
+            progressObserver,
+            _shutdownToken
+        );
 
         if (!result.Success)
         {

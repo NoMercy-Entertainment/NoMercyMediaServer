@@ -12,10 +12,12 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NoMercy.Events;
 using NoMercy.Events.Plugins;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -126,6 +128,36 @@ public class PluginManagerTests : IDisposable
     }
 
     [Fact]
+    public void Constructor_NullDriver_Throws()
+    {
+        Action act = () =>
+            new PluginManager(
+                new InMemoryEventBus(),
+                new MinimalServiceProvider(),
+                NullLogger<PluginManager>.Instance,
+                "/tmp",
+                TestStorageHelper.CreateStorage("/tmp"),
+                null!
+            );
+        act.Should().Throw<ArgumentNullException>().WithParameterName("driver");
+    }
+
+    [Fact]
+    public void Constructor_NullStorage_Throws()
+    {
+        Action act = () =>
+            new PluginManager(
+                new InMemoryEventBus(),
+                new MinimalServiceProvider(),
+                NullLogger<PluginManager>.Instance,
+                "/tmp",
+                null!,
+                TestStorageHelper.CreateBackend()
+            );
+        act.Should().Throw<ArgumentNullException>().WithParameterName("storage");
+    }
+
+    [Fact]
     public void GetInstalledPlugins_NoPluginsLoaded_ReturnsEmptyList()
     {
         IReadOnlyList<PluginInfo> plugins = _manager.GetInstalledPlugins();
@@ -210,6 +242,64 @@ public class PluginManagerTests : IDisposable
 
         await act.Should().NotThrowAsync();
         manager.Dispose();
+    }
+
+    [Fact]
+    public async Task LoadPluginsFromDirectoryAsync_UnexpectedStorageFailureForOneDirectory_SkipsItAndContinues()
+    {
+        // "Defense in depth" (see the source comment on this catch): the per-plugin
+        // load helpers already isolate their OWN failures internally, so the only
+        // way to reach PluginManager's OWN catch here is a fault from the storage
+        // layer itself — e.g. mid-scan I/O trouble on one specific directory while
+        // the rest of the plugins root is fine. IStorage is PluginManager's
+        // collaborator (not the type under test), so substituting a controlled
+        // fault for it is the correct way to prove this isolation for real rather
+        // than merely by reading the comment.
+        Mock<IStorage> storage = new(MockBehavior.Strict);
+        storage.Setup(s => s.Exists(_tempPluginsDir)).Returns(true);
+        storage
+            .Setup(s => s.List(_tempPluginsDir, null, false))
+            .Returns([
+                new StorageEntry("FaultyPlugin", true, 0, DateTimeOffset.UtcNow),
+                new StorageEntry("GoodPlugin", true, 0, DateTimeOffset.UtcNow),
+            ]);
+        storage.Setup(s => s.Exists(Path.Combine("FaultyPlugin", "plugin.json"))).Returns(false);
+        storage
+            .Setup(s => s.List("FaultyPlugin", "*.dll", false))
+            .Throws(new IOException("simulated storage fault enumerating FaultyPlugin"));
+        storage.Setup(s => s.Exists(Path.Combine("GoodPlugin", "plugin.json"))).Returns(false);
+        storage.Setup(s => s.List("GoodPlugin", "*.dll", false)).Returns([]);
+
+        PluginManager faultyManager = new(
+            new InMemoryEventBus(),
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir,
+            storage.Object,
+            TestStorageHelper.CreateBackend()
+        );
+
+        Func<Task> act = () => faultyManager.LoadPluginsFromDirectoryAsync();
+
+        await act.Should()
+            .NotThrowAsync("GoodPlugin must still be scanned after FaultyPlugin's failure");
+        storage.Verify(s => s.List("GoodPlugin", "*.dll", false), Times.Once);
+        faultyManager.Dispose();
+    }
+
+    [Fact]
+    public async Task LoadPluginsFromDirectoryAsync_StrayFileAtTopLevel_IsSkipped()
+    {
+        // The top-level listing is non-recursive and includes files alongside
+        // plugin subdirectories — a stray file sitting directly in the plugins
+        // root (never a valid plugin location) must be skipped via IsDirectory,
+        // not treated as a plugin directory name.
+        await File.WriteAllTextAsync(Path.Combine(_tempPluginsDir, "stray.txt"), "not a plugin");
+
+        Func<Task> act = () => _manager.LoadPluginsFromDirectoryAsync();
+
+        await act.Should().NotThrowAsync();
+        _manager.GetInstalledPlugins().Should().BeEmpty();
     }
 
     [Fact]

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Users;
@@ -75,15 +76,52 @@ public class UserRepository(MediaContext context, IDbContextFactory<MediaContext
     {
         await using MediaContext deleteContext = await contextFactory.CreateDbContextAsync();
 
-        User? user = await deleteContext
-            .Users.Include(user => user.LibraryUser)
-            .FirstOrDefaultAsync(user => user.Id == userId);
-
-        if (user is null)
+        bool exists = await deleteContext.Users.AnyAsync(user => user.Id == userId);
+        if (!exists)
             return;
 
-        deleteContext.Users.Remove(user);
-        await deleteContext.SaveChangesAsync();
+        // Every table that references User defaults to DeleteBehavior.Restrict
+        // (MediaContext's schema-wide default), so deleting the User row while any of them
+        // still reference it throws instead of deleting. Clear each Restrict dependent
+        // first, deepest first, then delete the User; the database itself then resolves the
+        // remaining Cascade/SetNull foreign keys (Device un-owns itself, PlaylistItem
+        // cascades from its UserPlaylist). Dropping the account legitimately drops that
+        // user's own grants, preferences and history and touches no other user's data.
+        // The whole thing runs in one transaction so a mid-sweep failure never leaves a
+        // half-deleted account behind.
+        await using IDbContextTransaction transaction =
+            await deleteContext.Database.BeginTransactionAsync();
+
+        // PlaylistTrack -> Playlist is itself Restrict, so it has to go before the user's
+        // Playlist rows can be removed.
+        await deleteContext
+            .PlaylistTrack.Where(pt =>
+                deleteContext.Playlists.Any(p => p.Id == pt.PlaylistId && p.UserId == userId)
+            )
+            .ExecuteDeleteAsync();
+
+        await deleteContext.LibraryUser.Where(lu => lu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.MovieUser.Where(mu => mu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.TvUser.Where(tu => tu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.CollectionUser.Where(cu => cu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.SpecialUser.Where(su => su.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.NotificationUser.Where(nu => nu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.AlbumUser.Where(au => au.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.ArtistUser.Where(au => au.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.TrackUser.Where(tu => tu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext
+            .PlaybackPreferences.Where(pp => pp.UserId == userId)
+            .ExecuteDeleteAsync();
+        await deleteContext.MusicPlays.Where(mp => mp.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.UserData.Where(ud => ud.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.ActivityLogs.Where(al => al.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.DeviceDropNotices.Where(dn => dn.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.UserPlaylists.Where(up => up.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.Playlists.Where(p => p.UserId == userId).ExecuteDeleteAsync();
+
+        await deleteContext.Users.Where(user => user.Id == userId).ExecuteDeleteAsync();
+
+        await transaction.CommitAsync();
     }
 
     public async Task UpdatePermissionsAsync(

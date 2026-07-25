@@ -152,7 +152,7 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         Task<TmdbPaginatedResponse<TmdbPerson>?> personTask = client.Person("Leonardo DiCaprio");
         Task<TmdbPaginatedResponse<TmdbMultiSearch>?> multiTask = client.Multi("Marvel");
 
-        await Task.WhenAll(movieTask, tvTask, personTask, multiTask);
+        await Task.WhenAll([movieTask, tvTask, personTask, multiTask]);
 
         // Assert
         (await movieTask)

@@ -367,6 +367,70 @@ public class QueueEngineEndToEndTests : IDisposable
         _context.FailedJobs.Count().Should().Be(0);
     }
 
+    /// <summary>
+    /// The scenario that motivated this whole file: a server restart mid-scan
+    /// leaves a job reserved (e.g. a FileRescanJob) with nothing to ever clear
+    /// it. Orphan recovery alone only proves the reservation gets released —
+    /// this chains a REAL <see cref="QueueWorker"/> onto the requeued row so
+    /// the assertion is "the interrupted job actually resumes and completes",
+    /// not merely "its ReservedAt went back to null".
+    /// </summary>
+    [Fact]
+    public async Task OrphanRecovery_RequeuedJob_IsThenPickedUpByARealWorkerAndCompletes()
+    {
+        SemaphoreSlim done = new(0, 1);
+        string jobKey = Guid.NewGuid().ToString("N");
+        CompletionSignalJob.RegisterCompletion(jobKey, () => done.Release());
+
+        QueueJob interruptedByRestart = new()
+        {
+            Queue = "worker-success",
+            Payload = SerializationHelper.Serialize(new CompletionSignalJob { JobKey = jobKey }),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(-5),
+            Attempts = 1,
+        };
+        _context.QueueJobs.Add(interruptedByRestart);
+        await _context.SaveChangesAsync();
+
+        ServiceCollection services = new();
+        services.AddSingleton<IQueueContext>(_adapter);
+        ServiceProvider provider = services.BuildServiceProvider();
+        OrphanJobRecoveryHostedService recovery = new(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<OrphanJobRecoveryHostedService>.Instance
+        );
+        await recovery.StartAsync(CancellationToken.None);
+        if (recovery.ExecuteTask is not null)
+            await recovery.ExecuteTask;
+
+        _context
+            .QueueJobs.Count()
+            .Should()
+            .Be(1, "the boot pass grants a first-time orphan one clean retry, not a dead-letter");
+        _context.QueueJobs.Single().ReservedAt.Should().BeNull();
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        QueueWorker worker = new(_jobQueue, "worker-success");
+        Task workerTask = worker.StartAsync(cts.Token);
+
+        bool completed = await done.WaitAsync(TimeSpan.FromSeconds(8));
+        worker.Stop();
+        cts.Cancel();
+        await workerTask;
+
+        completed
+            .Should()
+            .BeTrue(
+                "the job orphan recovery released for retry must actually resume and run to completion"
+            );
+        _context
+            .QueueJobs.Count()
+            .Should()
+            .Be(0, "the resumed job must be deleted from the queue once it completes");
+        _context.FailedJobs.Count().Should().Be(0);
+    }
+
     // ── Orphan recovery: ResetAllReservedJobs on Initialize ───────────────
 
     [Fact]

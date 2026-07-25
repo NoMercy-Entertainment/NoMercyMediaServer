@@ -10,7 +10,9 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Sources;
@@ -382,5 +384,268 @@ public class DiscScannerTests
         result.Titles[0].VideoStreams.Should().HaveCount(2);
         result.Titles[0].VideoStreams[0].Codec.Should().Be("h264");
         result.Titles[0].VideoStreams[1].Codec.Should().Be("hevc");
+    }
+
+    // ── ScanAsync — end to end via mocked IProcessRunner ──────────────────
+
+    [Fact]
+    public async Task ScanAsync_NonBlurayPath_SkipsPreProbe_ScansDirectly()
+    {
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                new ProcessResult(0, """{"format":{"duration":"3600"}}""", "", TimeSpan.Zero)
+            );
+
+        DiscScanner sut = MakeSut(runner.Object);
+
+        DiscInfo result = await sut.ScanAsync("/dev/sr0", CancellationToken.None);
+
+        result.Type.Should().Be(OpticalDiscType.Dvd);
+        result.Titles.Should().HaveCount(1);
+        // Only one ffprobe call for a non-Blu-ray path — no 1s pre-probe.
+        runner.Verify(
+            r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task ScanAsync_BlurayPath_RunsPreProbeThenFullScan()
+    {
+        Mock<IProcessRunner> runner = new();
+        runner
+            .SetupSequence(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero)) // pre-probe
+            .ReturnsAsync(
+                new ProcessResult(0, """{"format":{"duration":"5400"}}""", "", TimeSpan.Zero)
+            ); // full scan
+
+        DiscScanner sut = MakeSut(runner.Object);
+
+        DiscInfo result = await sut.ScanAsync("bluray:/dev/sr0", CancellationToken.None);
+
+        result.Type.Should().Be(OpticalDiscType.BluRay);
+        result.Titles[0].Duration.Should().Be(TimeSpan.FromSeconds(5400));
+        runner.Verify(
+            r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Exactly(2)
+        );
+    }
+
+    [Fact]
+    public async Task ScanAsync_BlurayPreProbeDetectsAacsFailure_ThrowsRuntimeException()
+    {
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(1, "", "aacs: no matching certificate", TimeSpan.Zero));
+
+        DiscScanner sut = MakeSut(runner.Object);
+
+        Func<Task> act = () => sut.ScanAsync("bluray:/dev/sr0", CancellationToken.None);
+
+        await act.Should().ThrowAsync<Exception>();
+    }
+
+    [Fact]
+    public async Task ScanAsync_FfprobeExitsNonZero_ReturnsEmptyTitlesDiscInfo()
+    {
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(1, "", "no such file", TimeSpan.Zero));
+
+        DiscScanner sut = MakeSut(runner.Object);
+
+        DiscInfo result = await sut.ScanAsync("/dev/sr0", CancellationToken.None);
+
+        result.Titles.Should().BeEmpty();
+        result.DiscLabel.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ScanAsync_MalformedJsonFromFfprobe_ReturnsEmptyTitlesDiscInfo_WithoutThrowing()
+    {
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, "{ not valid json", "", TimeSpan.Zero));
+
+        DiscScanner sut = MakeSut(runner.Object);
+
+        DiscInfo result = await sut.ScanAsync("/dev/sr0", CancellationToken.None);
+
+        result.Titles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ScanAsync_BlurayPreProbeTimesOut_ProceedsToFullScanAnyway()
+    {
+        // The 1-second pre-probe uses its own linked CTS; a timeout there
+        // (OperationCanceledException where the OUTER token is NOT itself
+        // cancelled) must be swallowed and the real scan must still run.
+        Mock<IProcessRunner> runner = new();
+        runner
+            .SetupSequence(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ThrowsAsync(new OperationCanceledException("pre-probe timed out"))
+            .ReturnsAsync(
+                new ProcessResult(0, """{"format":{"duration":"1800"}}""", "", TimeSpan.Zero)
+            );
+
+        DiscScanner sut = MakeSut(runner.Object);
+
+        DiscInfo result = await sut.ScanAsync("bluray:/dev/sr0", CancellationToken.None);
+
+        result.Titles[0].Duration.Should().Be(TimeSpan.FromSeconds(1800));
+    }
+
+    // ── ClassifyBluRayStderr — direct unit tests (pure function) ───────────
+
+    [Fact]
+    public void ClassifyBluRayStderr_EmptyStderr_DoesNotThrow()
+    {
+        Action act = () => DiscScanner.ClassifyBluRayStderr("/dev/sr0", "");
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void ClassifyBluRayStderr_AacsNoMatchingCertificate_ThrowsDiscAacsCertMissing()
+    {
+        Action act = () =>
+            DiscScanner.ClassifyBluRayStderr("/dev/sr0", "aacs: no matching certificate");
+
+        act.Should().Throw<EncoderRuntimeException>();
+    }
+
+    [Fact]
+    public void ClassifyBluRayStderr_BdplusNoMatchingConverter_ThrowsDiscBdplusConverterMissing()
+    {
+        Action act = () =>
+            DiscScanner.ClassifyBluRayStderr("/dev/sr0", "bdplus: no matching converter");
+
+        act.Should().Throw<EncoderRuntimeException>();
+    }
+
+    [Theory]
+    [InlineData("Protocol not found")]
+    [InlineData("No such file or directory")]
+    [InlineData("Input/output error")]
+    public void ClassifyBluRayStderr_ProtocolLevelFailure_ThrowsDiscReadError(string stderrText)
+    {
+        Action act = () => DiscScanner.ClassifyBluRayStderr("/dev/sr0", stderrText);
+
+        act.Should().Throw<EncoderRuntimeException>();
+    }
+
+    [Fact]
+    public void ClassifyBluRayStderr_UnrecognizedStderr_DoesNotThrow()
+    {
+        Action act = () =>
+            DiscScanner.ClassifyBluRayStderr("/dev/sr0", "some unrelated ffmpeg warning");
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void ClassifyBluRayStderr_ExtractsVolumeIdFromHexString_IncludesItInException()
+    {
+        string stderr = "aacs: no matching certificate for volume 0123456789ABCDEF0123456789ABCDEF";
+
+        Action act = () => DiscScanner.ClassifyBluRayStderr("/dev/sr0", stderr);
+
+        act.Should()
+            .Throw<EncoderRuntimeException>()
+            .Where(ex => ex.Message.Contains("0123456789ABCDEF0123456789ABCDEF"));
+    }
+
+    [Fact]
+    public async Task ScanAsync_FfprobeFailsWithEmptyStderr_LogsNoStderrPlaceholderWithoutThrowing()
+    {
+        // Exercises DiscScanner's private TrimStderr("(no stderr)" branch) —
+        // only reachable when a real ffprobe failure carries no stderr text
+        // at all, distinct from the "no such file"-style failures used by
+        // the sibling ScanAsync failure test above.
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(1, "", "", TimeSpan.Zero));
+
+        DiscScanner sut = MakeSut(runner.Object);
+
+        DiscInfo result = await sut.ScanAsync("/dev/sr0", CancellationToken.None);
+
+        result.Titles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ClassifyBluRayStderr_NoHexVolumeId_FallsBackToDrivePath()
+    {
+        Action act = () =>
+            DiscScanner.ClassifyBluRayStderr("/dev/sr0", "aacs: no matching certificate");
+
+        act.Should().Throw<EncoderRuntimeException>().Where(ex => ex.Message.Contains("/dev/sr0"));
     }
 }

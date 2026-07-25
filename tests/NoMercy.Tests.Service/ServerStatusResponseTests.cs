@@ -11,7 +11,6 @@
 
 using Newtonsoft.Json;
 using NoMercy.Launcher.Models;
-using Xunit;
 
 namespace NoMercy.Tests.Service;
 

@@ -91,11 +91,9 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(
-                MakeLocalDriver(moviesId, @"C:\Media\Movies"),
-                MakeLocalDriver(tvId, @"C:\Media\TV")
+            seed.Drivers.AddRange([MakeLocalDriver(moviesId, @"C:\Media\Movies"), MakeLocalDriver(tvId, @"C:\Media\TV")]
             );
-            seed.Folders.AddRange(MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId));
+            seed.Folders.AddRange([MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId)]);
             await seed.SaveChangesAsync();
         }
 
@@ -134,20 +132,18 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(
-                MakeLocalDriver(moviesId, @"C:\Media\Movies"),
-                MakeLocalDriver(tvId, @"C:\Media\TV"),
-                new Driver
-                {
-                    Id = sharedId,
-                    Name = @"C:\Media",
-                    Type = "local",
-                    Config = "{\"rootPath\":\"C:\\\\Media\"}",
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    UpdatedAt = DateTimeOffset.UtcNow,
-                }
+            seed.Drivers.AddRange([MakeLocalDriver(moviesId, @"C:\Media\Movies"), MakeLocalDriver(tvId, @"C:\Media\TV"), new Driver
+                    {
+                        Id = sharedId,
+                        Name = @"C:\Media",
+                        Type = "local",
+                        Config = "{\"rootPath\":\"C:\\\\Media\"}",
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        UpdatedAt = DateTimeOffset.UtcNow,
+                    }
+                ]
             );
-            seed.Folders.AddRange(MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId));
+            seed.Folders.AddRange([MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId)]);
             await seed.SaveChangesAsync();
         }
 
@@ -218,11 +214,9 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(
-                MakeLocalDriver(moviesId, @"C:\Media\Movies"),
-                MakeLocalDriver(tvId, @"C:\Media\TV")
+            seed.Drivers.AddRange([MakeLocalDriver(moviesId, @"C:\Media\Movies"), MakeLocalDriver(tvId, @"C:\Media\TV")]
             );
-            seed.Folders.AddRange(MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId));
+            seed.Folders.AddRange([MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId)]);
             await seed.SaveChangesAsync();
         }
 
@@ -340,29 +334,28 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(
-                new Driver
-                {
-                    Id = nfsDriverId,
-                    Name = "NFS",
-                    Type = "nfs",
-                    Config = "{\"host\":\"192.168.1.1\",\"share\":\"/media\"}",
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    UpdatedAt = DateTimeOffset.UtcNow,
-                },
-                new Driver
-                {
-                    Id = s3DriverId,
-                    Name = "S3",
-                    Type = "s3",
-                    Config = "{\"bucket\":\"my-media\",\"region\":\"eu-west-1\"}",
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    UpdatedAt = DateTimeOffset.UtcNow,
-                }
+            seed.Drivers.AddRange([
+                    new Driver
+                    {
+                        Id = nfsDriverId,
+                        Name = "NFS",
+                        Type = "nfs",
+                        Config = "{\"host\":\"192.168.1.1\",\"share\":\"/media\"}",
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        UpdatedAt = DateTimeOffset.UtcNow,
+                    },
+                    new Driver
+                    {
+                        Id = s3DriverId,
+                        Name = "S3",
+                        Type = "s3",
+                        Config = "{\"bucket\":\"my-media\",\"region\":\"eu-west-1\"}",
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        UpdatedAt = DateTimeOffset.UtcNow,
+                    }
+                ]
             );
-            seed.Folders.AddRange(
-                MakeRealDriverFolder(nfsFolderId, nfsDriverId, "Movies"),
-                MakeRealDriverFolder(s3FolderId, s3DriverId, "TV")
+            seed.Folders.AddRange([MakeRealDriverFolder(nfsFolderId, nfsDriverId, "Movies"), MakeRealDriverFolder(s3FolderId, s3DriverId, "TV")]
             );
             await seed.SaveChangesAsync();
         }
@@ -402,23 +395,20 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(
-                new Driver
-                {
-                    Id = realDriverId,
-                    Name = "S3",
-                    Type = "s3",
-                    Config = "{\"bucket\":\"media\"}",
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    UpdatedAt = DateTimeOffset.UtcNow,
-                },
-                MakeLocalDriver(moviesId, @"D:\Media\Movies"),
-                MakeLocalDriver(tvId, @"D:\Media\TV")
+            seed.Drivers.AddRange([
+                    new Driver
+                    {
+                        Id = realDriverId,
+                        Name = "S3",
+                        Type = "s3",
+                        Config = "{\"bucket\":\"media\"}",
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        UpdatedAt = DateTimeOffset.UtcNow,
+                    },
+                    MakeLocalDriver(moviesId, @"D:\Media\Movies"), MakeLocalDriver(tvId, @"D:\Media\TV")
+                ]
             );
-            seed.Folders.AddRange(
-                MakeRealDriverFolder(realFolderId, realDriverId, "Films"),
-                MakeSelfDriverFolder(moviesId),
-                MakeSelfDriverFolder(tvId)
+            seed.Folders.AddRange([MakeRealDriverFolder(realFolderId, realDriverId, "Films"), MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId)]
             );
             await seed.SaveChangesAsync();
         }
@@ -456,11 +446,9 @@ public class V1DriverBridgeSeedTests : IDisposable
 
         await using (MediaContext seed = CreateContext())
         {
-            seed.Drivers.AddRange(
-                MakeLocalDriver(moviesId, @"C:\Data\Media\Movies"),
-                MakeLocalDriver(tvId, @"C:\Data\Media\TV")
+            seed.Drivers.AddRange([MakeLocalDriver(moviesId, @"C:\Data\Media\Movies"), MakeLocalDriver(tvId, @"C:\Data\Media\TV")]
             );
-            seed.Folders.AddRange(MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId));
+            seed.Folders.AddRange([MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId)]);
             await seed.SaveChangesAsync();
         }
 
@@ -548,23 +536,18 @@ public class V1DriverBridgeSeedTests : IDisposable
             {
                 await seedCtx.Database.EnsureCreatedAsync();
 
-                seedCtx.Drivers.AddRange(
-                    MakeLocalDriver(moviesId, @"C:\Media\Movies"),
-                    MakeLocalDriver(tvId, @"C:\Media\TV"),
-                    new Driver
-                    {
-                        Id = configuredDriverId,
-                        Name = "NAS",
-                        Type = "nfs",
-                        Config = "{\"host\":\"192.168.1.1\"}",
-                        CreatedAt = DateTimeOffset.UtcNow,
-                        UpdatedAt = DateTimeOffset.UtcNow,
-                    }
+                seedCtx.Drivers.AddRange([MakeLocalDriver(moviesId, @"C:\Media\Movies"), MakeLocalDriver(tvId, @"C:\Media\TV"), new Driver
+                        {
+                            Id = configuredDriverId,
+                            Name = "NAS",
+                            Type = "nfs",
+                            Config = "{\"host\":\"192.168.1.1\"}",
+                            CreatedAt = DateTimeOffset.UtcNow,
+                            UpdatedAt = DateTimeOffset.UtcNow,
+                        }
+                    ]
                 );
-                seedCtx.Folders.AddRange(
-                    MakeSelfDriverFolder(moviesId),
-                    MakeSelfDriverFolder(tvId),
-                    MakeRealDriverFolder(configuredFolderId, configuredDriverId, "Films")
+                seedCtx.Folders.AddRange([MakeSelfDriverFolder(moviesId), MakeSelfDriverFolder(tvId), MakeRealDriverFolder(configuredFolderId, configuredDriverId, "Films")]
                 );
                 await seedCtx.SaveChangesAsync();
             }

@@ -27,7 +27,6 @@ namespace NoMercy.Tests.MediaProcessing;
 /// </summary>
 internal static class MediaProcessingTestInit
 {
-
     [ModuleInitializer]
     internal static void Initialize()
     {

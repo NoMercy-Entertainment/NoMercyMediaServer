@@ -18,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.AcoustId;
@@ -60,26 +61,20 @@ public class ReleaseImportJob : AbstractMusicFolderJob
         await using MediaScan mediaScan = new(StorageDriver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
-            // .EnableFileListing()
             .Process(InputFolder, 1);
 
         if (rootFolders.Count == 0)
         {
             Log.LogTrace("Processing folder: {InputFolder}", InputFolder);
-            Folder baseFolder = albumLibrary
-                .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
-                .First(f =>
-                {
-                    // Resolve through the driver, not the IStorage facade: the
-                    // facade's GetFullPath is a LocalStorage-only escape hatch
-                    // that throws on every remote backend, so a facade call
-                    // here killed folder matching for NFS / SMB / S3 / WebDAV
-                    // music libraries.
-                    string driverRoot = StorageFactory
-                        .For(f.Id, f.DriverId, string.Empty)
-                        .Driver.GetFullPath(f.Path);
-                    return InputFolder.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
-                });
+            Folder? baseFolder = MatchLibraryFolder(albumLibrary, InputFolder);
+            if (baseFolder is null)
+            {
+                Log.LogWarning(
+                    "ReleaseImportJob: no library folder contains {InputFolder}; skipping",
+                    InputFolder
+                );
+                return;
+            }
 
             jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, InputFolder);
             return;
@@ -91,26 +86,41 @@ public class ReleaseImportJob : AbstractMusicFolderJob
             folder =>
             {
                 Log.LogInformation("Processing folder: {Path}", folder.Path);
-                Folder baseFolder = albumLibrary
-                    .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
-                    .First(f =>
-                    {
-                        // Resolve through the driver, not the IStorage facade: the
-                        // facade's GetFullPath is a LocalStorage-only escape hatch
-                        // that throws on every remote backend, so a facade call
-                        // here killed folder matching for NFS / SMB / S3 / WebDAV
-                        // music libraries.
-                        string driverRoot = StorageFactory
-                            .For(f.Id, f.DriverId, string.Empty)
-                            .Driver.GetFullPath(f.Path);
-                        return folder.Path.StartsWith(
-                            driverRoot,
-                            StringComparison.OrdinalIgnoreCase
-                        );
-                    });
+                Folder? baseFolder = MatchLibraryFolder(albumLibrary, folder.Path);
+                if (baseFolder is null)
+                {
+                    Log.LogWarning(
+                        "ReleaseImportJob: no library folder contains {Path}; skipping",
+                        folder.Path
+                    );
+                    return;
+                }
 
                 jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, folder.Path);
             }
         );
     }
+
+    /// <summary>
+    /// The configured library folder whose root contains <paramref name="absolutePath"/>,
+    /// or null when none does. The root is resolved facade-first
+    /// (<see cref="LibraryManager.ResolveScanRoot"/>): a local library's root lives in
+    /// the storage facade, and the raw driver's GetFullPath canonicalizes the
+    /// scope-relative folder path against the process working directory instead —
+    /// so a driver-only resolve produced a bogus "/app/Libraries/Music" root, matched
+    /// nothing, and the old <c>.First(...)</c> threw "Sequence contains no matching
+    /// element" for every music release on a local/UNC library.
+    /// </summary>
+    private Folder? MatchLibraryFolder(Library library, string absolutePath) =>
+        library
+            .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
+            .FirstOrDefault(f =>
+                absolutePath.StartsWith(
+                    LibraryManager.ResolveScanRoot(
+                        StorageFactory.For(f.Id, f.DriverId, string.Empty),
+                        f.Path
+                    ),
+                    StringComparison.OrdinalIgnoreCase
+                )
+            );
 }

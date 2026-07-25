@@ -25,21 +25,21 @@ public class LadderTiersTests
     public void AppleHlsRecommended_labels_are_correct()
     {
         string[] labels = LadderTiers.AppleHlsRecommended.Select(t => t.Label).ToArray();
-        labels.Should().Equal("360p", "540p", "720p", "1080p", "1440p", "2160p");
+        labels.Should().Equal(["360p", "540p", "720p", "1080p", "1440p", "2160p"]);
     }
 
     [Fact]
     public void AppleHlsRecommended_heights_are_correct()
     {
         int[] heights = LadderTiers.AppleHlsRecommended.Select(t => t.Height).ToArray();
-        heights.Should().Equal(360, 540, 720, 1080, 1440, 2160);
+        heights.Should().Equal([360, 540, 720, 1080, 1440, 2160]);
     }
 
     [Fact]
     public void AppleHlsRecommended_widths_are_correct()
     {
         int[] widths = LadderTiers.AppleHlsRecommended.Select(t => t.Width).ToArray();
-        widths.Should().Equal(640, 960, 1280, 1920, 2560, 3840);
+        widths.Should().Equal([640, 960, 1280, 1920, 2560, 3840]);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class LadderTiersTests
         int?[] bitrates = LadderTiers
             .AppleHlsRecommended.Select(t => t.RecommendedBitrateH264Kbps)
             .ToArray();
-        bitrates.Should().Equal(365, 2000, 3000, 6000, 12000, 24000);
+        bitrates.Should().Equal([365, 2000, 3000, 6000, 12000, 24000]);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class LadderTiersTests
         int?[] bitrates = LadderTiers
             .AppleHlsRecommended.Select(t => t.RecommendedBitrateHevcKbps)
             .ToArray();
-        bitrates.Should().Equal(200, 800, 1600, 3400, 6000, 11600);
+        bitrates.Should().Equal([200, 800, 1600, 3400, 6000, 11600]);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class LadderTiersTests
         int?[] bitrates = LadderTiers
             .AppleHlsRecommended.Select(t => t.RecommendedBitrateAv1Kbps)
             .ToArray();
-        bitrates.Should().Equal(150, 600, 1200, 2500, 4500, 8000);
+        bitrates.Should().Equal([150, 600, 1200, 2500, 4500, 8000]);
     }
 
     [Fact]
@@ -112,14 +112,14 @@ public class LadderTiersTests
     public void Standard_labels_are_correct()
     {
         string[] labels = LadderTiers.Standard.Select(t => t.Label).ToArray();
-        labels.Should().Equal("480p", "720p", "1080p");
+        labels.Should().Equal(["480p", "720p", "1080p"]);
     }
 
     [Fact]
     public void Standard_H264_bitrates_are_correct()
     {
         int?[] bitrates = LadderTiers.Standard.Select(t => t.RecommendedBitrateH264Kbps).ToArray();
-        bitrates.Should().Equal(1500, 3000, 6000);
+        bitrates.Should().Equal([1500, 3000, 6000]);
     }
 
     [Fact]

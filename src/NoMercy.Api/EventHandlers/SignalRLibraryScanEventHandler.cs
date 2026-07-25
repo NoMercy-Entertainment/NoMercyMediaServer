@@ -70,9 +70,7 @@ public class SignalRLibraryScanEventHandler : IDisposable
         );
 
         _logger.LogInformation(
-            "Library scan completed: {LibraryName}, {ItemsFound} items found",
-            @event.LibraryName,
-            @event.ItemsFound
+            "Library scan completed: {LibraryName}, {ItemsFound} items found", [@event.LibraryName, @event.ItemsFound]
         );
     }
 

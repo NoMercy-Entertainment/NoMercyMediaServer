@@ -268,6 +268,24 @@ public class MusicSyncProtocolTests
         Guid userId = Guid.NewGuid();
         User user = new() { Id = userId, Name = "Test User" };
 
+        // Count the debounced broadcast deterministically instead of racing a
+        // fixed wall-clock wait against the 150ms debounce timer. Under parallel
+        // test load a starved timer callback can land well after a fixed delay,
+        // which flaked the old `Task.Delay(400)` + Times.Once assertion. Signal on
+        // the first broadcast and await it with a generous timeout instead.
+        int broadcasts = 0;
+        TaskCompletionSource firstBroadcast = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        messenger
+            .Setup(m => m.SendTo("MusicPlayerState", "musicHub", userId, It.IsAny<object?>()))
+            .Callback(() =>
+            {
+                if (Interlocked.Increment(ref broadcasts) == 1)
+                    firstBroadcast.TrySetResult();
+            })
+            .Returns(Task.CompletedTask);
+
         PlaylistTrackDto trackA = MakeTrack();
         PlaylistTrackDto trackB = MakeTrack();
         MusicPlayerState state = new()
@@ -294,12 +312,13 @@ public class MusicSyncProtocolTests
         // Mirrors MusicHub.PlaybackCommand's skip-command path.
         service.DebouncedUpdatePlaybackState(user, state);
 
-        await Task.Delay(400);
+        // Absorb thread-pool starvation: a missing broadcast throws TimeoutException.
+        await firstBroadcast.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        messenger.Verify(
-            m => m.SendTo("MusicPlayerState", "musicHub", userId, It.IsAny<object>()),
-            Times.Once
-        );
+        // An erroneous second broadcast would arrive within another debounce
+        // window (150ms); settle briefly, then confirm the debounce coalesced.
+        await Task.Delay(200);
+        broadcasts.Should().Be(1);
 
         // The single broadcast payload carries the state object as-is — item
         // and position never travel separately.

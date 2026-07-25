@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FlexLabs.EntityFrameworkCore.Upsert;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -90,8 +89,7 @@ public class ContinueWatchingLifecycleTests : IDisposable
                     x.UserId,
                     x.MovieId,
                 })
-                .WhenMatched(
-                    (uds, udi) =>
+                .WhenMatched((uds, udi) =>
                         new()
                         {
                             Id = uds.Id,

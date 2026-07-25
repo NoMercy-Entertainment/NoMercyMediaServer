@@ -94,7 +94,7 @@ public class JsonSerializerConfigurationTests : IClassFixture<NoMercyApiFactory>
         Assert.False(
             hasJsonStringEnumConverter,
             "System.Text.Json should not have JsonStringEnumConverter configured — "
-                + "Newtonsoft.Json is the sole controller serializer and handles enum conversion via StringEnumConverter"
+                         + "Newtonsoft.Json is the sole controller serializer and handles enum conversion via StringEnumConverter"
         );
     }
 }

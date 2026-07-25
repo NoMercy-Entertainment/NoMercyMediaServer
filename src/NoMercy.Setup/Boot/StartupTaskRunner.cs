@@ -157,7 +157,11 @@ public class StartupTaskRunner
         return task.DependsOn.All(dep => _completedTasks.Contains(dep));
     }
 
-    private IEnumerable<string> GetUnmetDependencies(StartupTask task)
+    // Internal (not private): the null-DependsOn guard below is unreachable via RunAll()
+    // (AreDependenciesMet already returns true for a null DependsOn, so this method is
+    // only ever invoked once dependencies are known non-null) — exposed so
+    // NoMercy.Tests.Setup can still lock the guard's behavior directly.
+    internal IEnumerable<string> GetUnmetDependencies(StartupTask task)
     {
         if (task.DependsOn is null)
             return [];

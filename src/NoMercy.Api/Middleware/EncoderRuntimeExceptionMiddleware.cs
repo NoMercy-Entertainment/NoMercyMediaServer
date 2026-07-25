@@ -61,10 +61,7 @@ public class EncoderRuntimeExceptionMiddleware
             string traceId = context.TraceIdentifier;
 
             _logger.LogWarning(
-                "[{TraceId}] EncoderRuntimeException [{Id}]: {Message}",
-                traceId,
-                ex.Shape.Id,
-                ex.Message
+                "[{TraceId}] EncoderRuntimeException [{Id}]: {Message}", [traceId, ex.Shape.Id, ex.Message]
             );
 
             // Response already in flight — can't safely overwrite headers.

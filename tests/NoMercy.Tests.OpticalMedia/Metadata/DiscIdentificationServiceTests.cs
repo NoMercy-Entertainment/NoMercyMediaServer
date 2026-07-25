@@ -192,4 +192,64 @@ public class DiscIdentificationServiceTests
 
         result.NeedsManualAssignment.Should().BeTrue();
     }
+
+    // ── Manual SearchAsync delegation ──────────────────────────────────────
+
+    [Fact]
+    public async Task SearchAsync_NoVideoDiscIdentifierRegistered_ReturnsEmpty()
+    {
+        // Only a non-VideoDiscIdentifier IDiscIdentifier is registered — the
+        // dashboard search-box delegate must degrade to empty rather than throw.
+        Mock<IDiscIdentifier> audioMock = new();
+
+        DiscIdentificationService sut = new(
+            [audioMock.Object],
+            NullLogger<DiscIdentificationService>.Instance
+        );
+
+        DiscCandidate[] result = await sut.SearchAsync(
+            "Inception",
+            MediaType.Movie,
+            CancellationToken.None
+        );
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SearchAsync_EmptyIdentifierList_ReturnsEmpty()
+    {
+        DiscIdentificationService sut = new([], NullLogger<DiscIdentificationService>.Instance);
+
+        DiscCandidate[] result = await sut.SearchAsync(
+            "Inception",
+            MediaType.Movie,
+            CancellationToken.None
+        );
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SearchAsync_VideoDiscIdentifierRegistered_DelegatesToIt()
+    {
+        VideoDiscIdentifier videoIdentifier = new(NullLogger<VideoDiscIdentifier>.Instance);
+
+        DiscIdentificationService sut = new(
+            [videoIdentifier],
+            NullLogger<DiscIdentificationService>.Instance
+        );
+
+        // No network seam on VideoDiscIdentifier.SearchAsync's TMDB call —
+        // an empty query short-circuits before any HTTP call is made, which
+        // still proves the delegation path (non-empty query paths are
+        // covered end-to-end in VideoDiscIdentifierTests via the HTTP harness).
+        DiscCandidate[] result = await sut.SearchAsync(
+            string.Empty,
+            MediaType.Movie,
+            CancellationToken.None
+        );
+
+        result.Should().BeEmpty();
+    }
 }

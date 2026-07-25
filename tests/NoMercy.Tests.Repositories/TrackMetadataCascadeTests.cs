@@ -106,7 +106,7 @@ public class TrackMetadataCascadeTests : IDisposable
             FolderId = FolderId,
             LibraryFolder = folder,
         };
-        context.Tracks.AddRange(audioTrack, siblingTrack1, siblingTrack2);
+        context.Tracks.AddRange([audioTrack, siblingTrack1, siblingTrack2]);
         context.SaveChanges();
 
         Metadata metadata = new()

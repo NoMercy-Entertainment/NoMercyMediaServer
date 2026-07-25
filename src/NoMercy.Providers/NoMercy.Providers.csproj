@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="NoMercy.Tests.Providers" />
+    <InternalsVisibleTo Include="NoMercy.Tests.OpticalMedia" />
   </ItemGroup>
 
   <ItemGroup>

@@ -51,9 +51,9 @@ public class ContentPolicyTests
     }
 
     [Theory]
-    [InlineData(null, false)]
-    [InlineData(false, false)]
-    [InlineData(true, true)]
+    [InlineData([null, false])]
+    [InlineData([false, false])]
+    [InlineData([true, true])]
     public void ShowAdultContent_MatchesAllThreeInputStates(bool? configured, bool expected)
     {
         ContentPolicy policy = new() { AllowAdultContent = configured };

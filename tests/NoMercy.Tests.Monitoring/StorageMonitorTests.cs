@@ -114,12 +114,14 @@ public class StorageMonitorTests
             Used = 10 * gbInUnits,
             Movies = 5 * gbInUnits,
             Shows = 3 * gbInUnits,
-            Music = 2 * gbInUnits,
+            Music = 1 * gbInUnits,
+            Other = 1 * gbInUnits,
         };
 
         usage.Movies.Should().Be(50, "5/10 = 50%");
         usage.Shows.Should().Be(30, "3/10 = 30%");
-        usage.Music.Should().Be(20, "2/10 = 20%");
+        usage.Music.Should().Be(10, "1/10 = 10%");
+        usage.Other.Should().Be(10, "1/10 = 10%");
     }
 
     [Fact]

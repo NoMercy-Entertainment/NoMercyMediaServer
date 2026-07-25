@@ -22,19 +22,19 @@ namespace NoMercy.Tests.NmSystem;
 public class CultureTests
 {
     [Theory]
-    [InlineData("en", "English")]
-    [InlineData("nl", "Dutch")]
-    [InlineData("de", "German")]
-    [InlineData("fr", "French")]
+    [InlineData(["en", "English"])]
+    [InlineData(["nl", "Dutch"])]
+    [InlineData(["de", "German"])]
+    [InlineData(["fr", "French"])]
     public void EnglishLanguageName_ResolvesCommonCodes(string code, string expected)
     {
         Culture.EnglishLanguageName(code).Should().Be(expected);
     }
 
     [Theory]
-    [InlineData("und", "Unknown")]
-    [InlineData("mul", "Multiple Languages")]
-    [InlineData("zxx", "No Language")]
+    [InlineData(["und", "Unknown"])]
+    [InlineData(["mul", "Multiple Languages"])]
+    [InlineData(["zxx", "No Language"])]
     public void EnglishLanguageName_ResolvesSpecialCodes(string code, string expected)
     {
         Culture.EnglishLanguageName(code).Should().Be(expected);
@@ -76,12 +76,12 @@ public class CultureTests
     }
 
     [Theory]
-    [InlineData("nl", "dut")]
-    [InlineData("nld", "dut")]
-    [InlineData("nl-NL", "dut")]
-    [InlineData("de", "ger")]
-    [InlineData("fr", "fre")]
-    [InlineData("cs", "cze")]
+    [InlineData(["nl", "dut"])]
+    [InlineData(["nld", "dut"])]
+    [InlineData(["nl-NL", "dut"])]
+    [InlineData(["de", "ger"])]
+    [InlineData(["fr", "fre"])]
+    [InlineData(["cs", "cze"])]
     public void BibliographicLanguageCode_MapsToTheCodeOpenSubtitlesAccepts(
         string code,
         string expected
@@ -105,9 +105,9 @@ public class CultureTests
     }
 
     [Theory]
-    [InlineData("en", "eng")]
-    [InlineData("ja", "jpn")]
-    [InlineData("hu", "hun")]
+    [InlineData(["en", "eng"])]
+    [InlineData(["ja", "jpn"])]
+    [InlineData(["hu", "hun"])]
     public void BibliographicLanguageCode_LeavesNonLegacyCodesOnTheirIso3Form(
         string code,
         string expected

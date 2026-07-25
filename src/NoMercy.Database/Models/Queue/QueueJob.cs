@@ -31,11 +31,7 @@ namespace NoMercy.Database.Models.Queue;
 // Queue and ReservedAt turns it into a SEARCH and lets the trailing columns satisfy
 // the ORDER BY. Measured 2741ms -> 87ms on a copy of a real 2.5GB queue.db.
 [Index(
-    nameof(Queue),
-    nameof(ReservedAt),
-    nameof(Priority),
-    nameof(CreatedAt),
-    nameof(Id),
+    nameof(Queue), [nameof(ReservedAt), nameof(Priority), nameof(CreatedAt), nameof(Id)],
     IsDescending = new[] { false, false, true, false, false }
 )]
 public class QueueJob

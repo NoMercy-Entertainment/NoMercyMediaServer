@@ -37,9 +37,7 @@ public sealed class SignalRLiveSessionTransport(
         {
             logger.LogDebug(
                 ex,
-                "SignalR send failed for event {Event} on session {SessionId}",
-                eventName,
-                sessionId
+                "SignalR send failed for event {Event} on session {SessionId}", [eventName, sessionId]
             );
         }
     }

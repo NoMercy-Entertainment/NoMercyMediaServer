@@ -111,7 +111,7 @@ public class InMemoryEventBusTests
 
         await bus.PublishAsync(new TestEvent { Data = "multi" });
 
-        order.Should().Equal("first", "second");
+        order.Should().Equal(["first", "second"]);
         handler.Received.Should().ContainSingle();
     }
 

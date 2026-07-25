@@ -11,7 +11,6 @@
 
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
@@ -78,7 +77,7 @@ public class ImageRepositoryTests : IDisposable
             Type = "backdrop",
             Iso6391 = "en",
         };
-        _context.Images.AddRange(image1, image2);
+        _context.Images.AddRange([image1, image2]);
         await _context.SaveChangesAsync();
 
         Image? result = await _repository.GetImageByFilePathAsync("/images/image_one.jpg");

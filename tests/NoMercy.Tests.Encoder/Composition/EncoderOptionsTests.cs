@@ -197,12 +197,6 @@ public class EncoderOptionsTests
     }
 
     [Fact]
-    public void OcrPostEncodeSubscriber_DefaultsOn()
-    {
-        new EncoderOptions().EnableOcrPostEncodeSubscriber.Should().BeTrue();
-    }
-
-    [Fact]
     public void WorkerRegistryPath_DefaultsUnderLocalAppData()
     {
         // Fresh install → workers.json lands in LocalApplicationData under

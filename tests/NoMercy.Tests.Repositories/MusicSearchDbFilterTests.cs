@@ -356,7 +356,7 @@ public class MusicSearchDbFilterTests : IDisposable
                 $"DataSource={dbName};Mode=Memory;Cache=Shared",
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors([interceptor, new SqliteNormalizeSearchInterceptor()])
             .Options;
 
         using (TestMediaContext initContext = new(options))

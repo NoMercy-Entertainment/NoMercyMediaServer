@@ -60,9 +60,7 @@ public class EpisodeManager(
         });
 
         logger.LogDebug(
-            "Show {Name}: Season {SeasonNumber} Episodes stored",
-            show.Name,
-            season.SeasonNumber
+            "Show {Name}: Season {SeasonNumber} Episodes stored", [show.Name, season.SeasonNumber]
         );
 
         foreach (Episode episode in episodes)
@@ -133,10 +131,7 @@ public class EpisodeManager(
         await episodeRepository.StoreEpisodeTranslations(translations);
 
         logger.LogInformation(
-            "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Translations stored",
-            showName,
-            episode.SeasonNumber,
-            episode.EpisodeNumber
+            "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Translations stored", [showName, episode.SeasonNumber, episode.EpisodeNumber]
         );
     }
 
@@ -163,10 +158,7 @@ public class EpisodeManager(
             await episodeRepository.StoreEpisodeImages(stills);
 
             logger.LogDebug(
-                "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Images stored",
-                showName,
-                episode.SeasonNumber,
-                episode.EpisodeNumber
+                "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Images stored", [showName, episode.SeasonNumber, episode.EpisodeNumber]
             );
 
             await using MediaContext db = new();
@@ -184,11 +176,7 @@ public class EpisodeManager(
         catch (Exception e)
         {
             logger.LogError(
-                "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Error storing images: {Message}",
-                showName,
-                episode.SeasonNumber,
-                episode.EpisodeNumber,
-                e.Message
+                "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Error storing images: {Message}", [showName, episode.SeasonNumber, episode.EpisodeNumber, e.Message]
             );
         }
     }

@@ -17,12 +17,12 @@ using Newtonsoft.Json;
 namespace NoMercy.Database.Models.Media;
 
 [PrimaryKey(nameof(Id))]
-[Index(nameof(TvId), nameof(Iso6391), nameof(Iso31661), IsUnique = true)]
-[Index(nameof(SeasonId), nameof(Iso6391), nameof(Iso31661), IsUnique = true)]
-[Index(nameof(EpisodeId), nameof(Iso6391), nameof(Iso31661), IsUnique = true)]
-[Index(nameof(MovieId), nameof(Iso6391), nameof(Iso31661), IsUnique = true)]
-[Index(nameof(CollectionId), nameof(Iso6391), nameof(Iso31661), IsUnique = true)]
-[Index(nameof(PersonId), nameof(Iso6391), nameof(Iso31661), IsUnique = true)]
+[Index(nameof(TvId), [nameof(Iso6391), nameof(Iso31661)], IsUnique = true)]
+[Index(nameof(SeasonId), [nameof(Iso6391), nameof(Iso31661)], IsUnique = true)]
+[Index(nameof(EpisodeId), [nameof(Iso6391), nameof(Iso31661)], IsUnique = true)]
+[Index(nameof(MovieId), [nameof(Iso6391), nameof(Iso31661)], IsUnique = true)]
+[Index(nameof(CollectionId), [nameof(Iso6391), nameof(Iso31661)], IsUnique = true)]
+[Index(nameof(PersonId), [nameof(Iso6391), nameof(Iso31661)], IsUnique = true)]
 [Index(nameof(ReleaseGroupId), nameof(Iso31661), IsUnique = true)]
 [Index(nameof(ArtistId), nameof(Iso31661), IsUnique = true)]
 [Index(nameof(AlbumId), nameof(Iso31661), IsUnique = true)]

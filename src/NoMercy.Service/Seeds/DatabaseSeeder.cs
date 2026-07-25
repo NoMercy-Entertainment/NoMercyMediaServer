@@ -31,8 +31,6 @@ namespace NoMercy.Service.Seeds;
 
 public static class DatabaseSeeder
 {
-    internal static bool ShouldSeedMarvel { get; set; }
-
     /// <summary>
     /// Phase 1: Create database schema (migrations + EnsureCreated).
     /// Does NOT require authentication — safe to call before auth.
@@ -160,7 +158,7 @@ public static class DatabaseSeeder
 
         Func<Task>[] offlineSeeds =
         [
-            () => appDbContext.Init(),
+            appDbContext.Init,
             () => SeedSystemLocalDriver(mediaDbContext),
             () => V1DriverBridgeSeed.RunAsync(mediaDbContext),
             () => LibrariesSeed.Init(mediaDbContext, storage, storageDriver),
@@ -248,7 +246,7 @@ public static class DatabaseSeeder
             {
                 Logger.Setup(
                     $"Disk overlay '{entry.SourcePath}' has Ulid {p.Id} that collides with a built-in preset '{existing.Name}'. "
-                        + "Built-ins are immutable; disk overlay rejected. Use a different Ulid to coexist.",
+                             + "Built-ins are immutable; disk overlay rejected. Use a different Ulid to coexist.",
                     LogEventLevel.Warning
                 );
             }
@@ -334,23 +332,10 @@ public static class DatabaseSeeder
 
         Func<Task>[] seeds =
         [
-            () => UsersSeed.Init(mediaDbContext, storage, accessToken),
+            () => mediaDbContext.Init(storage, accessToken),
             () => AssignOwnerToUnassignedLibraries(mediaDbContext),
             () => UserCache.Current.InitializeAsync(mediaDbContext),
         ];
-
-        if (ShouldSeedMarvel)
-        {
-            try
-            {
-                await using MediaContext specialSeedContext = new();
-                await SpecialSeed.Init(specialSeedContext);
-            }
-            catch (Exception ex)
-            {
-                Logger.Setup($"Special seed failed: {ex.Message}", LogEventLevel.Warning);
-            }
-        }
 
         foreach (Func<Task> seed in seeds)
         {
@@ -479,10 +464,10 @@ public static class DatabaseSeeder
                 if (removedOrphans.Count > 0)
                     Logger.Setup(
                         $"{contextName}: Removed {removedOrphans.Values.Sum()} foreign-key-orphaned row(s) before migration: "
-                            + string.Join(
-                                ", ",
-                                removedOrphans.Select(entry => $"{entry.Key}={entry.Value}")
-                            ),
+                                 + string.Join(
+                                     ", ",
+                                     removedOrphans.Select(entry => $"{entry.Key}={entry.Value}")
+                                 ),
                         LogEventLevel.Warning
                     );
             }
@@ -522,11 +507,11 @@ public static class DatabaseSeeder
                 );
                 Logger.Setup(
                     $"{contextName}: Migration failed on a foreign-key constraint. "
-                        + (
-                            violations.Count > 0
-                                ? $"Orphaned rows: {string.Join("; ", violations)}"
-                                : "No pre-existing orphans remain — the violation is in a migration's own data step."
-                        ),
+                             + (
+                                 violations.Count > 0
+                                     ? $"Orphaned rows: {string.Join("; ", violations)}"
+                                     : "No pre-existing orphans remain — the violation is in a migration's own data step."
+                             ),
                     LogEventLevel.Fatal
                 );
                 throw;
@@ -581,7 +566,7 @@ public static class DatabaseSeeder
 
         Logger.Setup(
             $"{contextName}: Detected {toUnstamp.Count} stamped-but-missing migration(s), "
-                + $"unstamping so they re-apply: {string.Join(", ", toUnstamp)}",
+                     + $"unstamping so they re-apply: {string.Join(", ", toUnstamp)}",
             LogEventLevel.Warning
         );
 
@@ -690,9 +675,7 @@ public static class DatabaseSeeder
             try
             {
                 context.Database.ExecuteSqlRaw(
-                    "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})",
-                    migration,
-                    version
+                    "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})", [migration, version]
                 );
                 Logger.Setup($"Added migration {migration} to history", LogEventLevel.Verbose);
             }

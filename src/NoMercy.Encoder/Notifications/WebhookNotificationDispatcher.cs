@@ -118,11 +118,7 @@ public class WebhookNotificationDispatcher(
                     return;
 
                 logger.LogWarning(
-                    "Webhook {Url} returned {Status} on attempt {Attempt}/{Max}",
-                    url,
-                    (int)response.StatusCode,
-                    attempt,
-                    MaxRetries
+                    "Webhook {Url} returned {Status} on attempt {Attempt}/{Max}", [url, (int)response.StatusCode, attempt, MaxRetries]
                 );
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -133,10 +129,7 @@ public class WebhookNotificationDispatcher(
             {
                 logger.LogWarning(
                     ex,
-                    "Webhook {Url} threw on attempt {Attempt}/{Max}",
-                    url,
-                    attempt,
-                    MaxRetries
+                    "Webhook {Url} threw on attempt {Attempt}/{Max}", [url, attempt, MaxRetries]
                 );
             }
 
@@ -154,6 +147,6 @@ public class WebhookNotificationDispatcher(
             }
         }
 
-        logger.LogWarning("Webhook {Url} exhausted {Max} retries — giving up", url, MaxRetries);
+        logger.LogWarning("Webhook {Url} exhausted {Max} retries — giving up", [url, MaxRetries]);
     }
 }

@@ -12,7 +12,9 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NoMercy.Database;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs;
@@ -26,6 +28,8 @@ namespace NoMercy.Tests.MediaProcessing.Libraries;
 
 public class LibraryManagerEventTests : IDisposable
 {
+    private static readonly IMediaAnalyzer MediaAnalyzer = new Mock<IMediaAnalyzer>().Object;
+
     private readonly SqliteConnection _connection;
     private readonly MediaContext _context;
 
@@ -82,7 +86,16 @@ public class LibraryManagerEventTests : IDisposable
         StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
         LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, NullLogger<LibraryManager>.Instance, bus);
+        LibraryManager manager = new(
+            repo,
+            dispatcher,
+            _context,
+            driver,
+            storageFactory,
+            MediaAnalyzer,
+            NullLogger<LibraryManager>.Instance,
+            bus
+        );
 
         await manager.ProcessLibrary(Ulid.NewUlid());
 
@@ -125,7 +138,16 @@ public class LibraryManagerEventTests : IDisposable
         StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
         LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, NullLogger<LibraryManager>.Instance, bus);
+        LibraryManager manager = new(
+            repo,
+            dispatcher,
+            _context,
+            driver,
+            storageFactory,
+            MediaAnalyzer,
+            NullLogger<LibraryManager>.Instance,
+            bus
+        );
 
         await manager.ProcessLibrary(libraryId);
 
@@ -160,7 +182,15 @@ public class LibraryManagerEventTests : IDisposable
         StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
         LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, NullLogger<LibraryManager>.Instance);
+        LibraryManager manager = new(
+            repo,
+            dispatcher,
+            _context,
+            driver,
+            storageFactory,
+            MediaAnalyzer,
+            NullLogger<LibraryManager>.Instance
+        );
 
         await manager.ProcessLibrary(libraryId);
     }
@@ -194,7 +224,16 @@ public class LibraryManagerEventTests : IDisposable
         StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
         LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, NullLogger<LibraryManager>.Instance, bus);
+        LibraryManager manager = new(
+            repo,
+            dispatcher,
+            _context,
+            driver,
+            storageFactory,
+            MediaAnalyzer,
+            NullLogger<LibraryManager>.Instance,
+            bus
+        );
 
         await manager.ProcessLibrary(libraryId);
 
@@ -232,7 +271,16 @@ public class LibraryManagerEventTests : IDisposable
         StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
         LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, NullLogger<LibraryManager>.Instance, bus);
+        LibraryManager manager = new(
+            repo,
+            dispatcher,
+            _context,
+            driver,
+            storageFactory,
+            MediaAnalyzer,
+            NullLogger<LibraryManager>.Instance,
+            bus
+        );
 
         await manager.ProcessLibrary(libraryId);
 

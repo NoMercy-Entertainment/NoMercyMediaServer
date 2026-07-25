@@ -11,7 +11,6 @@
 
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -36,7 +35,7 @@ public class CollectionsControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/collection");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -73,7 +72,7 @@ public class CollectionsControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/collection/313369");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -93,7 +92,7 @@ public class CollectionsControllerTests : IClassFixture<NoMercyApiFactory>
             "/api/v1/collection/313369/available"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -101,7 +100,32 @@ public class CollectionsControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.DeleteAsync("/api/v1/collection/313369");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+    }
+
+    [Fact]
+    public async Task DeleteCollection_ReturnsForbidden_WhenSecondaryUserNonModerator()
+    {
+        // Deleting a collection is irreversible: raised from "MediaAccess" to
+        // "Moderator". SecondaryUserId (Allowed=true, Owner=false, Manage=false)
+        // must now be rejected, where it previously reached the repository.
+        HttpResponseMessage response = await _secondaryUser.DeleteAsync(
+            "/api/v1/collection/313369"
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task DeleteCollection_ReturnsOk_WhenModerator()
+    {
+        // Uses a non-existent id: CollectionRepository.DeleteAsync is a no-op
+        // delete-if-present, always returning 200, so this proves the
+        // Moderator tier still reaches the repository without disturbing any
+        // seeded collection other tests in this class depend on.
+        HttpResponseMessage response = await _authed.DeleteAsync("/api/v1/collection/999999999");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

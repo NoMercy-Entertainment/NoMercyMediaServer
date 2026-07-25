@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Globalization;
-using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.NmSystem;
 
@@ -58,12 +57,12 @@ public class CultureExtensionsAdvancedTests
     }
 
     [Theory]
-    [InlineData("en", "English")]
-    [InlineData("eng", "English")]
-    [InlineData("de", "German")]
-    [InlineData("deu", "German")]
-    [InlineData("fr", "French")]
-    [InlineData("fra", "French")]
+    [InlineData(["en", "English"])]
+    [InlineData(["eng", "English"])]
+    [InlineData(["de", "German"])]
+    [InlineData(["deu", "German"])]
+    [InlineData(["fr", "French"])]
+    [InlineData(["fra", "French"])]
     public void EnglishLanguageName_ReturnsNameForCode(string code, string expected)
     {
         string result = Culture.EnglishLanguageName(code);
@@ -71,9 +70,9 @@ public class CultureExtensionsAdvancedTests
     }
 
     [Theory]
-    [InlineData("und", "Unknown")]
-    [InlineData("mul", "Multiple Languages")]
-    [InlineData("zxx", "No Language")]
+    [InlineData(["und", "Unknown"])]
+    [InlineData(["mul", "Multiple Languages"])]
+    [InlineData(["zxx", "No Language"])]
     public void EnglishLanguageName_WithSpecialCodes_ReturnsLabel(string code, string expected)
     {
         string result = Culture.EnglishLanguageName(code);

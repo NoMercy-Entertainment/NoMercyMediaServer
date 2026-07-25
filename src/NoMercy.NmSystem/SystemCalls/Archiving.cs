@@ -81,13 +81,13 @@ public static class Archiving
             {
                 Logger.System(
                     $"Refusing to extract {filePath}: archive missing or empty "
-                        + $"(exists={exists}, size={size}) after {maxAttempts} checks",
+                             + $"(exists={exists}, size={size}) after {maxAttempts} checks",
                     LogEventLevel.Error
                 );
                 throw new FileNotFoundException(
                     $"Cannot extract archive: file missing or empty at {filePath} — "
-                        + "the download did not complete or was removed before extraction. "
-                        + "Will retry the full download on the next provisioning attempt.",
+                             + "the download did not complete or was removed before extraction. "
+                             + "Will retry the full download on the next provisioning attempt.",
                     filePath
                 );
             }
@@ -260,9 +260,7 @@ public static class Archiving
     /// </summary>
     private static bool IsPathContained(string destinationRoot, string candidatePath)
     {
-        string normalizedRoot = destinationRoot.TrimEnd(
-            Path.DirectorySeparatorChar,
-            Path.AltDirectorySeparatorChar
+        string normalizedRoot = destinationRoot.TrimEnd([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]
         );
         string fullCandidatePath = Path.GetFullPath(candidatePath);
 

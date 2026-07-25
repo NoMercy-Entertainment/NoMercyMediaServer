@@ -136,6 +136,22 @@ public class PluginRegistryTests
     }
 
     [Fact]
+    public void Set_ReplacingEntryWithNullInstance_DoesNotThrow()
+    {
+        // A Malfunctioned entry recorded with no instance (e.g. a plugin whose
+        // constructor threw) has Instance == null — `replaced.Instance?.Dispose()`
+        // exists specifically so replacing THAT entry never calls Dispose on a
+        // null reference.
+        PluginRegistry registry = new();
+        Guid id = Guid.NewGuid();
+        registry[id] = new(MakeInfo(id), null, null);
+
+        Action act = () => registry[id] = new(MakeInfo(id), new DisposalTrackingPlugin(), null);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
     public void Set_ConcurrentReplacements_DisposesEverySupersededEntryExactlyOnce()
     {
         PluginRegistry registry = new();

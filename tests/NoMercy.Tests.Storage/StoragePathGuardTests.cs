@@ -18,7 +18,7 @@ public class StoragePathGuardTests
     private static Mock<IStorageDriver> NewBackend()
     {
         Mock<IStorageDriver> m = new(MockBehavior.Strict);
-        m.Setup(b => b.GetFullPath(It.IsAny<string>())).Returns<string>(p => Path.GetFullPath(p));
+        m.Setup(b => b.GetFullPath(It.IsAny<string>())).Returns<string>(Path.GetFullPath);
         m.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
         return m;
     }
@@ -102,6 +102,23 @@ public class StoragePathGuardTests
 
         result.Should().Be(Path.GetFullPath(inner));
         guard.Enforced.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Enforced_accepts_path_under_a_bare_drive_or_volume_root()
+    {
+        // A driver rooted at a bare drive/volume root ("G:\" on Windows, "/" on
+        // Unix) already ends in a separator. IsUnderRoot must still accept paths
+        // under it: the earlier code appended a second separator ("G:\\") which
+        // no real child path starts with, so every path on the drive was wrongly
+        // rejected as "not under any allowed root".
+        string driveRoot = Path.GetPathRoot(Path.GetFullPath(Path.GetTempPath()))!;
+        StoragePathGuard guard = new([driveRoot], NewBackend().Object);
+
+        string inner = Path.Combine(driveRoot, "nm-drive-root-child", "file.mkv");
+        string result = guard.Validate(inner);
+
+        result.Should().Be(Path.GetFullPath(inner));
     }
 
     [Fact]
@@ -217,7 +234,7 @@ public class StoragePathGuardTests
         StoragePathGuard guard = new([root], NewBackend().Object);
 
         // Three levels of ../ from inside the root — escapes to the temp dir
-        string escape = Path.Combine(root, "a", "b", "..", "..", "..", "outside.txt");
+        string escape = Path.Combine([root, "a", "b", "..", "..", "..", "outside.txt"]);
 
         Action act = () => guard.Validate(escape);
 
@@ -337,12 +354,12 @@ public class StoragePathGuardTests
     // ── Absolute-path rejection (RejectAbsolutePath) ─────────────────────────
 
     [Theory]
-    [InlineData("/mnt/media/x.mkv", "Unix-rooted leading slash")]
-    [InlineData("/abs/path/escape", "Unix-rooted single slash")]
-    [InlineData(@"C:\Media\x.mkv", "Windows drive + backslash")]
-    [InlineData("C:/Media/x.mkv", "Windows drive + forward slash")]
-    [InlineData(@"\\server\share\file", "UNC double backslash")]
-    [InlineData(@"\rooted-backslash", "Windows backslash root")]
+    [InlineData(["/mnt/media/x.mkv", "Unix-rooted leading slash"])]
+    [InlineData(["/abs/path/escape", "Unix-rooted single slash"])]
+    [InlineData([@"C:\Media\x.mkv", "Windows drive + backslash"])]
+    [InlineData(["C:/Media/x.mkv", "Windows drive + forward slash"])]
+    [InlineData([@"\\server\share\file", "UNC double backslash"])]
+    [InlineData([@"\rooted-backslash", "Windows backslash root"])]
     public void RejectAbsolutePath_rejects_absolute_path_forms(string path, string form)
     {
         Action act = () => StoragePathGuard.RejectAbsolutePath(path);
@@ -856,8 +873,8 @@ public class StoragePathGuardTests
         HashSet<string> testMethods = typeof(StoragePathGuardTests)
             .GetMethods(
                 System.Reflection.BindingFlags.Public
-                    | System.Reflection.BindingFlags.Instance
-                    | System.Reflection.BindingFlags.DeclaredOnly
+                             | System.Reflection.BindingFlags.Instance
+                             | System.Reflection.BindingFlags.DeclaredOnly
             )
             .Where(m => m.GetCustomAttributes(typeof(FactAttribute), false).Length > 0)
             .Select(m => m.Name)
@@ -872,7 +889,7 @@ public class StoragePathGuardTests
                 .HaveCountGreaterThanOrEqualTo(
                     2,
                     "rule '{0}' must have at least a fires-on and a silent-on test; "
-                        + "when a new guard rule is added to the catalogue, add both forms here",
+                             + "when a new guard rule is added to the catalogue, add both forms here",
                     rule
                 );
         }

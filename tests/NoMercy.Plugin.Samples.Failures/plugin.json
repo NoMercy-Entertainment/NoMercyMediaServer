@@ -1,0 +1,7 @@
+{
+  "id": "66666666-7777-8888-9999-aaaaaaaaaaaa",
+  "name": "Failures",
+  "version": "0.1.0",
+  "description": "Sample plugin assembly whose types exercise loader failure paths for the test suite",
+  "assembly": "NoMercy.Plugin.Samples.Failures.dll"
+}

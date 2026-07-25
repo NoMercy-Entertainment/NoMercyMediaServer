@@ -11,7 +11,6 @@
 
 using NoMercy.Service;
 using Serilog.Events;
-using Xunit;
 
 namespace NoMercy.Tests.Service;
 
@@ -24,12 +23,12 @@ namespace NoMercy.Tests.Service;
 public class StartupOptionsParsingTests
 {
     [Theory]
-    [InlineData("Debug", LogEventLevel.Debug)]
-    [InlineData("debug", LogEventLevel.Debug)]
-    [InlineData("VERBOSE", LogEventLevel.Verbose)]
-    [InlineData("Warning", LogEventLevel.Warning)]
-    [InlineData("error", LogEventLevel.Error)]
-    [InlineData("Fatal", LogEventLevel.Fatal)]
+    [InlineData(["Debug", LogEventLevel.Debug])]
+    [InlineData(["debug", LogEventLevel.Debug])]
+    [InlineData(["VERBOSE", LogEventLevel.Verbose])]
+    [InlineData(["Warning", LogEventLevel.Warning])]
+    [InlineData(["error", LogEventLevel.Error])]
+    [InlineData(["Fatal", LogEventLevel.Fatal])]
     public void TryParseLogLevel_KnownLevel_ReturnsTrueAndValue(string raw, LogEventLevel expected)
     {
         bool ok = StartupOptions.TryParseLogLevel(raw, out LogEventLevel level);
@@ -61,8 +60,8 @@ public class StartupOptionsParsingTests
     }
 
     [Theory]
-    [InlineData("9000", 9000)]
-    [InlineData("7700", 7700)]
+    [InlineData(["9000", 9000])]
+    [InlineData(["7700", 7700])]
     public void ResolvePortFrom_NoCliPort_UsesValidDatabaseValue(string dbValue, int expected)
     {
         Assert.Equal(expected, StartupOptions.ResolvePortFrom(0, dbValue, 7626));

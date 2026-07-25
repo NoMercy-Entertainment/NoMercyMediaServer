@@ -132,12 +132,32 @@ public class PluginRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Constructor_NullStorage_ThrowsArgumentNullException()
+    {
+        Action act = () => new PluginRepository(new(), NullLogger.Instance, _tempDir, null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void Constructor_CreatesConfigurationsDirectory()
     {
         string configDir = Path.Combine(_tempDir, "configurations");
 
         _ = MakeRepo();
 
+        Directory.Exists(configDir).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Constructor_ConfigurationsDirectoryAlreadyExists_DoesNotThrow()
+    {
+        string configDir = Path.Combine(_tempDir, "configurations");
+        Directory.CreateDirectory(configDir);
+
+        Action act = () => MakeRepo();
+
+        act.Should().NotThrow();
         Directory.Exists(configDir).Should().BeTrue();
     }
 
@@ -291,6 +311,127 @@ public class PluginRepositoryTests : IDisposable
         Func<Task> act = () => repo2.RefreshAsync();
 
         await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task RefreshAsync_OneRepoFailsAnotherSucceeds_SkipsFailingRepoKeepsOthers()
+    {
+        // RefreshAsync_FailingRepo_DoesNotThrow above builds repo2 through the sync
+        // constructor, which never loads _repositories from disk — its enabled-repo
+        // loop is empty and the per-repo catch (RefreshAsync's own, not
+        // RefreshRepositoryAsync's) is never actually entered. This test adds two
+        // repos through the real AddRepositoryAsync path so RefreshAsync's loop has
+        // two live entries, one of which fails per request, proving the failure is
+        // isolated to that repo and the other repo's plugins still come through.
+        PluginRepositoryManifest goodManifest = CreateTestManifest(
+            name: "good-repo",
+            pluginCount: 2
+        );
+        RoutingHttpHandler handler = new(
+            okUrl: "https://good.example.com/repo.json",
+            okJson: JsonSerializer.Serialize(goodManifest)
+        );
+        HttpClient client = new(handler);
+        PluginRepository repo = MakeRepo(client);
+
+        await repo.AddRepositoryAsync("good", "https://good.example.com/repo.json");
+        await repo.AddRepositoryAsync("broken", "https://broken.example.com/repo.json");
+
+        Func<Task> act = () => repo.RefreshAsync();
+
+        await act.Should().NotThrowAsync();
+        IReadOnlyList<PluginRepositoryEntry> plugins = repo.GetAvailablePlugins();
+        plugins.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task AddRepositoryAsync_ConfigurationsPathReplacedByAFile_SaveFailsSilently()
+    {
+        // SaveRepositoriesToDiskAsync's own catch(Exception): WriteAllTextAsync
+        // auto-creates a missing parent directory, so simply deleting
+        // "configurations" would just have it silently recreated. Replacing it
+        // with a FILE of the same name makes Directory.CreateDirectory itself
+        // throw IOException ("a file with the same name already exists"),
+        // which is the only way to force this specific write to fail — proving
+        // AddRepositoryAsync still completes (the repo entry stands in memory)
+        // instead of propagating the disk failure to the caller.
+        PluginRepository repo = MakeRepo(CreateFailingHttpClient());
+        string configDir = Path.Combine(_tempDir, "configurations");
+        Directory.Delete(configDir, recursive: true);
+        File.WriteAllText(configDir, "blocking file");
+
+        Func<Task> act = () => repo.AddRepositoryAsync("test", "https://example.com/repo.json");
+
+        await act.Should().NotThrowAsync();
+        repo.GetRepositories().Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task AddRepositoryAsync_FetchFails_StillAddsRepository_ButNoPluginsAvailable()
+    {
+        HttpClient client = CreateFailingHttpClient();
+        PluginRepository repo = MakeRepo(client);
+
+        Func<Task> act = () => repo.AddRepositoryAsync("test", "https://example.com/repo.json");
+
+        await act.Should().NotThrowAsync();
+        repo.GetRepositories().Should().ContainSingle().Which.Name.Should().Be("test");
+        repo.GetAvailablePlugins().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task FetchRepositoryPluginsAsync_ResponseBodyIsJsonNull_ReturnsEmptyList()
+    {
+        MockHttpHandler handler = new("null", HttpStatusCode.OK);
+        HttpClient client = new(handler);
+        PluginRepository repo = MakeRepo(client);
+
+        List<PluginRepositoryEntry> plugins = await repo.FetchRepositoryPluginsAsync(
+            "https://example.com/repo.json"
+        );
+
+        plugins.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateAsync_NoRepositoriesFileOnDisk_ReturnsEmptyWithoutThrowing()
+    {
+        IStorageDriver driver = TestStorageHelper.CreateBackend();
+        IStorage storage = new LocalStorage(driver, new([_tempDir], driver));
+
+        // An unhandled exception here fails the test — the assertion below is
+        // reached only when CreateAsync completed without throwing.
+        PluginRepository repo = await PluginRepository.CreateAsync(
+            new(),
+            NullLogger.Instance,
+            _tempDir,
+            storage
+        );
+
+        repo.GetRepositories().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateAsync_MalformedRepositoriesFileOnDisk_ReturnsEmptyWithoutThrowing()
+    {
+        string configDir = Path.Combine(_tempDir, "configurations");
+        Directory.CreateDirectory(configDir);
+        await File.WriteAllTextAsync(
+            Path.Combine(configDir, "repositories.json"),
+            "not valid json {{{{"
+        );
+
+        IStorageDriver driver = TestStorageHelper.CreateBackend();
+        IStorage storage = new LocalStorage(driver, new([_tempDir], driver));
+
+        PluginRepository repo = await PluginRepository.CreateAsync(
+            new(),
+            NullLogger.Instance,
+            _tempDir,
+            storage
+        );
+
+        repo.GetRepositories().Should().BeEmpty();
     }
 
     [Fact]
@@ -521,6 +662,32 @@ public class PluginRepositoryTests : IDisposable
             HttpResponseMessage response = new(statusCode)
             {
                 Content = new StringContent(responseContent),
+            };
+            return Task.FromResult(response);
+        }
+    }
+
+    // Returns okJson for the one URL matching okUrl and a 500 for every other
+    // URL — lets a single HttpClient represent "one repo fetch succeeds, every
+    // other repo fetch fails" within the same PluginRepository instance.
+    private sealed class RoutingHttpHandler(string okUrl, string okJson) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            bool isOk = string.Equals(
+                request.RequestUri?.ToString(),
+                okUrl,
+                StringComparison.Ordinal
+            );
+
+            HttpResponseMessage response = new(
+                isOk ? HttpStatusCode.OK : HttpStatusCode.InternalServerError
+            )
+            {
+                Content = new StringContent(isOk ? okJson : string.Empty),
             };
             return Task.FromResult(response);
         }

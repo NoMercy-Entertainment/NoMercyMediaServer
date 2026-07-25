@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Launcher.Services;
-using Xunit;
 
 namespace NoMercy.Tests.Service;
 

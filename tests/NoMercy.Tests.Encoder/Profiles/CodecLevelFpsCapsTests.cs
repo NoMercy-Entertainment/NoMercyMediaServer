@@ -26,14 +26,14 @@ public class CodecLevelFpsCapsTests
     // ── H.264 spec values ───────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("4.0", 62_914_560L)] // 1080p30 needs ~62M
-    [InlineData("4.1", 62_914_560L)] // Same as 4.0
-    [InlineData("4.2", 133_693_440L)] // 1080p60
-    [InlineData("5.0", 150_994_944L)] // Up to ~4K30 in theory
-    [InlineData("5.1", 251_658_240L)] // 4K30 typical declared
-    [InlineData("5.2", 530_841_600L)] // 4K60
-    [InlineData("6.0", 1_069_547_520L)] // 8K30
-    [InlineData("6.2", 4_278_190_080L)] // 8K120
+    [InlineData(["4.0", 62_914_560L])] // 1080p30 needs ~62M
+    [InlineData(["4.1", 62_914_560L])] // Same as 4.0
+    [InlineData(["4.2", 133_693_440L])] // 1080p60
+    [InlineData(["5.0", 150_994_944L])] // Up to ~4K30 in theory
+    [InlineData(["5.1", 251_658_240L])] // 4K30 typical declared
+    [InlineData(["5.2", 530_841_600L])] // 4K60
+    [InlineData(["6.0", 1_069_547_520L])] // 8K30
+    [InlineData(["6.2", 4_278_190_080L])] // 8K120
     public void H264_Lookup_SpecValues(string level, long expected)
     {
         CodecLevelFpsCaps
@@ -46,12 +46,12 @@ public class CodecLevelFpsCapsTests
     // ── HEVC spec values ────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("3.1", 33_177_600L)] // 720p30
-    [InlineData("4.0", 66_846_720L)] // 1080p30 typical
-    [InlineData("4.1", 133_693_440L)] // 1080p60
-    [InlineData("5.0", 267_386_880L)] // 4K30
-    [InlineData("5.1", 534_773_760L)] // 4K60
-    [InlineData("5.2", 1_069_547_520L)] // 8K30
+    [InlineData(["3.1", 33_177_600L])] // 720p30
+    [InlineData(["4.0", 66_846_720L])] // 1080p30 typical
+    [InlineData(["4.1", 133_693_440L])] // 1080p60
+    [InlineData(["5.0", 267_386_880L])] // 4K30
+    [InlineData(["5.1", 534_773_760L])] // 4K60
+    [InlineData(["5.2", 1_069_547_520L])] // 8K30
     public void Hevc_Lookup_SpecValues(string level, long expected)
     {
         CodecLevelFpsCaps
@@ -64,10 +64,10 @@ public class CodecLevelFpsCapsTests
     // ── VP9 spec values ─────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("3.1", 36_864_000L)]
-    [InlineData("4", 83_558_400L)]
-    [InlineData("5", 311_951_360L)]
-    [InlineData("5.1", 588_251_136L)]
+    [InlineData(["3.1", 36_864_000L])]
+    [InlineData(["4", 83_558_400L])]
+    [InlineData(["5", 311_951_360L])]
+    [InlineData(["5.1", 588_251_136L])]
     public void Vp9_Lookup_SpecValues(string level, long expected)
     {
         CodecLevelFpsCaps
@@ -107,11 +107,11 @@ public class CodecLevelFpsCapsTests
     // ── FindNextFit ─────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(VideoCodecType.H264, 62_914_560L, "4.0")] // Exact-match boundary
-    [InlineData(VideoCodecType.H264, 70_000_000L, "4.2")] // Bumps to next level
-    [InlineData(VideoCodecType.H264, 530_841_600L, "5.2")] // 4K60ish exact-match boundary
-    [InlineData(VideoCodecType.H265, 100_000_000L, "4.1")] // HEVC 4.1 = 133M
-    [InlineData(VideoCodecType.H265, 500_000_000L, "5.1")] // 4K60 HEVC
+    [InlineData([VideoCodecType.H264, 62_914_560L, "4.0"])] // Exact-match boundary
+    [InlineData([VideoCodecType.H264, 70_000_000L, "4.2"])] // Bumps to next level
+    [InlineData([VideoCodecType.H264, 530_841_600L, "5.2"])] // 4K60ish exact-match boundary
+    [InlineData([VideoCodecType.H265, 100_000_000L, "4.1"])] // HEVC 4.1 = 133M
+    [InlineData([VideoCodecType.H265, 500_000_000L, "5.1"])] // 4K60 HEVC
     public void FindNextFit_PicksFirstSufficientLevel(
         VideoCodecType codec,
         long required,
@@ -165,7 +165,7 @@ public class CodecLevelFpsCapsTests
                 .BeGreaterThanOrEqualTo(
                     table[i - 1].MaxLumaSamplesPerSec,
                     $"{codec} table entry {table[i].Level} must be >= preceding "
-                        + $"{table[i - 1].Level}"
+                             + $"{table[i - 1].Level}"
                 );
         }
     }

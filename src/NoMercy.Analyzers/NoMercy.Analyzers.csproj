@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <Analyzer>true</Analyzer>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <!--
+          Opt out of central package management for this project only.
+          Analyzer/code-fix packages must be pinned to the running compiler's
+          Roslyn version (4.8.0 = ships with .NET 8 SDK, compatible with the
+          .NET 10 compiler at runtime). The rest of the solution pins Roslyn
+          5.3.0 for workspace tooling (NoMercy.Data), a different use-case
+          that can't mix in here.
+        -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
+    <PackageReference
+      Include="Microsoft.CodeAnalysis.CSharp.Workspaces"
+      Version="4.8.0"
+      PrivateAssets="all"
+    />
+    <PackageReference
+      Include="Microsoft.CodeAnalysis.Analyzers"
+      Version="3.11.0"
+      PrivateAssets="all"
+    >
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!--
+        AnalyzerReleases.Shipped.md / Unshipped.md are picked up automatically by
+        Microsoft.CodeAnalysis.Analyzers' own build target when present in the
+        project directory — no explicit AdditionalFiles wiring needed. All four
+        rules are tracked as Unshipped (Release 1.0 hasn't gone out yet); keep the
+        category/severity columns in sync with the DiagnosticDescriptors below or
+        RS2007/RS2008 will fail the build under this repo's TreatWarningsAsErrors.
+    -->
+</Project>

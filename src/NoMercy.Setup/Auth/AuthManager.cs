@@ -33,9 +33,10 @@ public class AuthManager
 {
     private readonly AppDbContext _appContext;
 
-    // Serialises read-then-write upserts: _appContext is a non-thread-safe EF
-    // DbContext and concurrent callers (PKCE callback + refresh timer) could
-    // otherwise both miss the existing row and insert a duplicate key.
+    // Serialises ALL _appContext access: it is a non-thread-safe EF DbContext, so
+    // a read (LoadSecureValue) racing a write (UpsertSecureValue) — e.g. the boot
+    // refresh timer reading while a PKCE callback stores tokens — throws "a second
+    // operation was started on this DbContext". Every access below takes this.
     private readonly SemaphoreSlim _upsertLock = new(1, 1);
     private readonly IStorageDriver _driver;
 
@@ -495,11 +496,19 @@ public class AuthManager
 
     private async Task<string?> LoadSecureValue(string key)
     {
-        Configuration? row = await _appContext
-            .Configuration.AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Key == key);
+        await _upsertLock.WaitAsync();
+        try
+        {
+            Configuration? row = await _appContext
+                .Configuration.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Key == key);
 
-        return row?.SecureValue;
+            return row?.SecureValue;
+        }
+        finally
+        {
+            _upsertLock.Release();
+        }
     }
 
     private async Task UpsertSecureValue(string key, string value)

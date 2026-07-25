@@ -12,7 +12,6 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using NoMercy.Encoder.Execution;
-using Xunit;
 
 namespace NoMercy.Tests.Encoder.Execution;
 

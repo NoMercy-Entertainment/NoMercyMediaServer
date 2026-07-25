@@ -56,7 +56,7 @@ public class DistributedComputeScenarioTests
         results.Should().HaveCount(4);
         results.Should().AllSatisfy(r => r.Success.Should().BeTrue());
         HashSet<string> resultIds = results.Select(r => r.TaskId).ToHashSet();
-        resultIds.Should().BeEquivalentTo("t0", "t1", "t2", "t3");
+        resultIds.Should().BeEquivalentTo(["t0", "t1", "t2", "t3"]);
     }
 
     [Fact]
@@ -79,9 +79,9 @@ public class DistributedComputeScenarioTests
                 Interlocked.Increment(ref beastReceived);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/beast/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/beast/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "beast"
                 );
             }
@@ -95,9 +95,9 @@ public class DistributedComputeScenarioTests
                 Interlocked.Increment(ref laptopReceived);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/laptop/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/laptop/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "laptop"
                 );
             }
@@ -147,9 +147,9 @@ public class DistributedComputeScenarioTests
                 Interlocked.Increment(ref remoteTaskCount);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/remote/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/remote/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "remote-box"
                 );
             }
@@ -196,9 +196,9 @@ public class DistributedComputeScenarioTests
                     Task.FromResult(
                         new DispatchResult(
                             t.TaskId,
-                            true,
-                            "/out/t0",
-                            TimeSpan.FromSeconds(1),
+                            Success: true,
+                            OutputPath: "/out/t0",
+                            Duration: TimeSpan.FromSeconds(1),
                             WorkerId: "no-slots"
                         )
                     )
@@ -240,9 +240,9 @@ public class DistributedComputeScenarioTests
                     Task.FromResult(
                         new DispatchResult(
                             t.TaskId,
-                            true,
-                            "/out/t1",
-                            TimeSpan.FromSeconds(1),
+                            Success: true,
+                            OutputPath: "/out/t1",
+                            Duration: TimeSpan.FromSeconds(1),
                             WorkerId: "has-slots"
                         )
                     )
@@ -317,9 +317,9 @@ public class DistributedComputeScenarioTests
     {
         DispatchResult original = new(
             "result-tamper",
-            true,
-            "/out/r",
-            TimeSpan.FromSeconds(1),
+            Success: true,
+            OutputPath: "/out/r",
+            Duration: TimeSpan.FromSeconds(1),
             WorkerId: "w"
         );
         string signed = _serializer.SerializeResult(original, _sharedKey);
@@ -367,9 +367,9 @@ public class DistributedComputeScenarioTests
                 Interlocked.Increment(ref workerACount);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/a/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/a/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "a"
                 );
             }
@@ -394,9 +394,9 @@ public class DistributedComputeScenarioTests
                 Interlocked.Increment(ref workerBCount);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/b/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/b/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "b"
                 );
             }
@@ -440,9 +440,9 @@ public class DistributedComputeScenarioTests
                 Interlocked.Increment(ref workerACount);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/a/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/a/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "a"
                 );
             }
@@ -456,9 +456,9 @@ public class DistributedComputeScenarioTests
                 Interlocked.Increment(ref workerBCount);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/b/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/b/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "b"
                 );
             }
@@ -472,9 +472,9 @@ public class DistributedComputeScenarioTests
                 Interlocked.Increment(ref workerCCount);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/c/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/c/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "c"
                 );
             }
@@ -534,9 +534,9 @@ public class DistributedComputeScenarioTests
                     Task.FromResult(
                         new DispatchResult(
                             "cpu-task",
-                            true,
-                            "/cpu/out",
-                            TimeSpan.FromSeconds(1),
+                            Success: true,
+                            OutputPath: "/cpu/out",
+                            Duration: TimeSpan.FromSeconds(1),
                             WorkerId: "cpu-only"
                         )
                     )
@@ -553,9 +553,9 @@ public class DistributedComputeScenarioTests
                     Task.FromResult(
                         new DispatchResult(
                             "gpu-task",
-                            true,
-                            "/gpu/out",
-                            TimeSpan.FromSeconds(1),
+                            Success: true,
+                            OutputPath: "/gpu/out",
+                            Duration: TimeSpan.FromSeconds(1),
                             WorkerId: "gpu-box"
                         )
                     )
@@ -572,9 +572,9 @@ public class DistributedComputeScenarioTests
 
         EncodeTask gpuTask = new(
             "gpu-req",
-            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
-            "/out/gpu-req",
-            EncodeTaskType.QualityVariant,
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            OutputPath: "/out/gpu-req",
+            Type: EncodeTaskType.QualityVariant,
             RequiresGpu: true
         );
 
@@ -609,11 +609,11 @@ public class DistributedComputeScenarioTests
             .Returns(() =>
                 Task.FromResult(
                     new ExecutionResult(
-                        Success: true,
-                        ExitCode: 0,
-                        StdErr: "",
-                        Duration: TimeSpan.FromSeconds(1),
-                        Error: null
+                        true,
+                        0,
+                        "",
+                        TimeSpan.FromSeconds(1),
+                        null
                     )
                 )
             );
@@ -638,7 +638,7 @@ public class DistributedComputeScenarioTests
             .Returns(
                 (EncodeTask _, CancellationToken __) =>
                     Task.FromResult(
-                        new DispatchResult("t0", false, "", TimeSpan.Zero, Error: "OOM")
+                        new DispatchResult("t0", false, "", TimeSpan.Zero, "OOM")
                     )
             );
 
@@ -674,15 +674,15 @@ public class DistributedComputeScenarioTests
             .Returns(
                 (EncodeTask _, CancellationToken __) =>
                     Task.FromResult(
-                        new DispatchResult("t0", false, "", TimeSpan.Zero, Error: "failure")
+                        new DispatchResult("t0", false, "", TimeSpan.Zero, "failure")
                     )
             );
 
         registry.Register(flaky.Object);
 
-        registry.RecordTaskOutcome("flaky", success: false);
-        registry.RecordTaskOutcome("flaky", success: false);
-        registry.RecordTaskOutcome("flaky", success: false);
+        registry.RecordTaskOutcome("flaky", false);
+        registry.RecordTaskOutcome("flaky", false);
+        registry.RecordTaskOutcome("flaky", false);
 
         IReadOnlyList<IRemoteWorker> active = registry.GetActiveWorkers();
 
@@ -700,14 +700,14 @@ public class DistributedComputeScenarioTests
 
         registry.Register(recovering.Object);
 
-        registry.RecordTaskOutcome("recovering", success: false);
-        registry.RecordTaskOutcome("recovering", success: false);
-        registry.RecordTaskOutcome("recovering", success: false);
+        registry.RecordTaskOutcome("recovering", false);
+        registry.RecordTaskOutcome("recovering", false);
+        registry.RecordTaskOutcome("recovering", false);
 
         IReadOnlyList<IRemoteWorker> active = registry.GetActiveWorkers();
         active.Should().BeEmpty("in cooldown after 3 failures");
 
-        registry.RecordTaskOutcome("recovering", success: true);
+        registry.RecordTaskOutcome("recovering", true);
 
         active = registry.GetActiveWorkers();
         active.Should().HaveCount(1, "success clears failure counter and exits cooldown");
@@ -733,9 +733,9 @@ public class DistributedComputeScenarioTests
                 Interlocked.Increment(ref fastCount);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/fast/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/fast/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "fast"
                 );
             }
@@ -749,9 +749,9 @@ public class DistributedComputeScenarioTests
                 Interlocked.Increment(ref slowCount);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/slow/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/slow/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "slow"
                 );
             }
@@ -770,17 +770,17 @@ public class DistributedComputeScenarioTests
 
         EncodeTask heavyTask = new(
             "heavy",
-            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
-            "/out/heavy",
-            EncodeTaskType.QualityVariant,
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            OutputPath: "/out/heavy",
+            Type: EncodeTaskType.QualityVariant,
             EstimatedCostUnits: 8
         );
 
         EncodeTask lightTask = new(
             "light",
-            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
-            "/out/light",
-            EncodeTaskType.QualityVariant,
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            OutputPath: "/out/light",
+            Type: EncodeTaskType.QualityVariant,
             EstimatedCostUnits: 1
         );
 
@@ -816,9 +816,9 @@ public class DistributedComputeScenarioTests
                     Interlocked.Increment(ref beastHasVariant);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/beast/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/beast/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "beast"
                 );
             }
@@ -833,9 +833,9 @@ public class DistributedComputeScenarioTests
                     Interlocked.Increment(ref laptopHasVariant);
                 return new DispatchResult(
                     t.TaskId,
-                    true,
-                    $"/laptop/{t.TaskId}",
-                    TimeSpan.FromSeconds(1),
+                    Success: true,
+                    OutputPath: $"/laptop/{t.TaskId}",
+                    Duration: TimeSpan.FromSeconds(1),
                     WorkerId: "laptop"
                 );
             }
@@ -892,9 +892,9 @@ public class DistributedComputeScenarioTests
                     4,
                     t => new DispatchResult(
                         t.TaskId,
-                        true,
-                        $"/w1/{t.TaskId}",
-                        TimeSpan.FromSeconds(1),
+                        Success: true,
+                        OutputPath: $"/w1/{t.TaskId}",
+                        Duration: TimeSpan.FromSeconds(1),
                         WorkerId: $"r{round}-w1"
                     )
                 );
@@ -908,9 +908,9 @@ public class DistributedComputeScenarioTests
                     2,
                     t => new DispatchResult(
                         t.TaskId,
-                        true,
-                        $"/w2/{t.TaskId}",
-                        TimeSpan.FromSeconds(1),
+                        Success: true,
+                        OutputPath: $"/w2/{t.TaskId}",
+                        Duration: TimeSpan.FromSeconds(1),
                         WorkerId: $"r{round}-w2"
                     )
                 );
@@ -970,11 +970,11 @@ public class DistributedComputeScenarioTests
             .Returns(() =>
                 Task.FromResult(
                     new ExecutionResult(
-                        Success: true,
-                        ExitCode: 0,
-                        StdErr: string.Empty,
-                        Duration: TimeSpan.FromSeconds(1),
-                        Error: null
+                        true,
+                        0,
+                        string.Empty,
+                        TimeSpan.FromSeconds(1),
+                        null
                     )
                 )
             );
@@ -997,9 +997,9 @@ public class DistributedComputeScenarioTests
 
     private static EncodeTask MakeTask(string id, EncodeTaskType type) =>
         new(
-            TaskId: id,
-            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
-            OutputPath: $"/out/{id}",
-            Type: type
+            id,
+            new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            $"/out/{id}",
+            type
         );
 }

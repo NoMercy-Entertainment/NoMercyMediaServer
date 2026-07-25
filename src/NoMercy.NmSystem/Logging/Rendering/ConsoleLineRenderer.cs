@@ -20,10 +20,10 @@ namespace NoMercy.NmSystem.Logging.Rendering;
 /// <summary>
 /// Renders one log entry into an aligned, optionally-coloured console block:
 /// <c>HH:mm:ss [marker] [right-aligned category] | message</c>, with message
-/// values token-coloured, continuation/wrapped lines hung under the gutter, an
-/// optional dim scope suffix, and any exception indented under the gutter. All
-/// column maths go through <see cref="DisplayWidth"/> so alignment holds for CJK,
-/// emoji and already-coloured strings.
+/// values token-coloured, continuation/wrapped lines hung under the gutter, and
+/// any exception indented under the gutter. All column maths go through
+/// <see cref="DisplayWidth"/> so alignment holds for CJK, emoji and
+/// already-coloured strings.
 /// </summary>
 public static class ConsoleLineRenderer
 {
@@ -35,7 +35,6 @@ public static class ConsoleLineRenderer
         LogLevel level,
         LogCategory category,
         string message,
-        string? scope,
         Exception? exception,
         NoMercyConsoleTheme theme,
         bool color,
@@ -69,9 +68,6 @@ public static class ConsoleLineRenderer
 
         if (output.Count == 0)
             output.Add(head.ToString());
-
-        if (!string.IsNullOrEmpty(scope))
-            output[0] = output[0] + " " + Paint("· " + scope, dim, color);
 
         if (exception is not null)
         {

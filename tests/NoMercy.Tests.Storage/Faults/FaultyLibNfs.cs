@@ -511,6 +511,8 @@ internal sealed class FaultyLibNfs : ILibNfs
     public long Lseek(IntPtr nfs, IntPtr fh, long offset, int whence, out ulong currentOffset)
     {
         currentOffset = 0;
+        if (TryFault(nameof(Lseek), out int rc, out _))
+            return rc;
         if (!_openHandles.TryGetValue(fh, out FileHandle? handle))
             return -9;
         handle.Position = offset;

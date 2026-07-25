@@ -17,10 +17,10 @@ using Newtonsoft.Json;
 namespace NoMercy.Database.Models.People;
 
 [PrimaryKey(nameof(Id))]
-[Index(nameof(CreditId), nameof(MovieId), nameof(JobId), IsUnique = true)]
-[Index(nameof(CreditId), nameof(TvId), nameof(JobId), IsUnique = true)]
-[Index(nameof(CreditId), nameof(SeasonId), nameof(JobId), IsUnique = true)]
-[Index(nameof(CreditId), nameof(EpisodeId), nameof(JobId), IsUnique = true)]
+[Index(nameof(CreditId), [nameof(MovieId), nameof(JobId)], IsUnique = true)]
+[Index(nameof(CreditId), [nameof(TvId), nameof(JobId)], IsUnique = true)]
+[Index(nameof(CreditId), [nameof(SeasonId), nameof(JobId)], IsUnique = true)]
+[Index(nameof(CreditId), [nameof(EpisodeId), nameof(JobId)], IsUnique = true)]
 [Index(nameof(CreditId))]
 [Index(nameof(PersonId))]
 [Index(nameof(JobId), IsUnique = false)]

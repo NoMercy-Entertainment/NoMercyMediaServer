@@ -140,14 +140,7 @@ public sealed class DvdDiscSource(
                 drive.Path,
                 protection?.Message ?? "(no protection detected)"
             );
-            return new(
-                OpticalDiscType.Dvd,
-                drive.Label,
-                [],
-                null,
-                TimeSpan.Zero,
-                protection
-            );
+            return new(OpticalDiscType.Dvd, drive.Label, [], null, TimeSpan.Zero, protection);
         }
 
         // Flag the longest title as the main feature.
@@ -230,8 +223,14 @@ public sealed class DvdDiscSource(
             DiscTitle? single = info.Titles.FirstOrDefault();
             return single is null ? empty : single with { Index = titleIndex };
         }
-        catch (JsonException ex)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
+            // DiscScanner.Parse wraps a JSON parse failure into
+            // InvalidOperationException rather than letting JsonException
+            // escape — this catch must widen to match, or a malformed
+            // ffprobe response on a real disc crashes the per-title probe
+            // instead of degrading to the empty skeleton title this method
+            // otherwise always returns on failure.
             logger.LogInformation(
                 ex,
                 "DVD per-title probe parse failed for {Drive} title {Title}",

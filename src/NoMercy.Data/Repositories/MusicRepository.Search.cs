@@ -28,6 +28,8 @@ public partial class MusicRepository
         return await mediaContext
             .Artists.AsNoTracking()
             .Where(artist => MediaContext.NormalizeSearch(artist.Name).Contains(normalizedQuery))
+            .OrderBy(artist => artist.Name)
+            .ThenBy(artist => artist.Id)
             .Select(artist => artist.Id)
             .ToListAsync(ct);
     }
@@ -41,6 +43,8 @@ public partial class MusicRepository
         return await mediaContext
             .Albums.AsNoTracking()
             .Where(album => MediaContext.NormalizeSearch(album.Name).Contains(normalizedQuery))
+            .OrderBy(album => album.Name)
+            .ThenBy(album => album.Id)
             .Select(album => album.Id)
             .ToListAsync(ct);
     }
@@ -56,6 +60,8 @@ public partial class MusicRepository
             .Where(playlist =>
                 MediaContext.NormalizeSearch(playlist.Name).Contains(normalizedQuery)
             )
+            .OrderBy(playlist => playlist.Name)
+            .ThenBy(playlist => playlist.Id)
             .Select(playlist => playlist.Id)
             .ToListAsync(ct);
     }
@@ -69,6 +75,8 @@ public partial class MusicRepository
         return await mediaContext
             .Tracks.AsNoTracking()
             .Where(track => MediaContext.NormalizeSearch(track.Name).Contains(normalizedQuery))
+            .OrderBy(track => track.Name)
+            .ThenBy(track => track.Id)
             .Select(track => track.Id)
             .ToListAsync(ct);
     }
@@ -82,6 +90,8 @@ public partial class MusicRepository
         return await mediaContext
             .Artists.AsNoTracking()
             .Where(artist => artistIds.Contains(artist.Id))
+            .OrderBy(artist => artist.Name)
+            .ThenBy(artist => artist.Id)
             .Include(artist => artist.ArtistTrack)
                 .ThenInclude(artistTrack => artistTrack.Track)
             .Include(artist => artist.AlbumArtist)
@@ -98,6 +108,8 @@ public partial class MusicRepository
         return await mediaContext
             .Albums.AsNoTracking()
             .Where(album => albumIds.Contains(album.Id))
+            .OrderBy(album => album.Name)
+            .ThenBy(album => album.Id)
             .Include(album => album.AlbumTrack)
                 .ThenInclude(albumTrack => albumTrack.Track)
                     .ThenInclude(track => track.ArtistTrack)
@@ -117,6 +129,8 @@ public partial class MusicRepository
         return await mediaContext
             .Playlists.AsNoTracking()
             .Where(playlist => playlistIds.Contains(playlist.Id))
+            .OrderBy(playlist => playlist.Name)
+            .ThenBy(playlist => playlist.Id)
             .Include(playlist => playlist.Tracks)
                 .ThenInclude(playlistTrack => playlistTrack.Track)
                     .ThenInclude(track => track.TrackUser)
@@ -132,6 +146,8 @@ public partial class MusicRepository
         return await mediaContext
             .Tracks.AsNoTracking()
             .Where(track => trackIds.Contains(track.Id))
+            .OrderBy(track => track.Name)
+            .ThenBy(track => track.Id)
             .Include(track => track.ArtistTrack)
                 .ThenInclude(artistTrack => artistTrack.Artist)
             .Include(track => track.AlbumTrack)

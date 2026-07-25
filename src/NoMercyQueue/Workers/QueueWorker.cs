@@ -44,6 +44,11 @@ public class QueueWorker(
     private bool _isRunning = true;
     private CancellationTokenSource _stopCts = new();
 
+    // The currently-running poll loop task. Restart() must let the previous loop
+    // fully exit before the next one starts polling, or the two overlap and share
+    // _currentJobId — reserving/running the same job twice.
+    private Task? _runTask;
+
     /// <summary>
     /// Set when the resource budget gate rejected the most recent acquire
     /// attempt and cleared on the next successful acquire. Used to log the
@@ -165,22 +170,14 @@ public class QueueWorker(
                         OnWorkCompleted(EventArgs.Empty);
 
                         logger?.LogTrace(
-                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {ClassInstance} processed successfully",
-                            name,
-                            CurrentIndex,
-                            job.Id,
-                            classInstance
+                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {ClassInstance} processed successfully", [name, CurrentIndex, job.Id, classInstance]
                         );
                     }
                     else
                     {
                         string typeName = jobWithArguments.GetType().FullName ?? "null";
                         logger?.LogError(
-                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} deserialized to {TypeName} which does not implement IShouldQueue — rejecting",
-                            name,
-                            CurrentIndex,
-                            job.Id,
-                            typeName
+                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} deserialized to {TypeName} which does not implement IShouldQueue — rejecting", [name, CurrentIndex, job.Id, typeName]
                         );
 
                         queue.FailJob(
@@ -192,6 +189,38 @@ public class QueueWorker(
                         _currentJobId = null;
                     }
                 }
+                catch (OperationCanceledException) when (stopToken.IsCancellationRequested)
+                {
+                    // Shutdown interrupted the job (e.g. an encode whose ffmpeg
+                    // child was torn down via the host-stopping token). This is
+                    // NOT a failure: return the reservation to the pool, which
+                    // also undoes the attempt increment from GetNextJob, so the
+                    // job resumes cleanly on next boot instead of burning a retry
+                    // or dead-lettering after a few restarts. Then exit the loop.
+                    queue.ReleaseReservation(job, TimeSpan.Zero);
+                    _currentJobId = null;
+
+                    logger?.LogInformation(
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} interrupted by shutdown — released for retry", [name, CurrentIndex, job.Id]
+                    );
+                    break;
+                }
+                catch (ObjectDisposedException) when (stopToken.IsCancellationRequested)
+                {
+                    // The host disposed the root service provider as it stopped,
+                    // while this job was being scoped (ExecuteWithTransientRetry →
+                    // IServiceScopeFactory.CreateScope). Same as the cancellation
+                    // case: this is shutdown, not a job fault — release the
+                    // reservation for a clean retry on next boot instead of
+                    // dead-lettering a job that never got to run.
+                    queue.ReleaseReservation(job, TimeSpan.Zero);
+                    _currentJobId = null;
+
+                    logger?.LogInformation(
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} scope disposed by shutdown — released for retry", [name, CurrentIndex, job.Id]
+                    );
+                    break;
+                }
                 catch (Exception ex)
                 {
                     queue.FailJob(job, ex);
@@ -199,12 +228,7 @@ public class QueueWorker(
                     _currentJobId = null;
 
                     logger?.LogError(
-                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {Payload} failed with error: {Error}",
-                        name,
-                        CurrentIndex,
-                        job.Id,
-                        job.Payload,
-                        ex
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {Payload} failed with error: {Error}", [name, CurrentIndex, job.Id, job.Payload, ex]
                     );
                 }
                 finally
@@ -272,11 +296,7 @@ public class QueueWorker(
             if (!_suppressBudgetSaturationLog)
             {
                 logger?.LogWarning(
-                    "[{Queue}] budget acquisition failed for job {JobId}: {Message}. Will retry every {Delay}s.",
-                    name,
-                    job.Id,
-                    ex.Message,
-                    BudgetRetryDelay.TotalSeconds
+                    "[{Queue}] budget acquisition failed for job {JobId}: {Message}. Will retry every {Delay}s.", [name, job.Id, ex.Message, BudgetRetryDelay.TotalSeconds]
                 );
                 _suppressBudgetSaturationLog = true;
             }
@@ -308,13 +328,7 @@ public class QueueWorker(
                 int cpuAvailable = resourceBudget.AvailableCpuThreads();
 
                 logger?.LogInformation(
-                    "[{Queue}] budget saturated for job {JobId} ({Requirement}) — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Still retrying every {Delay}s.",
-                    name,
-                    job.Id,
-                    requirement,
-                    gpuAvailable,
-                    cpuAvailable,
-                    BudgetRetryDelay.TotalSeconds
+                    "[{Queue}] budget saturated for job {JobId} ({Requirement}) — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Still retrying every {Delay}s.", [name, job.Id, requirement, gpuAvailable, cpuAvailable, BudgetRetryDelay.TotalSeconds]
                 );
                 _suppressBudgetSaturationLog = true;
             }
@@ -358,9 +372,7 @@ public class QueueWorker(
         {
             logger?.LogWarning(
                 ex,
-                "[{Queue}] failed to deserialize job {JobId} while degrading an absent-GPU requirement",
-                name,
-                job.Id
+                "[{Queue}] failed to deserialize job {JobId} while degrading an absent-GPU requirement", [name, job.Id]
             );
             return false;
         }
@@ -380,11 +392,7 @@ public class QueueWorker(
 
         logger?.LogWarning(
             "[{Queue}] job {JobId} requires GPU device '{GpuKey}' which is not present on this "
-                + "host — degrading to software and rerouting to '{NewQueue}'.",
-            name,
-            job.Id,
-            gpuDeviceKey,
-            degraded.QueueName
+                     + "host — degrading to software and rerouting to '{NewQueue}'.", [name, job.Id, gpuDeviceKey, degraded.QueueName]
         );
 
         queue.Requeue(job, degraded.QueueName, newPayload);
@@ -471,13 +479,7 @@ public class QueueWorker(
                     int delay = TransientRetryBaseMs + Random.Shared.Next(TransientRetryJitterMs);
 
                     logger?.LogWarning(
-                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} hit transient SQLite error (attempt {Attempt}/{Max}), retrying in {Delay}ms",
-                        name,
-                        CurrentIndex,
-                        queueJob.Id,
-                        attempt + 1,
-                        MaxTransientRetries,
-                        delay
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} hit transient SQLite error (attempt {Attempt}/{Max}), retrying in {Delay}ms", [name, CurrentIndex, queueJob.Id, attempt + 1, MaxTransientRetries, delay]
                     );
 
                     Thread.Sleep(delay);
@@ -510,7 +512,7 @@ public class QueueWorker(
 
     public void Stop()
     {
-        logger?.LogInformation("QueueWorker {Name} - {CurrentIndex}: stopped", name, CurrentIndex);
+        logger?.LogInformation("QueueWorker {Name} - {CurrentIndex}: stopped", [name, CurrentIndex]);
         _isRunning = false;
         _stopCts.Cancel();
     }
@@ -531,11 +533,29 @@ public class QueueWorker(
     /// </summary>
     public void Start()
     {
+        Task? previous = _runTask;
         if (_stopCts.IsCancellationRequested)
             _stopCts = new();
         _isRunning = true;
-        _ = Task.Run(async () =>
+        _runTask = Task.Run(async () =>
         {
+            // If a prior loop is still winding down (Restart cancelled it while it
+            // was mid-job), wait for it to exit before polling so two loops never
+            // run concurrently on this instance. Bounded so a stuck job can't
+            // deadlock the restart.
+            if (previous is not null)
+            {
+                try
+                {
+                    await previous.WaitAsync(TimeSpan.FromSeconds(30));
+                }
+                catch (Exception)
+                {
+                    // Timed out or faulted — proceed; the old loop's token is
+                    // already cancelled so it will not reserve new work.
+                }
+            }
+
             try
             {
                 await StartAsync(_stopCts.Token);
@@ -544,9 +564,7 @@ public class QueueWorker(
             {
                 logger?.LogCritical(
                     ex,
-                    "QueueWorker {Name} - {CurrentIndex}: StartAsync crashed",
-                    name,
-                    CurrentIndex
+                    "QueueWorker {Name} - {CurrentIndex}: StartAsync crashed", [name, CurrentIndex]
                 );
             }
         });

@@ -49,11 +49,7 @@ public partial class RecordingManager(
     )
     {
         logger.LogTrace(
-            "Storing Recording: {Title} - {Position}-{Position2} {Title2}",
-            releaseAppends.Title,
-            musicBrainzMedia.Position,
-            musicBrainzTrack.Position,
-            musicBrainzTrack.Title
+            "Storing Recording: {Title} - {Position}-{Position2} {Title2}", [releaseAppends.Title, musicBrainzMedia.Position, musicBrainzTrack.Position, musicBrainzTrack.Title]
         );
 
         MediaScan mediaScan = new(storageDriver);
@@ -102,7 +98,7 @@ public partial class RecordingManager(
                     DiscNumber = musicBrainzMedia.Position,
                     TrackNumber = musicBrainzTrack.Position,
 
-                    Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path),
+                    Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path.Replace('\\', '/')),
                     Quality = (int)
                         Math.Floor(
                             (
@@ -167,9 +163,7 @@ public partial class RecordingManager(
     )
     {
         logger.LogTrace(
-            "Linking Recording to Artist: {Title} - {Title2}",
-            musicBrainzTrack.Title,
-            releaseAppends.MusicBrainzReleaseGroup.Title
+            "Linking Recording to Artist: {Title} - {Title2}", [musicBrainzTrack.Title, releaseAppends.MusicBrainzReleaseGroup.Title]
         );
 
         foreach (ReleaseArtistCredit credit in releaseAppends.ArtistCredit)
@@ -428,7 +422,7 @@ public partial class RecordingManager(
             DiscNumber = mediaFile.Parsed?.DiscNumber ?? 0,
             TrackNumber = mediaFile.Parsed?.TrackNumber ?? 0,
 
-            Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path),
+            Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path.Replace('\\', '/')),
             Quality = (int)
                 Math.Floor(
                     (

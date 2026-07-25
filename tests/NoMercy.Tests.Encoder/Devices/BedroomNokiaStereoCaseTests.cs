@@ -51,7 +51,7 @@ public class BedroomNokiaStereoCaseTests
         sel.AudioConstraint.Should().Be(new AudioConstraint(2, "aac"));
         sel.VideoConstraint.Should().NotBeNull();
         sel.VideoConstraint!.MaxHeight.Should().Be(1080);
-        sel.VideoConstraint.Codec.Should().BeOneOf("h264", "hevc");
+        sel.VideoConstraint.Codec.Should().BeOneOf(["h264", "hevc"]);
         sel.Reason.Should().Contain("LowRam");
     }
 

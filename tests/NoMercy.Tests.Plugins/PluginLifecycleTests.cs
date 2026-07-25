@@ -30,14 +30,14 @@ public class PluginLifecycleTests
     }
 
     [Theory]
-    [InlineData(PluginStatus.Active, PluginStatus.Disabled)]
-    [InlineData(PluginStatus.Active, PluginStatus.Malfunctioned)]
-    [InlineData(PluginStatus.Active, PluginStatus.Deleted)]
-    [InlineData(PluginStatus.Disabled, PluginStatus.Active)]
-    [InlineData(PluginStatus.Disabled, PluginStatus.Deleted)]
-    [InlineData(PluginStatus.Malfunctioned, PluginStatus.Active)]
-    [InlineData(PluginStatus.Malfunctioned, PluginStatus.Disabled)]
-    [InlineData(PluginStatus.Malfunctioned, PluginStatus.Deleted)]
+    [InlineData([PluginStatus.Active, PluginStatus.Disabled])]
+    [InlineData([PluginStatus.Active, PluginStatus.Malfunctioned])]
+    [InlineData([PluginStatus.Active, PluginStatus.Deleted])]
+    [InlineData([PluginStatus.Disabled, PluginStatus.Active])]
+    [InlineData([PluginStatus.Disabled, PluginStatus.Deleted])]
+    [InlineData([PluginStatus.Malfunctioned, PluginStatus.Active])]
+    [InlineData([PluginStatus.Malfunctioned, PluginStatus.Disabled])]
+    [InlineData([PluginStatus.Malfunctioned, PluginStatus.Deleted])]
     public void CanTransition_AllowedTransitions_ReturnsTrue(PluginStatus from, PluginStatus to)
     {
         bool result = PluginLifecycle.CanTransition(from, to);
@@ -46,15 +46,30 @@ public class PluginLifecycleTests
     }
 
     [Theory]
-    [InlineData(PluginStatus.Deleted, PluginStatus.Active)]
-    [InlineData(PluginStatus.Deleted, PluginStatus.Disabled)]
-    [InlineData(PluginStatus.Deleted, PluginStatus.Malfunctioned)]
-    [InlineData(PluginStatus.Disabled, PluginStatus.Malfunctioned)]
-    [InlineData(PluginStatus.Active, PluginStatus.Active)]
-    [InlineData(PluginStatus.Disabled, PluginStatus.Disabled)]
+    [InlineData([PluginStatus.Deleted, PluginStatus.Active])]
+    [InlineData([PluginStatus.Deleted, PluginStatus.Disabled])]
+    [InlineData([PluginStatus.Deleted, PluginStatus.Malfunctioned])]
+    [InlineData([PluginStatus.Disabled, PluginStatus.Malfunctioned])]
+    [InlineData([PluginStatus.Active, PluginStatus.Active])]
+    [InlineData([PluginStatus.Disabled, PluginStatus.Disabled])]
     public void CanTransition_ForbiddenTransitions_ReturnsFalse(PluginStatus from, PluginStatus to)
     {
         bool result = PluginLifecycle.CanTransition(from, to);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CanTransition_FromStatusAbsentFromTheAllowedTransitionMap_ReturnsFalse()
+    {
+        // Every real PluginStatus value is a key in AllowedTransitions, so the
+        // TryGetValue-miss branch is otherwise unreachable through the public
+        // enum. An out-of-range cast is the only way to exercise it — proving
+        // CanTransition fails closed (denies) for a status the map has no entry
+        // for, rather than throwing or defaulting to permissive.
+        PluginStatus unknownStatus = (PluginStatus)999;
+
+        bool result = PluginLifecycle.CanTransition(unknownStatus, PluginStatus.Active);
 
         result.Should().BeFalse();
     }

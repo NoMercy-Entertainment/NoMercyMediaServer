@@ -58,7 +58,7 @@ public class H264DefinitionTests
     {
         EncoderInfo nvenc = _definition.Encoders.Single(e => e.FfmpegName == "h264_nvenc");
         nvenc.RequiredVendor.Should().Be(GpuVendor.Nvidia);
-        nvenc.Presets.Should().BeEquivalentTo("p1", "p2", "p3", "p4", "p5", "p6", "p7");
+        nvenc.Presets.Should().BeEquivalentTo(["p1", "p2", "p3", "p4", "p5", "p6", "p7"]);
         nvenc.Profiles.Should().Contain("baseline");
         nvenc.Profiles.Should().Contain("main");
         nvenc.Profiles.Should().Contain("high");
@@ -75,7 +75,7 @@ public class H264DefinitionTests
     {
         EncoderInfo amf = _definition.Encoders.Single(e => e.FfmpegName == "h264_amf");
         amf.RequiredVendor.Should().Be(GpuVendor.Amd);
-        amf.Presets.Should().BeEquivalentTo("speed", "balanced", "quality");
+        amf.Presets.Should().BeEquivalentTo(["speed", "balanced", "quality"]);
         amf.Profiles.Should().Contain("constrained_baseline");
         amf.Profiles.Should().Contain("constrained_high");
         amf.MaxConcurrentSessions.Should().Be(int.MaxValue);
@@ -88,8 +88,8 @@ public class H264DefinitionTests
         EncoderInfo qsv = _definition.Encoders.Single(e => e.FfmpegName == "h264_qsv");
         qsv.RequiredVendor.Should().Be(GpuVendor.Intel);
         qsv.Presets.Should()
-            .BeEquivalentTo("veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow");
-        qsv.Profiles.Should().BeEquivalentTo("baseline", "main", "high");
+            .BeEquivalentTo(["veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"]);
+        qsv.Profiles.Should().BeEquivalentTo(["baseline", "main", "high"]);
         qsv.QualityRange.Min.Should().Be(1);
         qsv.QualityRange.Max.Should().Be(51);
         qsv.SupportedRateControl.Should().Contain(RateControlMode.Icq);
@@ -102,7 +102,7 @@ public class H264DefinitionTests
         EncoderInfo vaapi = _definition.Encoders.Single(e => e.FfmpegName == "h264_vaapi");
         vaapi.RequiredVendor.Should().Be(GpuVendor.Intel);
         vaapi.Presets.Should().BeEmpty();
-        vaapi.Profiles.Should().BeEquivalentTo("constrained_baseline", "main", "high");
+        vaapi.Profiles.Should().BeEquivalentTo(["constrained_baseline", "main", "high"]);
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class H264DefinitionTests
         EncoderInfo vtb = _definition.Encoders.Single(e => e.FfmpegName == "h264_videotoolbox");
         vtb.RequiredVendor.Should().Be(GpuVendor.Apple);
         vtb.Presets.Should().BeEmpty();
-        vtb.Profiles.Should().BeEquivalentTo("66", "77", "100");
+        vtb.Profiles.Should().BeEquivalentTo(["66", "77", "100"]);
         vtb.QualityRange.Min.Should().Be(0);
         vtb.QualityRange.Max.Should().Be(100);
         vtb.SupportedRateControl.Should().Contain(RateControlMode.QualityLevel);

@@ -13,6 +13,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
@@ -21,6 +22,8 @@ using NoMercy.Data.DTOs.Specials;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -30,7 +33,11 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/specials")]
-public class SpecialController(ISpecialRepository specialRepository) : BaseController
+public class SpecialController(
+    ISpecialRepository specialRepository,
+    IJobDispatcher jobDispatcher,
+    ILogger<SpecialController> logger
+    ) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index(
@@ -246,6 +253,129 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
                 Message = request.Add
                     ? "Special added to watch list"
                     : "Special removed from watch list",
+            }
+        );
+    }
+    
+    [HttpPost]
+    [Route("{id:ulid}/rescan")]
+    [Authorize(Policy = "Moderator")]
+    public async Task<IActionResult> Rescan(Ulid id, CancellationToken ct = default)
+    {
+        Guid userId = User.UserId();
+        
+        Special? special = await specialRepository.GetSpecialWithTvAsync(userId, id, ct);
+
+        if (special is null)
+            return UnprocessableEntityResponse("Special not found");
+        
+        var movies = special.Items
+            .Where(item => item.MovieId is not null)
+            .Select(item => new
+            {
+                id = item.MovieId ?? 0,
+                libraryId = item.Movie!.LibraryId!
+            })
+            .ToList();
+
+        foreach (var movie in movies)
+        {
+            try
+            {
+                jobDispatcher.DispatchJob<FileRescanJob>(movie.id, movie.libraryId);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e.Message);
+                return InternalServerErrorResponse(e.Message);
+            }
+        }
+        
+        var tvs = special.Items
+            .Where(item => item.Episode is not null)
+            .Select(item => new
+            {
+                id = item.Episode?.TvId ?? 0,
+                libraryId = item.Episode?.Tv.LibraryId ?? Ulid.Empty
+            })
+            .GroupBy(item => new { item.id, item.libraryId })
+            .DistinctBy(group => new { group.Key.id, group.Key.libraryId })
+            .Select(group => group.Key)
+            .ToList();
+        
+        foreach (var tv in tvs)
+        {
+            try
+            {
+                jobDispatcher.DispatchJob<FileRescanJob>(tv.id, tv.libraryId);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e.Message);
+                return InternalServerErrorResponse(e.Message);
+            }
+        }
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Rescanning {0} for files in the background",
+                Args = [special.Title ?? "Unknown"],
+            }
+        );
+    }
+
+    // [HttpPost]
+    // [Route("{id:ulid}/refresh")]
+    // [Authorize(Policy = "Moderator")]
+    // public async Task<IActionResult> Refresh(Ulid id, CancellationToken ct = default)
+    // {
+    //     Special? special = await specialRepository.GetSpecialByIdAsync(id, ct);
+    //
+    //     if (special is null)
+    //         return UnprocessableEntityResponse("Special not found");
+    //
+    //     try
+    //     {
+    //         jobDispatcher.DispatchJob<MovieImportJob>(id, special.Library.Id);
+    //     }
+    //     catch (Exception e)
+    //     {
+    //         logger.LogError(e.Message);
+    //         return InternalServerErrorResponse(e.Message);
+    //     }
+    //
+    //     return Ok(
+    //         new StatusResponseDto<string>
+    //         {
+    //             Status = "ok",
+    //             Message = "Refreshing {0} in the background",
+    //             Args = [special.Title ?? "Unknown"],
+    //         }
+    //     );
+    // }
+
+    
+    [HttpPost]
+    [Route("seed")]
+    [Authorize(Policy = "Moderator")]
+    public async Task<IActionResult> Seed(CancellationToken ct = default)
+    {
+        try
+        {
+            jobDispatcher.DispatchJob<SpecialSeedFetchJob>();
+        }
+        catch (Exception e)
+        {
+            return InternalServerErrorResponse(e.Message);
+        }
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Seeding specials in the background",
             }
         );
     }

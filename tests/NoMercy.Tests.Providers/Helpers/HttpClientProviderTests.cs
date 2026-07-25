@@ -27,7 +27,6 @@ public class HttpClientProviderTests : IDisposable
             client =>
             {
                 client.BaseAddress = new("https://api.themoviedb.org/3/");
-                client.DefaultRequestHeaders.Add("User-Agent", "test-agent");
             }
         );
         services.AddHttpClient(
@@ -35,6 +34,7 @@ public class HttpClientProviderTests : IDisposable
             client =>
             {
                 client.BaseAddress = new("https://musicbrainz.org/ws/2/");
+                client.DefaultRequestHeaders.Add("User-Agent", "Anonymous");
             }
         );
         services.AddHttpClient(

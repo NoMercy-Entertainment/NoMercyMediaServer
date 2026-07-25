@@ -48,7 +48,7 @@ public partial class NoClosureCaptureTests
             .Should()
             .BeFalse(
                 "VideoEncodeJob must not register EventBus subscriptions — "
-                    + "subscriptions would capture MediaContext across Handle() invocations (B1 regression)"
+                         + "subscriptions would capture MediaContext across Handle() invocations (B1 regression)"
             );
     }
 
@@ -79,8 +79,8 @@ public partial class NoClosureCaptureTests
             .Should()
             .BeEmpty(
                 "MediaContext, FileRepository, and FileManager must be opened locally "
-                    + "inside each phase method and disposed before the method returns. "
-                    + "Class-level fields of these types would survive across Handle() calls."
+                         + "inside each phase method and disposed before the method returns. "
+                         + "Class-level fields of these types would survive across Handle() calls."
             );
     }
 
@@ -128,7 +128,7 @@ public partial class NoClosureCaptureTests
             .Should()
             .BeEmpty(
                 "every coordinator phase method must open its own MediaContext locally "
-                    + "so it is disposed before Handle() returns"
+                         + "so it is disposed before Handle() returns"
             );
     }
 

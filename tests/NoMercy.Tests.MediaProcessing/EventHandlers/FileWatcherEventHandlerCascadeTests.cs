@@ -186,10 +186,7 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
         HttpClientProvider.Initialize(new FileWatcherTmdbMockFactory());
 
         _queueContext = new();
-        QueueConfiguration config = new()
-        {
-            WorkerCounts = new() { ["import"] = 0 },
-        };
+        QueueConfiguration config = new() { WorkerCounts = new() { ["import"] = 0 } };
         _queueRunner = new(_queueContext, config, NullLoggerFactory.Instance);
 
         _tempRoot = Path.Combine(Path.GetTempPath(), "nm-fweh-" + Path.GetRandomFileName());
@@ -461,9 +458,7 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
                 DriverId = driverId,
             }
         );
-        _sharedContext.FolderLibrary.Add(
-            new() { LibraryId = libraryId, FolderId = folderId }
-        );
+        _sharedContext.FolderLibrary.Add(new() { LibraryId = libraryId, FolderId = folderId });
         _sharedContext.SaveChanges();
 
         return libraryId;

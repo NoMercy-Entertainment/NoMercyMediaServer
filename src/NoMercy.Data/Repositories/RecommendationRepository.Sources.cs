@@ -93,6 +93,7 @@ public partial class RecommendationRepository
             .Include(m =>
                 m.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
             )
             .Include(m => m.VideoFiles)
             .Include(m => m.KeywordMovies)
@@ -140,6 +141,7 @@ public partial class RecommendationRepository
             .Include(t =>
                 t.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
             )
             .Include(t => t.Episodes)
                 .ThenInclude(e => e.VideoFiles)
@@ -187,6 +189,7 @@ public partial class RecommendationRepository
             .Include(m =>
                 m.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
             )
             .Include(m => m.VideoFiles)
             .Include(m => m.KeywordMovies)
@@ -231,6 +234,7 @@ public partial class RecommendationRepository
             .Include(t =>
                 t.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
             )
             .Include(t => t.Episodes)
                 .ThenInclude(e => e.VideoFiles)
@@ -274,6 +278,7 @@ public partial class RecommendationRepository
             .Include(m =>
                 m.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
             )
             .Include(m => m.VideoFiles)
             .Include(m => m.KeywordMovies)
@@ -316,6 +321,7 @@ public partial class RecommendationRepository
             .Include(t =>
                 t.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en")
                     .OrderByDescending(i => i.VoteAverage)
+                    .ThenBy(i => i.Id)
             )
             .Include(t => t.Episodes)
                 .ThenInclude(e => e.VideoFiles)

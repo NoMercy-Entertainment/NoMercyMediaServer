@@ -39,6 +39,12 @@ public class Gpu
     [JsonProperty("identifier")]
     internal string Identifier { get; set; } = string.Empty;
 
+    // TryParse rather than Parse: an empty/default Identifier ("") splits into a
+    // single empty-string segment (not null), so the "?? "0"" fallback never
+    // fires and int.Parse("") throws FormatException. Every real provider sets
+    // Identifier before Index is read, but a defensively-constructed Gpu (or a
+    // future caller) must not crash on a missing/malformed identifier.
     [JsonProperty("index")]
-    public int Index => int.Parse(Identifier.Split('/').LastOrDefault() ?? "0");
+    public int Index =>
+        int.TryParse(Identifier.Split('/').LastOrDefault(), out int index) ? index : 0;
 }

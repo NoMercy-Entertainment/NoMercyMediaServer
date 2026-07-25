@@ -40,8 +40,7 @@ internal static class PlanStageHelpers
     internal static VideoOutput[] EnumerateVideo(EncodingProfile profile)
     {
         if (
-            profile.Ladder?.Mode == LadderMode.Manual
-            && profile.Ladder.Rungs is { Length: > 0 } rungs
+            profile.Ladder is { Mode: LadderMode.Manual, Rungs: { Length: > 0 } rungs }
         )
         {
             VideoOutput reference = profile.Video ?? BuildSyntheticReference(rungs[0]);

@@ -349,10 +349,10 @@ public class CodecCapabilitySelectionTests
     // ── Rate control defaults per encoder ──────────────────────────────────────
 
     [Theory]
-    [InlineData(VideoCodecType.H264, "libx264", RateControlMode.Crf)]
-    [InlineData(VideoCodecType.H265, "libx265", RateControlMode.Crf)]
-    [InlineData(VideoCodecType.Av1, "libsvtav1", RateControlMode.Crf)]
-    [InlineData(VideoCodecType.Vp9, "libvpx-vp9", RateControlMode.Crf)]
+    [InlineData([VideoCodecType.H264, "libx264", RateControlMode.Crf])]
+    [InlineData([VideoCodecType.H265, "libx265", RateControlMode.Crf])]
+    [InlineData([VideoCodecType.Av1, "libsvtav1", RateControlMode.Crf])]
+    [InlineData([VideoCodecType.Vp9, "libvpx-vp9", RateControlMode.Crf])]
     public void Software_Encoders_Default_To_Crf(
         VideoCodecType codec,
         string expectedHandle,
@@ -369,9 +369,9 @@ public class CodecCapabilitySelectionTests
     }
 
     [Theory]
-    [InlineData(VideoCodecType.H264, RateControlMode.Cq)]
-    [InlineData(VideoCodecType.H265, RateControlMode.Cq)]
-    [InlineData(VideoCodecType.Av1, RateControlMode.Cq)]
+    [InlineData([VideoCodecType.H264, RateControlMode.Cq])]
+    [InlineData([VideoCodecType.H265, RateControlMode.Cq])]
+    [InlineData([VideoCodecType.Av1, RateControlMode.Cq])]
     public void Nvenc_Encoders_Default_To_Cq(VideoCodecType codec, RateControlMode expected)
     {
         IHardwareCapabilities caps = MakeCaps(

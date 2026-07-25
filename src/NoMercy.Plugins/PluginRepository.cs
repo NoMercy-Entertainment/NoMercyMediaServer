@@ -148,10 +148,7 @@ public class PluginRepository : IPluginRepository
             catch (Exception ex)
             {
                 _logger.LogWarning(
-                    "Failed to refresh repository '{Name}' ({Url}): {Error}",
-                    repo.Name,
-                    repo.Url,
-                    ex.Message
+                    "Failed to refresh repository '{Name}' ({Url}): {Error}", [repo.Name, repo.Url, ex.Message]
                 );
             }
         }
@@ -226,10 +223,7 @@ public class PluginRepository : IPluginRepository
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to fetch repository '{Name}' ({Url}): {Error}",
-                name,
-                url,
-                ex.Message
+                "Failed to fetch repository '{Name}' ({Url}): {Error}", [name, url, ex.Message]
             );
         }
     }
@@ -255,9 +249,7 @@ public class PluginRepository : IPluginRepository
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to load repositories from {Path}: {Error}",
-                _repositoriesFilePath,
-                ex.Message
+                "Failed to load repositories from {Path}: {Error}", [_repositoriesFilePath, ex.Message]
             );
         }
     }
@@ -284,9 +276,7 @@ public class PluginRepository : IPluginRepository
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to save repositories to {Path}: {Error}",
-                _repositoriesFilePath,
-                ex.Message
+                "Failed to save repositories to {Path}: {Error}", [_repositoriesFilePath, ex.Message]
             );
         }
     }

@@ -441,7 +441,12 @@ public class Binaries
     /// Returns true when the binary exists in an installer directory (not the binaries path).
     /// This prevents redundant downloads when binaries were installed by an installer.
     /// </summary>
-    private bool ExistsInInstalledDirectory(string executableName)
+    // Internal (not private): NoMercy.Tests.Setup exercises the platform/asset-resolution
+    // branches of each Download* method directly (installer-directory short-circuit,
+    // per-platform asset name selection, "no asset found" fallbacks) without needing to
+    // drive the entire DownloadAll() sequence — the same testability rationale already
+    // documented on DownloadFfmpeg below.
+    internal bool ExistsInInstalledDirectory(string executableName)
     {
         // Check the Launcher's install directory (set for installer deployments only)
         string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
@@ -538,7 +543,7 @@ public class Binaries
         });
     }
 
-    private bool CheckLocalVersion(
+    internal bool CheckLocalVersion(
         GithubReleaseResponse releaseInfo,
         string destination,
         out string version
@@ -765,7 +770,7 @@ public class Binaries
     /// The qualifying release, or an empty <see cref="GithubReleaseResponse"/> when
     /// none is old enough yet (the caller then keeps whatever is already installed).
     /// </returns>
-    private async Task<GithubReleaseResponse> GetLatestReleaseInfoOlderThan(
+    internal async Task<GithubReleaseResponse> GetLatestReleaseInfoOlderThan(
         string latestApiUrl,
         TimeSpan minAge
     )
@@ -834,7 +839,7 @@ public class Binaries
     /// releases) is tolerated. Used for third-party binaries downloaded outside
     /// <see cref="DownloadWithVerificationAsync"/> (which handle their own extraction).
     /// </summary>
-    private async Task VerifyAssetDigestOrThrow(string path, Asset? asset, string label)
+    internal async Task VerifyAssetDigestOrThrow(string path, Asset? asset, string label)
     {
         string? expected = BinaryVerification.ExtractSha256FromDigest(asset?.Digest);
         if (expected is null)
@@ -857,7 +862,7 @@ public class Binaries
         Logger.Setup($"SHA-256 verified for {label} (github digest)", LogEventLevel.Verbose);
     }
 
-    private async Task DownloadApp()
+    internal async Task DownloadApp()
     {
         if (ExistsInInstalledDirectory("NoMercyApp" + Info.ExecSuffix))
         {
@@ -953,7 +958,7 @@ public class Binaries
         await FilePermissions.SetExecutionPermissions(path);
     }
 
-    private async Task DownloadLauncher()
+    internal async Task DownloadLauncher()
     {
         if (ExistsInInstalledDirectory("NoMercyLauncher" + Info.ExecSuffix))
         {
@@ -1049,7 +1054,7 @@ public class Binaries
         await FilePermissions.SetExecutionPermissions(path);
     }
 
-    private async Task DownloadCli()
+    internal async Task DownloadCli()
     {
         if (ExistsInInstalledDirectory("nomercy" + Info.ExecSuffix))
         {
@@ -1445,7 +1450,7 @@ public class Binaries
     /// The file format is one <c>"&lt;hash&gt;  &lt;filename&gt;"</c> entry per line.
     /// </summary>
     /// <returns>The hex digest, or <c>null</c> when the sums file or entry is absent.</returns>
-    private async Task<string?> ResolveUpstreamSha256Async(
+    internal async Task<string?> ResolveUpstreamSha256Async(
         GithubReleaseResponse releaseInfo,
         string sumsAssetName,
         string targetAssetName
@@ -1476,7 +1481,7 @@ public class Binaries
         return null;
     }
 
-    private async Task DownloadYtdlp()
+    internal async Task DownloadYtdlp()
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfoOlderThan(
             GithubYtdlpApiUrl,
@@ -1557,7 +1562,7 @@ public class Binaries
         Logger.Setup($"Downloaded yt-dlp to {outputPath}");
     }
 
-    private async Task DownloadShakaPackager()
+    internal async Task DownloadShakaPackager()
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfoOlderThan(
             GithubShakaPackagerApiUrl,
@@ -1625,7 +1630,7 @@ public class Binaries
         Logger.Setup($"Downloaded shaka-packager to {outputPath}");
     }
 
-    private async Task DownloadCloudflared()
+    internal async Task DownloadCloudflared()
     {
         string destinationPath = AppFiles.CloudflareDPath;
 
@@ -1744,7 +1749,7 @@ public class Binaries
         }
     }
 
-    private async Task DownloadWhisperModels(string modelName = "ggml-large-v3")
+    internal async Task DownloadWhisperModels(string modelName = "ggml-large-v3")
     {
         string destinationPath = Path.Combine(AppFiles.FfmpegFolder, modelName + ".bin");
 
@@ -1815,12 +1820,19 @@ public class Binaries
         }
     }
 
-    private async Task<string> ConcatenateModelParts(
+    internal async Task<string> ConcatenateModelParts(
         string modelName,
         IEnumerable<string> partPaths
     )
     {
         string destinationPath = Path.Combine(AppFiles.FfmpegFolder, modelName + ".bin");
+
+        // Mirrors DownloadWithVerificationAsync's own directory-creation guard: normally
+        // FfmpegFolder already exists (DownloadFfmpeg's extraction step creates it, and
+        // runs before this in DownloadAll's sequence), but nothing enforces that
+        // ordering for a caller that only ever invokes DownloadWhisperModels directly.
+        if (!_driver.DirectoryExists(AppFiles.FfmpegFolder))
+            _storage.CreateDirectory(AppFiles.FfmpegFolder);
 
         await using Stream destinationStream = _driver.OpenWrite(destinationPath, overwrite: true);
 
@@ -1837,7 +1849,7 @@ public class Binaries
         return destinationPath;
     }
 
-    private async Task DownloadTesseractData(IEnumerable<string> languages)
+    internal async Task DownloadTesseractData(IEnumerable<string> languages)
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubTesseractApiUrl);
         if (releaseInfo.Assets.Length == 0)

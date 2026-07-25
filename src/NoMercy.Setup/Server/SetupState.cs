@@ -104,7 +104,10 @@ public class SetupState
         return signal.Task.WaitAsync(cancellationToken);
     }
 
-    public async Task WaitForPhaseAsync(SetupPhase targetPhase, CancellationToken cancellationToken = default)
+    public async Task WaitForPhaseAsync(
+        SetupPhase targetPhase,
+        CancellationToken cancellationToken = default
+    )
     {
         while (true)
         {
@@ -230,6 +233,17 @@ public class SetupState
             (SetupPhase.Authenticated, SetupPhase.Authenticated) => true,
             // Certificate failure can go back to registered (retry cert)
             (SetupPhase.Registered, SetupPhase.Registered) => true,
+
+            // Degraded-complete: BootOrchestrator.RunRegistrationAsync intentionally
+            // reaches Complete even when the certificate isn't ready yet (Registered,
+            // no cert) or registration itself failed (still at Registering when its
+            // catch block runs) — "partial functionality beats no functionality," with
+            // DegradedModeRecovery retrying registration/cert acquisition in the
+            // background. Without these, both call sites silently rejected the
+            // transition and left SetupState (and therefore IsSetupRequired) stuck
+            // forever on a degraded first boot.
+            (SetupPhase.Registered, SetupPhase.Complete) => true,
+            (SetupPhase.Registering, SetupPhase.Complete) => true,
 
             _ => false,
         };

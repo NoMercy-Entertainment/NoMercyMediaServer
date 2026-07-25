@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Progress;
@@ -174,9 +175,11 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnStageCompleted(string stageName, TimeSpan duration)
     {
+        // This message rides the same SignalR "ProgressData" payload as the raw
+        // numeric fields below — keep it period-decimal regardless of host locale.
         Publish(
             status: "encoding",
-            message: $"Completed: {stageName} ({duration.TotalSeconds:F1}s)"
+            message: $"Completed: {stageName} ({duration.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)}s)"
         );
     }
 

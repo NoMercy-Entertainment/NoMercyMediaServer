@@ -250,7 +250,25 @@ public sealed partial class BlurayDiscSource(
             return new(OpticalDiscType.BluRay, null, [], null, TimeSpan.Zero);
         }
 
-        return DiscScanner.Parse(result.StdOut, OpticalDiscType.BluRay);
+        try
+        {
+            return DiscScanner.Parse(result.StdOut, OpticalDiscType.BluRay);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // DiscScanner.Parse wraps a JSON parse failure into
+            // InvalidOperationException — a truncated/malformed ffprobe
+            // response on a real disc must degrade to an empty probe result
+            // here, the same way the !result.IsSuccess branch above does,
+            // rather than crash the per-playlist detail fetch.
+            logger.LogWarning(
+                ex,
+                "Per-playlist probe returned unparsable JSON for {Drive} #{Playlist}",
+                drivePath,
+                playlistIndex
+            );
+            return new(OpticalDiscType.BluRay, null, [], null, TimeSpan.Zero);
+        }
     }
 
     internal static List<(int Index, TimeSpan Duration)> ParsePlaylists(string stderr)

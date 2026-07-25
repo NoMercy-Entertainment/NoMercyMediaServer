@@ -80,9 +80,9 @@ public class ServerConfigurationShowAdultContentTests : IDisposable
     }
 
     [Theory]
-    [InlineData(null, false)]
-    [InlineData(false, false)]
-    [InlineData(true, true)]
+    [InlineData([null, false])]
+    [InlineData([false, false])]
+    [InlineData([true, true])]
     public void ShowAdultContent_MatchesRuntimeSettingForAllThreeStates(
         bool? configured,
         bool expected

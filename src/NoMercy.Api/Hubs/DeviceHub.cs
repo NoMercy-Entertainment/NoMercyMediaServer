@@ -77,11 +77,7 @@ public sealed class DeviceHub : ConnectionHub
         _capabilityRegistry.Set(deviceId, payload);
 
         _logger.LogInformation(
-            "Device {DeviceId} declared capabilities: channels={Channels} codecs=[{Codecs}] ramTier={Tier}",
-            deviceId,
-            payload.MaxAudioChannels,
-            string.Join(",", payload.AudioCodecs),
-            payload.RamTier
+            "Device {DeviceId} declared capabilities: channels={Channels} codecs=[{Codecs}] ramTier={Tier}", [deviceId, payload.MaxAudioChannels, string.Join(",", payload.AudioCodecs), payload.RamTier]
         );
     }
 

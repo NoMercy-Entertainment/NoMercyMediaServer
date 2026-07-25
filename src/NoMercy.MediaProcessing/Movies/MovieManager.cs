@@ -39,7 +39,7 @@ public class MovieManager(
 {
     public async Task<TmdbMovieAppends?> Add(int id, Library library)
     {
-        logger.LogInformation("Movie: {Id}: Adding to Library {Title}", id, library.Title);
+        logger.LogInformation("Movie: {Id}: Adding to Library {Title}", [id, library.Title]);
 
         using TmdbMovieClient movieClient = new(id);
         TmdbMovieAppends? movieAppends = await MetadataRetry.FetchAsync(
@@ -130,18 +130,13 @@ public class MovieManager(
         logger.LogDebug("Movie: {Title}: Added to Database", movie.Title);
 
         await movieRepository.LinkToLibrary(library, movie);
-        logger.LogDebug("Movie: {Title}: Linked to Library {Title2}", movie.Title, library.Title);
+        logger.LogDebug("Movie: {Title}: Linked to Library {Title2}", [movie.Title, library.Title]);
 
-        await Task.WhenAll(
-            StoreTranslations(movieAppends),
-            StoreGenres(movieAppends),
-            StoreContentRatings(movieAppends)
+        await Task.WhenAll([StoreTranslations(movieAppends), StoreGenres(movieAppends), StoreContentRatings(movieAppends)]
         );
 
         logger.LogInformation(
-            "Movie: {Title}: Added to Library {Title2}",
-            movieAppends.Title,
-            library.Title
+            "Movie: {Title}: Added to Library {Title2}", [movieAppends.Title, library.Title]
         );
 
         jobDispatcher.DispatchColorPaletteJob("movie", movie.Id.ToString());
@@ -160,7 +155,7 @@ public class MovieManager(
 
     public async Task Remove(int id, Library library)
     {
-        logger.LogInformation("Movie: {Id}: Removing from Library {Title}", id, library.Title);
+        logger.LogInformation("Movie: {Id}: Removing from Library {Title}", [id, library.Title]);
         await movieRepository.Remove(id);
         logger.LogDebug("Movie: {Id}: Removed from Database", id);
     }

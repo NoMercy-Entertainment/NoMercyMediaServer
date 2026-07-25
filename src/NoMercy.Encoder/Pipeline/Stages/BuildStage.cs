@@ -187,17 +187,17 @@ public class BuildStage(
             // narrows the plan to what this batch should emit (resource cap
             // enforcement — see VideoEncodeJob.DispatchDecomposedAsync).
             bool isPerStreamSlice =
-                input.TaskFilter is { } perStreamFilter
-                && perStreamFilter.Kind
-                    is EncodeTaskKind.Video
+                input is { TaskFilter:
+                    { Kind: EncodeTaskKind.Video
                         or EncodeTaskKind.Audio
                         or EncodeTaskKind.Subtitle
                         or EncodeTaskKind.Thumbnails
-                && input.Pass == EncodingPass.Single;
+                    },
+                    Pass: EncodingPass.Single
+                };
 
             bool isBundledWhole =
-                input.TaskFilter is { } bundleFilter
-                && bundleFilter.Kind == EncodeTaskKind.Whole
+                input.TaskFilter is { Kind: EncodeTaskKind.Whole } bundleFilter
                 && (
                     bundleFilter.VideoSliceIndexes is not null
                     || bundleFilter.AudioSliceIndexes is not null

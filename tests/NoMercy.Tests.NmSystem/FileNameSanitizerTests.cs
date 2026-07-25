@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Extensions;
-
 namespace NoMercy.Tests.NmSystem;
 
 [Trait("Category", "Unit")]
@@ -154,10 +152,10 @@ public class FileNameSanitizerTests
     }
 
     [Theory]
-    [InlineData("simple", "simple")]
-    [InlineData("with spaces", "withspaces")]
-    [InlineData("with-dashes", "withdashes")]
-    [InlineData("CamelCase", "camelcase")]
+    [InlineData(["simple", "simple"])]
+    [InlineData(["with spaces", "withspaces"])]
+    [InlineData(["with-dashes", "withdashes"])]
+    [InlineData(["CamelCase", "camelcase"])]
     public void NormalizeForComparison_StripsNonAlphanumeric(string input, string expected)
     {
         string result = input.NormalizeForComparison();

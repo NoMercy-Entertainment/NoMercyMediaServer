@@ -45,7 +45,7 @@ public class ShowManager(
         bool? priority = false
     )
     {
-        logger.LogInformation("Show {Id}: Adding to Library {Title}", id, library.Title);
+        logger.LogInformation("Show {Id}: Adding to Library {Title}", [id, library.Title]);
 
         using TmdbTvClient showClient = new(id);
         TmdbTvShowAppends? showAppends = await MetadataRetry.FetchAsync(
@@ -142,16 +142,14 @@ public class ShowManager(
         logger.LogDebug("Show {Title}: Added to Database", show.Title);
 
         await showRepository.LinkToLibrary(library, show);
-        logger.LogDebug("Show {Title}: Linked to Library {Title2}", show.Title, library.Title);
+        logger.LogDebug("Show {Title}: Linked to Library {Title2}", [show.Title, library.Title]);
 
         await StoreGenres(showAppends);
         await StoreContentRatings(showAppends);
         await StoreTranslations(showAppends);
 
         logger.LogInformation(
-            "Show {Name}: Added to Library {Title}",
-            showAppends.Name,
-            library.Title
+            "Show {Name}: Added to Library {Title}", [showAppends.Name, library.Title]
         );
 
         jobDispatcher.DispatchColorPaletteJob("tv", show.Id.ToString());

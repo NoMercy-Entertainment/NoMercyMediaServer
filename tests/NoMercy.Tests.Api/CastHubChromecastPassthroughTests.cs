@@ -61,7 +61,7 @@ public class CastHubChromecastPassthroughTests
 
         string[] result = hub.GetChromeCasts();
 
-        result.Should().Equal("Living Room", "Bedroom");
+        result.Should().Equal(["Living Room", "Bedroom"]);
     }
 
     [Fact]

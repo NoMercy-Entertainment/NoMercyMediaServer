@@ -292,7 +292,7 @@ public class DiContextInjectionTests : IDisposable
             return context.Tracks.Count();
         });
 
-        await Task.WhenAll(task1, task2, task3);
+        await Task.WhenAll([task1, task2, task3]);
 
         Assert.Equal(1, await task1);
         Assert.Equal(1, await task2);

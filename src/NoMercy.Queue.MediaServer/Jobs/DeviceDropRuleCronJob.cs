@@ -55,9 +55,7 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
             // CronWorker's outer wrapper can't drop the diagnostic detail.
             _logger.LogError(
                 ex,
-                "DeviceDropRuleCronJob failed: {ErrorType} — {ErrorMessage}",
-                ex.GetType().Name,
-                ex.Message
+                "DeviceDropRuleCronJob failed: {ErrorType} — {ErrorMessage}", [ex.GetType().Name, ex.Message]
             );
             throw;
         }

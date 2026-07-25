@@ -79,7 +79,7 @@ public class FindMediaFilesJobTests : IClassFixture<NoMercyApiFactory>
                         new object?[] { MediaTypes.MovieMediaType, unseededMovieId.ToString() }
                     ),
                 "the published id element must be the STRING form of the scan id, not a raw int — "
-                    + "a bare `Id` element here would fail this SequenceEqual against \"555555\""
+                         + "a bare `Id` element here would fail this SequenceEqual against \"555555\""
             );
     }
 }

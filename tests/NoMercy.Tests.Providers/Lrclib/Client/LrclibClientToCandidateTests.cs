@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Lrclib.Client;
 using NoMercy.Providers.Lrclib.Models;
 using NoMercy.Providers.NoMercy.Models;

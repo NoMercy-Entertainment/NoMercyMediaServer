@@ -22,16 +22,37 @@ public static class DesktopIconCreator
     // LOCAL-ONLY: DesktopIconCreator is in NoMercy.Setup which cannot reference NoMercy.Providers (circular).
     private static IStorageDriver _driver => new LocalStorageDriver();
 
-    public static void CreateDesktopIcon(string appName, string appPath, string iconPath)
+    public static void CreateDesktopIcon(string appName, string appPath, string iconPath) =>
+        CreateDesktopIcon(
+            appName,
+            appPath,
+            iconPath,
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        );
+
+    /// <summary>
+    /// Internal (not private): threading the desktop directory through as a parameter
+    /// lets NoMercy.Tests.Setup exercise the real per-platform shortcut-writing branches
+    /// against an isolated temp directory instead of either skipping this method entirely
+    /// or — worse — actually writing a shortcut onto the real Desktop of whatever machine
+    /// runs the test suite. The public overload above preserves the exact production
+    /// default, so no caller behavior changes.
+    /// </summary>
+    internal static void CreateDesktopIcon(
+        string appName,
+        string appPath,
+        string iconPath,
+        string desktopPath
+    )
     {
         try
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                CreateWindowsShortcut(appName, appPath, iconPath);
+                CreateWindowsShortcut(appName, appPath, iconPath, desktopPath);
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                CreateMacShortcut(appName, appPath, iconPath);
+                CreateMacShortcut(appName, appPath, iconPath, desktopPath);
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                CreateLinuxShortcut(appName, appPath, iconPath);
+                CreateLinuxShortcut(appName, appPath, iconPath, desktopPath);
         }
         catch (Exception ex)
         {
@@ -39,12 +60,16 @@ public static class DesktopIconCreator
         }
     }
 
-    private static void CreateWindowsShortcut(string appName, string appPath, string iconPath)
+    private static void CreateWindowsShortcut(
+        string appName,
+        string appPath,
+        string iconPath,
+        string desktopPath
+    )
     {
 #pragma warning disable CA1416
         try
         {
-            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             string shortcutPath = Path.Combine(desktopPath, $"{appName}.lnk");
 
             Type? id = Type.GetTypeFromProgID("WScript.Shell");
@@ -67,11 +92,15 @@ public static class DesktopIconCreator
 #pragma warning restore CA1416
     }
 
-    private static void CreateMacShortcut(string appName, string appPath, string iconPath)
+    private static void CreateMacShortcut(
+        string appName,
+        string appPath,
+        string iconPath,
+        string desktopPath
+    )
     {
         try
         {
-            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             string aliasPath = Path.Combine(desktopPath, appName);
 
             string script =
@@ -111,11 +140,15 @@ public static class DesktopIconCreator
         }
     }
 
-    private static void CreateLinuxShortcut(string appName, string appPath, string iconPath)
+    private static void CreateLinuxShortcut(
+        string appName,
+        string appPath,
+        string iconPath,
+        string desktopPath
+    )
     {
         try
         {
-            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             string shortcutPath = Path.Combine(desktopPath, $"{appName}.desktop");
 
             string content =

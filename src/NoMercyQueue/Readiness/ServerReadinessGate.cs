@@ -165,9 +165,7 @@ public sealed class ServerReadinessGate : IServerReadinessGate
                     .ToList();
 
                 _logger.LogWarning(
-                    "Server readiness: {Timeout}s timeout reached — signals still pending: [{Laggards}]. Proceeding anyway",
-                    TimeoutSeconds,
-                    string.Join(", ", laggards)
+                    "Server readiness: {Timeout}s timeout reached — signals still pending: [{Laggards}]. Proceeding anyway", [TimeoutSeconds, string.Join(", ", laggards)]
                 );
             }
             else
